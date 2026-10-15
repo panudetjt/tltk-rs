@@ -69,7 +69,7 @@ impl<'a> Session<'a> {
                     if j > i + 1 {
                         let w: String = syl_lst[i..j].concat();
                         chart[i].set(j, vec![w]);
-                        i = j + 1;
+                        i = j + 2;
                     } else {
                         i += 1;
                     }
@@ -104,5 +104,22 @@ impl<'a> Session<'a> {
         } else {
             String::new()
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::embedded;
+    use crate::Tltk;
+
+    #[test]
+    fn test_eng_abbr_advance_two_runs_one_syl_apart() {
+        let tltk = Tltk::new(embedded::models());
+        let mut sess = tltk.session();
+        // Input with two abbr runs ("เอบี" and "เคแอล") one syllable ("คน") apart.
+        // Python 1.10 advances to j+2 after an abbr run, skipping the start of the next run
+        // when separated by one syllable, leaving "เค|แอล" unmerged if not in dictionary.
+        let res = sess.word_segment("เอบีคนเคแอล");
+        assert_eq!(res, "เอบี|คน|เค|แอล|<s/>");
     }
 }
