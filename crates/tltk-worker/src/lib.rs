@@ -3,12 +3,11 @@
 //! {success, function, input, result|error}.
 //!
 //! Model loading:
-//! - small models (thdict/sylseg/sylvar/phs/pos) are embedded in the WASM;
-//! - edu + w2v (and optional ner) are fetched once per isolate from the R2
-//!   bucket binding `MODELS` (keys: edu.bin.gz, w2v.bin.gz) and cached in a
-//!   global. Without R2 bindings the corresponding functions error loudly.
+//! - small models (thdict/sylseg/sylvar/phs/pos/ner) are embedded in the WASM;
+//! - edu + w2v are fetched once per isolate from the R2 bucket binding `MODELS`
+//!   (keys: edu.bin.gz, w2v.bin.gz) and cached in a global. Without R2 bindings
+//!   the corresponding functions error loudly.
 
-use once_cell::sync::OnceCell;
 use serde_json::Value;
 use std::collections::HashMap;
 use std::sync::Mutex;
@@ -68,15 +67,23 @@ async fn ensure_tltk(env: Env) -> Result<()> {
         }
         Err(e) => console_error!("no MODELS R2 binding: {}", e),
     }
-    let models = tltk_core::embedded::with_models(tltk_core::embedded::models(), &extra);
+    let mut blobs = tltk_core::embedded::blobs();
+    for (k, v) in extra {
+        blobs.insert(k.trim_end_matches(".gz").to_string(), v);
+    }
+    let models = match tltk_core::model::Models::try_from_blobs(&blobs) {
+        Ok(m) => m,
+        Err(e) => {
+            *INIT_FAIL.lock().unwrap() = Some(e.clone());
+            return Err(Error::RustError(format!("model init failed: {}", e)));
+        }
+    };
     *TLTK.lock().unwrap() = Some(Tltk::new(models));
     Ok(())
 }
 
 async fn process(mut req: Request, env: Env) -> Result<Response> {
-    if let Err(e) = ensure_tltk(env).await {
-        return Err(e);
-    }
+    ensure_tltk(env).await?;
     let body: Value = match req.json().await {
         Ok(v) => v,
         Err(e) => {

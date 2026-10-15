@@ -59,23 +59,27 @@ impl<'a> Reader<'a> {
     }
 }
 
-fn gunzip(data: &[u8]) -> Vec<u8> {
+fn try_gunzip(data: &[u8]) -> Result<Vec<u8>, String> {
     use std::io::Read;
     let mut d = flate2::read::GzDecoder::new(data);
     let mut out = Vec::new();
-    d.read_to_end(&mut out).unwrap();
-    out
+    d.read_to_end(&mut out)
+        .map_err(|e| format!("gunzip failed: {}", e))?;
+    Ok(out)
 }
 
-fn check_magic(r: &mut Reader, magic: &[u8; 4]) {
+
+fn check_magic(r: &mut Reader, magic: &[u8; 4]) -> Result<(), String> {
+    if r.pos + 4 > r.b.len() {
+        return Err(format!("unexpected EOF reading magic: want {:?}", magic));
+    }
     let got = r.bytes(4);
-    assert_eq!(got, magic, "bad model magic: got {:?} want {:?}", got, magic);
+    if got != magic {
+        return Err(format!("bad model magic: got {:?} want {:?}", got, magic));
+    }
+    Ok(())
 }
 
-// Sorted key tables support binary search; entry order matches the converter (sorted).
-pub fn binary_search_str<'a>(keys: &[&'a str], k: &str) -> Result<usize, usize> {
-    keys.binary_search(&k)
-}
 
 /// TD01 — thdict word set
 pub struct Thdict {
@@ -84,9 +88,9 @@ pub struct Thdict {
 }
 
 impl Thdict {
-    fn decode(data: &[u8]) -> Self {
+    fn decode(data: &[u8]) -> Result<Self, String> {
         let mut r = Reader::new(data);
-        check_magic(&mut r, b"TD01");
+        check_magic(&mut r, b"TD01")?;
         let n = r.uvarint();
         let mut words = Vec::with_capacity(n);
         let mut set = std::collections::HashSet::with_capacity(n);
@@ -95,7 +99,7 @@ impl Thdict {
             set.insert(w.clone());
             words.push(w);
         }
-        Thdict { words, set }
+        Ok(Thdict { words, set })
     }
     pub fn contains(&self, w: &str) -> bool {
         self.set.contains(w)
@@ -120,9 +124,9 @@ pub struct Sylseg {
 }
 
 impl Sylseg {
-    fn decode(data: &[u8]) -> Self {
+    fn decode(data: &[u8]) -> Result<Self, String> {
         let mut r = Reader::new(data);
-        check_magic(&mut r, b"SG01");
+        check_magic(&mut r, b"SG01")?;
         let n = r.uvarint();
         let mut syls = Vec::with_capacity(n);
         for _ in 0..n {
@@ -165,7 +169,7 @@ impl Sylseg {
                 syls.len(), tri.len(), bi_count.len(), bi_type.len(), count.len(), type_.len(), total_word, total_lex
             );
         }
-        Sylseg { syls, tri, bi_count, bi_type, count, type_, total_word, total_lex }
+        Ok(Sylseg { syls, tri, bi_count, bi_type, count, type_, total_word, total_lex })
     }
     pub fn syl_id(&self, s: &str) -> Option<u32> {
         self.syls.binary_search_by(|p| p.as_str().cmp(s)).ok().map(|i| i as u32)
@@ -214,9 +218,9 @@ pub struct Sylvar {
 }
 
 impl Sylvar {
-    fn decode(data: &[u8]) -> Self {
+    fn decode(data: &[u8]) -> Result<Self, String> {
         let mut r = Reader::new(data);
-        check_magic(&mut r, b"SV01");
+        check_magic(&mut r, b"SV01")?;
         let n = r.uvarint();
         let mut entries = Vec::with_capacity(n);
         let mut idx = HashMap::with_capacity(n);
@@ -230,7 +234,7 @@ impl Sylvar {
             idx.insert(phone.clone(), entries.len());
             entries.push((phone, forms));
         }
-        Sylvar { entries, idx }
+        Ok(Sylvar { entries, idx })
     }
     pub fn get(&self, phone: &str) -> Option<&Vec<String>> {
         self.idx.get(phone).map(|&i| &self.entries[i].1)
@@ -297,9 +301,9 @@ impl Phs {
     table_methods!(abs_uni_get, abs_uni, abs_uni_v, 2);
     table_methods!(abs_frm_get, abs_frm, abs_frm_v, 1);
 
-    fn decode(data: &[u8]) -> Self {
+    fn decode(data: &[u8]) -> Result<Self, String> {
         let mut r = Reader::new(data);
-        check_magic(&mut r, b"PH01");
+        check_magic(&mut r, b"PH01")?;
         let n = r.uvarint();
         let mut syls = Vec::with_capacity(n);
         let mut idx = HashMap::with_capacity(n);
@@ -332,7 +336,7 @@ impl Phs {
         let (frm_uni, frm_uni_v) = table!(1);
         let (abs_uni, abs_uni_v) = table!(2);
         let (abs_frm, abs_frm_v) = table!(1);
-        Phs {
+        Ok(Phs {
             syls,
             idx,
             phs_tri,
@@ -351,7 +355,7 @@ impl Phs {
             abs_uni_v,
             abs_frm,
             abs_frm_v,
-        }
+        })
     }
     pub fn syl_id(&self, s: &str) -> u32 {
         *self.idx.get(s).unwrap_or(&u32::MAX)
@@ -371,9 +375,9 @@ pub struct PosModel {
 }
 
 impl PosModel {
-    fn decode(data: &[u8]) -> Self {
+    fn decode(data: &[u8]) -> Result<Self, String> {
         let mut r = Reader::new(data);
-        check_magic(&mut r, b"PT01");
+        check_magic(&mut r, b"PT01")?;
         let n = r.uvarint();
         let mut classes = Vec::with_capacity(n);
         for _ in 0..n {
@@ -394,7 +398,7 @@ impl PosModel {
             let w = r.f64_();
             weights.push((f, t, w));
         }
-        PosModel { classes, tagdict, weights }
+        Ok(PosModel { classes, tagdict, weights })
     }
 }
 
@@ -417,9 +421,9 @@ pub struct EduTree {
 }
 
 impl EduModel {
-    fn decode(data: &[u8]) -> Self {
+    fn decode(data: &[u8]) -> Result<Self, String> {
         let mut r = Reader::new(data);
-        check_magic(&mut r, b"ED01");
+        check_magic(&mut r, b"ED01")?;
         let n = r.uvarint();
         let mut vocab = Vec::with_capacity(n);
         let mut feat_index = HashMap::with_capacity(n);
@@ -457,7 +461,7 @@ impl EduModel {
             }
             trees.push(EduTree { nodes, thresholds, values });
         }
-        EduModel { vocab, feat_index, classes, trees }
+        Ok(EduModel { vocab, feat_index, classes, trees })
     }
 }
 
@@ -473,9 +477,9 @@ pub struct W2v {
 }
 
 impl W2v {
-    fn decode(data: &[u8]) -> Self {
+    fn decode(data: &[u8]) -> Result<Self, String> {
         let mut r = Reader::new(data);
-        check_magic(&mut r, b"WV01");
+        check_magic(&mut r, b"WV01")?;
         let n = r.uvarint();
         let dim = r.uvarint();
         let mut words = Vec::with_capacity(n);
@@ -497,13 +501,13 @@ impl W2v {
             let s: f32 = row.iter().map(|x| x * x).sum();
             norms.push(s.sqrt());
         }
-        W2v { words, dim, vectors, norms, idx }
+        Ok(W2v { words, dim, vectors, norms, idx })
     }
     pub fn contains(&self, w: &str) -> bool {
         self.idx.contains_key(w)
     }
     pub fn index(&self, w: &str) -> Option<usize> {
-        self.idx.get(w).map(|&i| i)
+        self.idx.get(w).copied()
     }
     pub fn vector(&self, i: usize) -> &[f32] {
         &self.vectors[i * self.dim..(i + 1) * self.dim]
@@ -520,9 +524,9 @@ pub struct NerModel {
 }
 
 impl NerModel {
-    fn decode(data: &[u8]) -> Self {
+    fn decode(data: &[u8]) -> Result<Self, String> {
         let mut r = Reader::new(data);
-        check_magic(&mut r, b"NR01");
+        check_magic(&mut r, b"NR01")?;
         let n = r.uvarint();
         let mut labels = Vec::with_capacity(n);
         for _ in 0..n {
@@ -544,7 +548,7 @@ impl NerModel {
             let w = r.f64_();
             attributes.push((a, b, w));
         }
-        NerModel { labels, transitions, attributes }
+        Ok(NerModel { labels, transitions, attributes })
     }
 }
 
@@ -574,43 +578,47 @@ fn blob<'a>(blobs: &'a HashMap<String, Vec<u8>>, name: &str) -> Option<&'a [u8]>
 }
 
 impl Models {
-    /// `blobs`: gunzipped model payloads keyed by file name ("thdict.bin", ...).
-    pub fn from_blobs(blobs: &HashMap<String, Vec<u8>>) -> Models {
-        // gunzip only .bin payloads; .txt pattern files stay raw
+    pub fn try_from_blobs(blobs: &HashMap<String, Vec<u8>>) -> Result<Models, String> {
         let mut gz = HashMap::new();
         for (k, v) in blobs {
-            if k.ends_with(".bin") {
-                gz.insert(k.clone(), gunzip(v));
-            }
+            let key = if k.ends_with(".bin.gz") {
+                k.trim_end_matches(".gz").to_string()
+            } else if k.ends_with(".bin") {
+                k.clone()
+            } else {
+                continue;
+            };
+            gz.insert(key, try_gunzip(v).map_err(|e| format!("gunzip {} failed: {}", k, e))?);
         }
         let g = |k: &str| -> Option<&Vec<u8>> { gz.get(k) };
-        let thdict = Thdict::decode(g("thdict.bin").expect("thdict.bin missing"));
-        let sylseg = Sylseg::decode(g("sylseg.bin").expect("sylseg.bin missing"));
-        let sylvar = Sylvar::decode(g("sylvar.bin").expect("sylvar.bin missing"));
-        let phs = Phs::decode(g("phs.bin").expect("phs.bin missing"));
-        let pos = PosModel::decode(g("pos.bin").expect("pos.bin missing"));
-        let edu = g("edu.bin").map(|d| EduModel::decode(d));
-        let w2v = g("w2v.bin").map(|d| W2v::decode(d));
-        let ner = g("ner.bin").map(|d| NerModel::decode(d));
-        let sylrule = blob(blobs, "sylrule.txt").expect("sylrule.txt missing");
-        let thaisyl = blob(blobs, "thaisyl.txt").expect("thaisyl.txt missing");
-        let pron_raw = build_pron(
-            std::str::from_utf8(sylrule).unwrap(),
-            std::str::from_utf8(thaisyl).unwrap(),
-        );
-        let pron = pron_raw
-            .into_iter()
-            .map(|(pattern, codes)| {
-                let anchored = format!("^(?:{})", pattern);
-                let re = regex::Regex::new(&anchored)
-                    .unwrap_or_else(|e| panic!("bad PRON pattern {:?}: {}", pattern, e));
-                let n_groups = re.captures_len().saturating_sub(1);
-                PronPattern { pattern, codes, re, n_groups }
-            })
-            .collect();
-        Models { thdict, sylseg, sylvar, phs, pos, edu, w2v, ner, pron }
+        let thdict = Thdict::decode(g("thdict.bin").ok_or_else(|| "thdict.bin missing".to_string())?)?;
+        let sylseg = Sylseg::decode(g("sylseg.bin").ok_or_else(|| "sylseg.bin missing".to_string())?)?;
+        let sylvar = Sylvar::decode(g("sylvar.bin").ok_or_else(|| "sylvar.bin missing".to_string())?)?;
+        let phs = Phs::decode(g("phs.bin").ok_or_else(|| "phs.bin missing".to_string())?)?;
+        let pos = PosModel::decode(g("pos.bin").ok_or_else(|| "pos.bin missing".to_string())?)?;
+        let edu = g("edu.bin").map(|d| EduModel::decode(d)).transpose()?;
+        let w2v = g("w2v.bin").map(|d| W2v::decode(d)).transpose()?;
+        let ner = g("ner.bin").map(|d| NerModel::decode(d)).transpose()?;
+        let sylrule = blob(blobs, "sylrule.txt").ok_or_else(|| "sylrule.txt missing".to_string())?;
+        let thaisyl = blob(blobs, "thaisyl.txt").ok_or_else(|| "thaisyl.txt missing".to_string())?;
+        let sylrule_str = std::str::from_utf8(sylrule).map_err(|e| format!("sylrule.txt invalid utf-8: {}", e))?;
+        let thaisyl_str = std::str::from_utf8(thaisyl).map_err(|e| format!("thaisyl.txt invalid utf-8: {}", e))?;
+        let pron_raw = build_pron(sylrule_str, thaisyl_str);
+        let mut pron = Vec::with_capacity(pron_raw.len());
+        for (pattern, codes) in pron_raw {
+            let anchored = format!("^(?:{})", pattern);
+            let re = regex::Regex::new(&anchored)
+                .map_err(|e| format!("bad PRON pattern {:?}: {}", pattern, e))?;
+            let n_groups = re.captures_len().saturating_sub(1);
+            pron.push(PronPattern { pattern, codes, re, n_groups });
+        }
+        Ok(Models { thdict, sylseg, sylvar, phs, pos, edu, w2v, ner, pron })
     }
 
+    /// `blobs`: gunzipped model payloads keyed by file name ("thdict.bin", ...).
+    pub fn from_blobs(blobs: &HashMap<String, Vec<u8>>) -> Models {
+        Self::try_from_blobs(blobs).expect("failed to decode models from blobs")
+    }
     pub fn load_dir(dir: &std::path::Path) -> std::io::Result<Models> {
         let mut blobs = HashMap::new();
         for entry in std::fs::read_dir(dir)? {
