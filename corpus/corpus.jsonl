@@ -1,0 +1,244 @@
+{"function": "word_segment", "text": "แมว"}
+{"function": "word_segment", "text": "กิน"}
+{"function": "word_segment", "text": "ปลา"}
+{"function": "word_segment", "text": "แมวกินปลา"}
+{"function": "word_segment", "text": "สวัสดีครับ"}
+{"function": "word_segment", "text": "ภาษาไทย"}
+{"function": "word_segment", "text": "กรุงเทพมหานคร"}
+{"function": "word_segment", "text": "ประเทศไทย"}
+{"function": "word_segment", "text": "การเดินทาง"}
+{"function": "word_segment", "text": "อาหารอร่อย"}
+{"function": "word_segment", "text": "คอมพิวเตอร์"}
+{"function": "word_segment", "text": "มหาวิทยาลัย"}
+{"function": "word_segment", "text": "เอกสารประกอบการประชุม"}
+{"function": "word_segment", "text": "สุราษฎร์ธานี"}
+{"function": "word_segment", "text": "ทรงผม"}
+{"function": "word_segment", "text": "ทราบ"}
+{"function": "word_segment", "text": "กรุณา"}
+{"function": "word_segment", "text": "กฤษณา"}
+{"function": "word_segment", "text": "ฤดูฝน"}
+{"function": "word_segment", "text": "กลัว"}
+{"function": "word_segment", "text": "กลางคืน"}
+{"function": "word_segment", "text": "แสงดี"}
+{"function": "word_segment", "text": "ควายตาม"}
+{"function": "word_segment", "text": "มะลิซ้อน"}
+{"function": "word_segment", "text": "เรียวเธอคนดอ"}
+{"function": "word_segment", "text": "อยากกินข้าว"}
+{"function": "word_segment", "text": "หนึ่งสองสาม"}
+{"function": "word_segment", "text": "๑๒๓๔"}
+{"function": "word_segment", "text": "๑๙ ตุลา"}
+{"function": "word_segment", "text": "๐๑๐๒"}
+{"function": "word_segment", "text": "แมวกินปลาทะเล"}
+{"function": "word_segment", "text": "ผมชอบกินข้าวผัดกะเพราหมูสับ"}
+{"function": "word_segment", "text": "กรุงเทพมหานครเป็นเมืองหลวงของประเทศไทย"}
+{"function": "word_segment", "text": "วันนี้อากาศดีมาก ๆ"}
+{"function": "word_segment", "text": "เขาไปตลาดซื้อผัก ผลไม้ และของชำ"}
+{"function": "word_segment", "text": "การประชุมวิชาการจัดขึ้นเมื่อวันที่ 18 มิถุนายน 2566"}
+{"function": "word_segment", "text": "นายสมชายซื้อของที่จังหวัดเชียงใหม่"}
+{"function": "word_segment", "text": "บริษัทไทยพาณิชย์จำกัด (มหาชน) เปิดสำนักงานใหม่"}
+{"function": "word_segment", "text": "I love Thai food มาก"}
+{"function": "word_segment", "text": "COVID-19 ระบาดในปี 2563"}
+{"function": "word_segment", "text": "กินข้าวหรือยัง?"}
+{"function": "word_segment", "text": "ราคา 199.- ถูกมาก!"}
+{"function": "word_segment", "text": "อ่านหนังสือ...เฉย ๆ"}
+{"function": "word_segment", "text": "เอบีเอ็น แอมพีเอ็ม"}
+{"function": "word_segment", "text": "น.ส.สริตา ดอนม่วง ไป สน.ลุมพินี"}
+{"function": "word_segment", "text": "เมื่อวานนี้ฝนตกหนักมากจนน้ำท่วมถนนหลายสายทำให้การจราจรติดขัดเป็นอย่างมาก"}
+{"function": "word_segment", "text": "ที่ดักไขมันเป็นอุปกรณ์ที่ใช้ในการแยกไขมันออกจากน้ำเสียก่อนที่จะระบายต่อไป"}
+{"function": "syl_segment", "text": "แมว"}
+{"function": "syl_segment", "text": "กิน"}
+{"function": "syl_segment", "text": "ปลา"}
+{"function": "syl_segment", "text": "แมวกินปลา"}
+{"function": "syl_segment", "text": "สวัสดีครับ"}
+{"function": "syl_segment", "text": "ภาษาไทย"}
+{"function": "syl_segment", "text": "กรุงเทพมหานคร"}
+{"function": "syl_segment", "text": "ประเทศไทย"}
+{"function": "syl_segment", "text": "การเดินทาง"}
+{"function": "syl_segment", "text": "อาหารอร่อย"}
+{"function": "syl_segment", "text": "คอมพิวเตอร์"}
+{"function": "syl_segment", "text": "มหาวิทยาลัย"}
+{"function": "syl_segment", "text": "เอกสารประกอบการประชุม"}
+{"function": "syl_segment", "text": "สุราษฎร์ธานี"}
+{"function": "syl_segment", "text": "ทรงผม"}
+{"function": "syl_segment", "text": "ทราบ"}
+{"function": "syl_segment", "text": "กรุณา"}
+{"function": "syl_segment", "text": "กฤษณา"}
+{"function": "syl_segment", "text": "ฤดูฝน"}
+{"function": "syl_segment", "text": "กลัว"}
+{"function": "syl_segment", "text": "กลางคืน"}
+{"function": "syl_segment", "text": "แสงดี"}
+{"function": "syl_segment", "text": "ควายตาม"}
+{"function": "syl_segment", "text": "มะลิซ้อน"}
+{"function": "syl_segment", "text": "เรียวเธอคนดอ"}
+{"function": "syl_segment", "text": "อยากกินข้าว"}
+{"function": "syl_segment", "text": "หนึ่งสองสาม"}
+{"function": "syl_segment", "text": "๑๒๓๔"}
+{"function": "syl_segment", "text": "๑๙ ตุลา"}
+{"function": "syl_segment", "text": "๐๑๐๒"}
+{"function": "syl_segment", "text": "แมวกินปลาทะเล"}
+{"function": "syl_segment", "text": "ผมชอบกินข้าวผัดกะเพราหมูสับ"}
+{"function": "syl_segment", "text": "กรุงเทพมหานครเป็นเมืองหลวงของประเทศไทย"}
+{"function": "syl_segment", "text": "วันนี้อากาศดีมาก ๆ"}
+{"function": "syl_segment", "text": "เขาไปตลาดซื้อผัก ผลไม้ และของชำ"}
+{"function": "syl_segment", "text": "การประชุมวิชาการจัดขึ้นเมื่อวันที่ 18 มิถุนายน 2566"}
+{"function": "syl_segment", "text": "นายสมชายซื้อของที่จังหวัดเชียงใหม่"}
+{"function": "syl_segment", "text": "บริษัทไทยพาณิชย์จำกัด (มหาชน) เปิดสำนักงานใหม่"}
+{"function": "syl_segment", "text": "I love Thai food มาก"}
+{"function": "syl_segment", "text": "COVID-19 ระบาดในปี 2563"}
+{"function": "syl_segment", "text": "กินข้าวหรือยัง?"}
+{"function": "syl_segment", "text": "ราคา 199.- ถูกมาก!"}
+{"function": "syl_segment", "text": "อ่านหนังสือ...เฉย ๆ"}
+{"function": "syl_segment", "text": "เอบีเอ็น แอมพีเอ็ม"}
+{"function": "syl_segment", "text": "น.ส.สริตา ดอนม่วง ไป สน.ลุมพินี"}
+{"function": "syl_segment", "text": "เมื่อวานนี้ฝนตกหนักมากจนน้ำท่วมถนนหลายสายทำให้การจราจรติดขัดเป็นอย่างมาก"}
+{"function": "syl_segment", "text": "ที่ดักไขมันเป็นอุปกรณ์ที่ใช้ในการแยกไขมันออกจากน้ำเสียก่อนที่จะระบายต่อไป"}
+{"function": "g2p", "text": "แมว"}
+{"function": "g2p", "text": "กิน"}
+{"function": "g2p", "text": "ปลา"}
+{"function": "g2p", "text": "แมวกินปลา"}
+{"function": "g2p", "text": "สวัสดีครับ"}
+{"function": "g2p", "text": "ภาษาไทย"}
+{"function": "g2p", "text": "กรุงเทพมหานคร"}
+{"function": "g2p", "text": "ประเทศไทย"}
+{"function": "g2p", "text": "การเดินทาง"}
+{"function": "g2p", "text": "อาหารอร่อย"}
+{"function": "g2p", "text": "คอมพิวเตอร์"}
+{"function": "g2p", "text": "มหาวิทยาลัย"}
+{"function": "g2p", "text": "แมวกินปลาทะเล"}
+{"function": "g2p", "text": "ผมชอบกินข้าวผัดกะเพราหมูสับ"}
+{"function": "g2p", "text": "กรุงเทพมหานครเป็นเมืองหลวงของประเทศไทย"}
+{"function": "g2p", "text": "วันนี้อากาศดีมาก ๆ"}
+{"function": "g2p", "text": "เขาไปตลาดซื้อผัก ผลไม้ และของชำ"}
+{"function": "g2p", "text": "การประชุมวิชาการจัดขึ้นเมื่อวันที่ 18 มิถุนายน 2566"}
+{"function": "g2p", "text": "นายสมชายซื้อของที่จังหวัดเชียงใหม่"}
+{"function": "g2p", "text": "บริษัทไทยพาณิชย์จำกัด (มหาชน) เปิดสำนักงานใหม่"}
+{"function": "th2ipa", "text": "แมว"}
+{"function": "th2ipa", "text": "กิน"}
+{"function": "th2ipa", "text": "ปลา"}
+{"function": "th2ipa", "text": "แมวกินปลา"}
+{"function": "th2ipa", "text": "สวัสดีครับ"}
+{"function": "th2ipa", "text": "ภาษาไทย"}
+{"function": "th2ipa", "text": "กรุงเทพมหานคร"}
+{"function": "th2ipa", "text": "ประเทศไทย"}
+{"function": "th2ipa", "text": "การเดินทาง"}
+{"function": "th2ipa", "text": "อาหารอร่อย"}
+{"function": "th2ipa", "text": "คอมพิวเตอร์"}
+{"function": "th2ipa", "text": "มหาวิทยาลัย"}
+{"function": "th2ipa", "text": "แมวกินปลาทะเล"}
+{"function": "th2ipa", "text": "ผมชอบกินข้าวผัดกะเพราหมูสับ"}
+{"function": "th2ipa", "text": "กรุงเทพมหานครเป็นเมืองหลวงของประเทศไทย"}
+{"function": "th2ipa", "text": "วันนี้อากาศดีมาก ๆ"}
+{"function": "th2ipa", "text": "เขาไปตลาดซื้อผัก ผลไม้ และของชำ"}
+{"function": "th2ipa", "text": "การประชุมวิชาการจัดขึ้นเมื่อวันที่ 18 มิถุนายน 2566"}
+{"function": "th2roman", "text": "แมว"}
+{"function": "th2roman", "text": "กิน"}
+{"function": "th2roman", "text": "ปลา"}
+{"function": "th2roman", "text": "แมวกินปลา"}
+{"function": "th2roman", "text": "สวัสดีครับ"}
+{"function": "th2roman", "text": "ภาษาไทย"}
+{"function": "th2roman", "text": "กรุงเทพมหานคร"}
+{"function": "th2roman", "text": "ประเทศไทย"}
+{"function": "th2roman", "text": "การเดินทาง"}
+{"function": "th2roman", "text": "อาหารอร่อย"}
+{"function": "th2roman", "text": "คอมพิวเตอร์"}
+{"function": "th2roman", "text": "มหาวิทยาลัย"}
+{"function": "th2roman", "text": "แมวกินปลาทะเล"}
+{"function": "th2roman", "text": "ผมชอบกินข้าวผัดกะเพราหมูสับ"}
+{"function": "th2roman", "text": "กรุงเทพมหานครเป็นเมืองหลวงของประเทศไทย"}
+{"function": "th2roman", "text": "วันนี้อากาศดีมาก ๆ"}
+{"function": "th2roman", "text": "เขาไปตลาดซื้อผัก ผลไม้ และของชำ"}
+{"function": "th2roman", "text": "การประชุมวิชาการจัดขึ้นเมื่อวันที่ 18 มิถุนายน 2566"}
+{"function": "th2read", "text": "แมว"}
+{"function": "th2read", "text": "กิน"}
+{"function": "th2read", "text": "ปลา"}
+{"function": "th2read", "text": "แมวกินปลา"}
+{"function": "th2read", "text": "สวัสดีครับ"}
+{"function": "th2read", "text": "ภาษาไทย"}
+{"function": "th2read", "text": "กรุงเทพมหานคร"}
+{"function": "th2read", "text": "ประเทศไทย"}
+{"function": "th2read", "text": "การเดินทาง"}
+{"function": "th2read", "text": "อาหารอร่อย"}
+{"function": "th2read", "text": "แมวกินปลาทะเล"}
+{"function": "th2read", "text": "ผมชอบกินข้าวผัดกะเพราหมูสับ"}
+{"function": "th2read", "text": "กรุงเทพมหานครเป็นเมืองหลวงของประเทศไทย"}
+{"function": "th2read", "text": "วันนี้อากาศดีมาก ๆ"}
+{"function": "th2read", "text": "เขาไปตลาดซื้อผัก ผลไม้ และของชำ"}
+{"function": "spell_variants", "text": "แมวกินปลา"}
+{"function": "spell_variants", "text": "มะลิซ้อน"}
+{"function": "spell_variants", "text": "สุราษฎร์ธานี"}
+{"function": "spell_variants", "text": "กรุงเทพ"}
+{"function": "spell_variants", "text": "ทรงผม"}
+{"function": "spell_variants", "text": "กฤษณา"}
+{"function": "spell_variants", "text": "สวัสดี"}
+{"function": "spell_variants", "text": "ครับ"}
+{"function": "spell_variants", "text": "ขอบคุณ"}
+{"function": "spoonerism", "text": "แสงดี"}
+{"function": "spoonerism", "text": "ควายตาม"}
+{"function": "spoonerism", "text": "มะลิซ้อน"}
+{"function": "spoonerism", "text": "ไฟเราแงน"}
+{"function": "spoonerism", "text": "แมวกินปลา"}
+{"function": "spoonerism", "text": "สวัสดี"}
+{"function": "spoonerism", "text": "ประเทศไทย"}
+{"function": "pos_tag", "text": "แมวกินปลาทะเล"}
+{"function": "pos_tag", "text": "ผมชอบกินข้าวผัดกะเพราหมูสับ"}
+{"function": "pos_tag", "text": "กรุงเทพมหานครเป็นเมืองหลวงของประเทศไทย"}
+{"function": "pos_tag", "text": "วันนี้อากาศดีมาก ๆ"}
+{"function": "pos_tag", "text": "เขาไปตลาดซื้อผัก ผลไม้ และของชำ"}
+{"function": "pos_tag", "text": "การประชุมวิชาการจัดขึ้นเมื่อวันที่ 18 มิถุนายน 2566"}
+{"function": "pos_tag", "text": "นายสมชายซื้อของที่จังหวัดเชียงใหม่"}
+{"function": "pos_tag", "text": "บริษัทไทยพาณิชย์จำกัด (มหาชน) เปิดสำนักงานใหม่"}
+{"function": "pos_tag", "text": "I love Thai food มาก"}
+{"function": "pos_tag", "text": "COVID-19 ระบาดในปี 2563"}
+{"function": "pos_tag", "text": "แมวกินปลา"}
+{"function": "pos_tag", "text": "ครับ"}
+{"function": "ner_tag", "text": "แมวกินปลาทะเล"}
+{"function": "ner_tag", "text": "ผมชอบกินข้าวผัดกะเพราหมูสับ"}
+{"function": "ner_tag", "text": "กรุงเทพมหานครเป็นเมืองหลวงของประเทศไทย"}
+{"function": "ner_tag", "text": "วันนี้อากาศดีมาก ๆ"}
+{"function": "ner_tag", "text": "เขาไปตลาดซื้อผัก ผลไม้ และของชำ"}
+{"function": "ner_tag", "text": "การประชุมวิชาการจัดขึ้นเมื่อวันที่ 18 มิถุนายน 2566"}
+{"function": "ner_tag", "text": "นายสมชายซื้อของที่จังหวัดเชียงใหม่"}
+{"function": "ner_tag", "text": "บริษัทไทยพาณิชย์จำกัด (มหาชน) เปิดสำนักงานใหม่"}
+{"function": "segment", "text": "แมวกินปลาทะเล"}
+{"function": "segment", "text": "ผมชอบกินข้าวผัดกะเพราหมูสับ"}
+{"function": "segment", "text": "กรุงเทพมหานครเป็นเมืองหลวงของประเทศไทย"}
+{"function": "segment", "text": "วันนี้อากาศดีมาก ๆ"}
+{"function": "segment", "text": "เขาไปตลาดซื้อผัก ผลไม้ และของชำ"}
+{"function": "similar_words", "text": "กิน", "cutoff": "low"}
+{"function": "similar_words", "text": "กิน", "cutoff": "medium"}
+{"function": "similar_words", "text": "กิน", "cutoff": "high"}
+{"function": "similar_words", "text": "แมว", "cutoff": "low"}
+{"function": "similar_words", "text": "แมว", "cutoff": "medium"}
+{"function": "similar_words", "text": "แมว", "cutoff": "high"}
+{"function": "similar_words", "text": "กรุงเทพ", "cutoff": "low"}
+{"function": "similar_words", "text": "กรุงเทพ", "cutoff": "medium"}
+{"function": "similar_words", "text": "กรุงเทพ", "cutoff": "high"}
+{"function": "similarity", "text": "แมว หมา"}
+{"function": "similarity", "text": "กิน ข้าว"}
+{"function": "similarity", "text": "กรุงเทพ เชียงใหม่"}
+{"function": "similarity", "text": "กิน กิน"}
+{"function": "similarity", "text": "แมว แมว"}
+{"function": "outofgroup", "text": "แมว หมา นก รถยนต์"}
+{"function": "outofgroup", "text": "กิน ดื่ม นอน เดิน"}
+{"function": "outofgroup", "text": "ข้าว น้ำ ผัก คอมพิวเตอร์"}
+{"function": "analogy", "text": "พ่อ แม่ ลูกชาย"}
+{"function": "analogy", "text": "กิน ดื่ม นอน"}
+{"function": "analogy", "text": "กรุงเทพ เชียงใหม่ ขอนแก่น"}
+{"function": "plotwords", "text": "กิน"}
+{"function": "plotwords", "text": "แมว หมา"}
+{"function": "plotwords", "text": "ข้าว น้ำ ผัก"}
+{"function": "ner_tag", "text": "นายประยุทธ์ จันทร์โอชา เดินทางไปหารือ นางโอบาก ที่กรุงเทพฯ"}
+{"function": "ner_tag", "text": "บมจ. ปตท. เปิดเผยกำไรไตรมาสสาม"}
+{"function": "ner_tag", "text": "กทม. ประกาศเตือนประชาชนในพื้นที่ริมแม่น้ำเจ้าพระยา"}
+{"function": "ner_tag", "text": "มหาวิทยาลัยจุฬาลงกรณ์มหาวิทยาลัยจัดประชุมวิชาการที่หัวหิน"}
+{"function": "ner_tag", "text": "ธนาคารแห่งประเทศไทยปรับดอกเบี้ยขึ้น 0.25%"}
+{"function": "ner_tag", "text": "พายุโซนร้อนกำลังเคลื่อนเข้าฝั่งภาคใต้"}
+{"function": "ner_tag", "text": "รองเท้าไนกี้รุ่นใหม่วางจำหน่ายแล้ว"}
+{"function": "ner_tag", "text": "สมเด็จพระนางเจ้าพระบรมราชินีนาถ เสด็จพระราชดำเนิน"}
+{"function": "ner_tag", "text": "กระทรวงศึกษาธิการประกาศผลสอบในวันที่ 20 พฤษภาคม"}
+{"function": "ner_tag", "text": "ช้อปปิ้งที่เซ็นทรัลลาดพร้าว แล้วไปกินข้าวที่สยามพารากอน"}
+{"function": "ner_tag", "text": "โรงพยาบาลศิริราช ปิดผ่าตัดด้วยหุ่นยนต์"}
+{"function": "ner_tag", "text": "หุ้น Thai Oil ร่วงหนัก"}
+{"function": "ner_tag", "text": "นายกนุพล แก้วตะโค ชี้ประเด็นในสภา"}
+{"function": "ner_tag", "text": "แอปเปิลเปิดตัวไอโฟนรุ่นใหม่ที่แอปเปิลพาร์ก"}
+{"function": "ner_tag", "text": "กูเกิลซื้อกิจการของยูทูบเมื่อปี 2549"}

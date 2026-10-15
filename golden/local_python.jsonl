@@ -1,0 +1,235 @@
+{"function": "word_segment", "text": "แมว", "cutoff": "medium", "expected": "แมว|<s/>", "ok": true}
+{"function": "word_segment", "text": "กิน", "cutoff": "medium", "expected": "กิน|<s/>", "ok": true}
+{"function": "word_segment", "text": "ปลา", "cutoff": "medium", "expected": "ปลา|<s/>", "ok": true}
+{"function": "word_segment", "text": "แมวกินปลา", "cutoff": "medium", "expected": "แมว|กิน|ปลา|<s/>", "ok": true}
+{"function": "word_segment", "text": "สวัสดีครับ", "cutoff": "medium", "expected": "สวัสดี|ครับ|<s/>", "ok": true}
+{"function": "word_segment", "text": "ภาษาไทย", "cutoff": "medium", "expected": "ภาษาไทย|<s/>", "ok": true}
+{"function": "word_segment", "text": "กรุงเทพมหานคร", "cutoff": "medium", "expected": "กรุงเทพมหานคร|<s/>", "ok": true}
+{"function": "word_segment", "text": "ประเทศไทย", "cutoff": "medium", "expected": "ประเทศ|ไทย|<s/>", "ok": true}
+{"function": "word_segment", "text": "การเดินทาง", "cutoff": "medium", "expected": "การ|เดินทาง|<s/>", "ok": true}
+{"function": "word_segment", "text": "อาหารอร่อย", "cutoff": "medium", "expected": "อาหาร|อร่อย|<s/>", "ok": true}
+{"function": "word_segment", "text": "คอมพิวเตอร์", "cutoff": "medium", "expected": "คอมพิวเตอร์|<s/>", "ok": true}
+{"function": "word_segment", "text": "มหาวิทยาลัย", "cutoff": "medium", "expected": "มหาวิทยาลัย|<s/>", "ok": true}
+{"function": "word_segment", "text": "เอกสารประกอบการประชุม", "cutoff": "medium", "expected": "เอกสาร|ประกอบการ|ประชุม|<s/>", "ok": true}
+{"function": "word_segment", "text": "สุราษฎร์ธานี", "cutoff": "medium", "expected": "สุราษฎร์ธานี|<s/>", "ok": true}
+{"function": "word_segment", "text": "ทรงผม", "cutoff": "medium", "expected": "ทรงผม|<s/>", "ok": true}
+{"function": "word_segment", "text": "ทราบ", "cutoff": "medium", "expected": "ทราบ|<s/>", "ok": true}
+{"function": "word_segment", "text": "กรุณา", "cutoff": "medium", "expected": "กรุณา|<s/>", "ok": true}
+{"function": "word_segment", "text": "กฤษณา", "cutoff": "medium", "expected": "กฤษณา|<s/>", "ok": true}
+{"function": "word_segment", "text": "ฤดูฝน", "cutoff": "medium", "expected": "ฤดูฝน|<s/>", "ok": true}
+{"function": "word_segment", "text": "กลัว", "cutoff": "medium", "expected": "กลัว|<s/>", "ok": true}
+{"function": "word_segment", "text": "กลางคืน", "cutoff": "medium", "expected": "กลางคืน|<s/>", "ok": true}
+{"function": "word_segment", "text": "แสงดี", "cutoff": "medium", "expected": "แสง|ดี|<s/>", "ok": true}
+{"function": "word_segment", "text": "ควายตาม", "cutoff": "medium", "expected": "ควาย|ตาม|<s/>", "ok": true}
+{"function": "word_segment", "text": "มะลิซ้อน", "cutoff": "medium", "expected": "มะลิ|ซ้อน|<s/>", "ok": true}
+{"function": "word_segment", "text": "เรียวเธอคนดอ", "cutoff": "medium", "expected": "เรียว|เธอคนดอ|<s/>", "ok": true}
+{"function": "word_segment", "text": "อยากกินข้าว", "cutoff": "medium", "expected": "อยาก|กิน|ข้าว|<s/>", "ok": true}
+{"function": "word_segment", "text": "หนึ่งสองสาม", "cutoff": "medium", "expected": "หนึ่ง|สอง|สาม|<s/>", "ok": true}
+{"function": "word_segment", "text": "๑๒๓๔", "cutoff": "medium", "expected": "๑๒๓๔|<s/>", "ok": true}
+{"function": "word_segment", "text": "๑๙ ตุลา", "cutoff": "medium", "expected": "๑๙|<s/>ตุลา|<s/>", "ok": true}
+{"function": "word_segment", "text": "๐๑๐๒", "cutoff": "medium", "expected": "๐๑๐๒|<s/>", "ok": true}
+{"function": "word_segment", "text": "แมวกินปลาทะเล", "cutoff": "medium", "expected": "แมว|กิน|ปลาทะเล|<s/>", "ok": true}
+{"function": "word_segment", "text": "ผมชอบกินข้าวผัดกะเพราหมูสับ", "cutoff": "medium", "expected": "ผม|ชอบ|กิน|ข้าวผัดกะเพราหมู|สับ|<s/>", "ok": true}
+{"function": "word_segment", "text": "กรุงเทพมหานครเป็นเมืองหลวงของประเทศไทย", "cutoff": "medium", "expected": "กรุงเทพมหานคร|เป็น|เมืองหลวง|ของ|ประเทศ|ไทย|<s/>", "ok": true}
+{"function": "word_segment", "text": "วันนี้อากาศดีมาก ๆ", "cutoff": "medium", "expected": "วันนี้|อากาศ|ดี|มาก|ๆ|<s/>", "ok": true}
+{"function": "word_segment", "text": "เขาไปตลาดซื้อผัก ผลไม้ และของชำ", "cutoff": "medium", "expected": "เขา|ไป|ตลาด|ซื้อ|ผัก|<s/>ผลไม้|<s/>และ|ของชำ|<s/>", "ok": true}
+{"function": "word_segment", "text": "การประชุมวิชาการจัดขึ้นเมื่อวันที่ 18 มิถุนายน 2566", "cutoff": "medium", "expected": "การ|ประชุม|วิชาการ|จัด|ขึ้น|เมื่อ|วันที่|<s/>18|<s/>มิถุนายน|<s/>2566|<s/>", "ok": true}
+{"function": "word_segment", "text": "นายสมชายซื้อของที่จังหวัดเชียงใหม่", "cutoff": "medium", "expected": "นาย|สม|ชาย|ซื้อของ|ที่|จังหวัด|เชียงใหม่|<s/>", "ok": true}
+{"function": "word_segment", "text": "บริษัทไทยพาณิชย์จำกัด (มหาชน) เปิดสำนักงานใหม่", "cutoff": "medium", "expected": "บริษัท|ไทยพาณิชย์|จำกัด|<s/>(|มหาชน|)|<s/>เปิด|สำนักงาน|ใหม่|<s/>", "ok": true}
+{"function": "word_segment", "text": "I love Thai food มาก", "cutoff": "medium", "expected": "I|<s/>love|<s/>Thai|<s/>food|<s/>มาก|<s/>", "ok": true}
+{"function": "word_segment", "text": "COVID-19 ระบาดในปี 2563", "cutoff": "medium", "expected": "COVID-19|<s/>ระบาด|ใน|ปี|<s/>2563|<s/>", "ok": true}
+{"function": "word_segment", "text": "กินข้าวหรือยัง?", "cutoff": "medium", "expected": "กิน|ข้าว|หรือยัง|?|<s/>", "ok": true}
+{"function": "word_segment", "text": "ราคา 199.- ถูกมาก!", "cutoff": "medium", "expected": "ราคา|<s/>199.-|<s/>ถูก|มาก|!|<s/>", "ok": true}
+{"function": "word_segment", "text": "อ่านหนังสือ...เฉย ๆ", "cutoff": "medium", "expected": "อ่านหนังสือ|...|เฉยๆ|<s/>", "ok": true}
+{"function": "word_segment", "text": "เอบีเอ็น แอมพีเอ็ม", "cutoff": "medium", "expected": "เอบีเอ็น|<s/>แอม|พีเอ็ม|<s/>", "ok": true}
+{"function": "word_segment", "text": "น.ส.สริตา ดอนม่วง ไป สน.ลุมพินี", "cutoff": "medium", "expected": "น.ส.|สริ|ตา|<s/>ดอน|ม่วง|<s/>ไป|<s/>สน.|ลุมพิ|นี|<s/>", "ok": true}
+{"function": "word_segment", "text": "เมื่อวานนี้ฝนตกหนักมากจนน้ำท่วมถนนหลายสายทำให้การจราจรติดขัดเป็นอย่างมาก", "cutoff": "medium", "expected": "เมื่อวานนี้|ฝนตก|หนัก|มาก|จน|น้ำท่วม|ถนน|หลาย|สาย|ทำให้|การจราจร|ติดขัด|เป็น|อย่าง|มาก|<s/>", "ok": true}
+{"function": "word_segment", "text": "ที่ดักไขมันเป็นอุปกรณ์ที่ใช้ในการแยกไขมันออกจากน้ำเสียก่อนที่จะระบายต่อไป", "cutoff": "medium", "expected": "ที่|ดัก|ไขมัน|เป็น|อุปกรณ์|ที่|ใช้|ใน|การ|แยก|ไขมัน|ออก|จาก|น้ำเสีย|ก่อน|ที่|จะ|ระบาย|ต่อไป|<s/>", "ok": true}
+{"function": "syl_segment", "text": "แมว", "cutoff": "medium", "expected": "แมว~<s/>", "ok": true}
+{"function": "syl_segment", "text": "กิน", "cutoff": "medium", "expected": "กิน~<s/>", "ok": true}
+{"function": "syl_segment", "text": "ปลา", "cutoff": "medium", "expected": "ปลา~<s/>", "ok": true}
+{"function": "syl_segment", "text": "แมวกินปลา", "cutoff": "medium", "expected": "แมว~กิน~ปลา~<s/>", "ok": true}
+{"function": "syl_segment", "text": "สวัสดีครับ", "cutoff": "medium", "expected": "สวัส~ดี~ครับ~<s/>", "ok": true}
+{"function": "syl_segment", "text": "ภาษาไทย", "cutoff": "medium", "expected": "ภา~ษา~ไทย~<s/>", "ok": true}
+{"function": "syl_segment", "text": "กรุงเทพมหานคร", "cutoff": "medium", "expected": "กรุง~เทพ~มหา~นคร~<s/>", "ok": true}
+{"function": "syl_segment", "text": "ประเทศไทย", "cutoff": "medium", "expected": "ประ~เทศ~ไทย~<s/>", "ok": true}
+{"function": "syl_segment", "text": "การเดินทาง", "cutoff": "medium", "expected": "การ~เดิน~ทาง~<s/>", "ok": true}
+{"function": "syl_segment", "text": "อาหารอร่อย", "cutoff": "medium", "expected": "อา~หาร~อร่อย~<s/>", "ok": true}
+{"function": "syl_segment", "text": "คอมพิวเตอร์", "cutoff": "medium", "expected": "คอม~พิว~เตอร์~<s/>", "ok": true}
+{"function": "syl_segment", "text": "มหาวิทยาลัย", "cutoff": "medium", "expected": "มหา~วิท~ยา~ลัย~<s/>", "ok": true}
+{"function": "syl_segment", "text": "เอกสารประกอบการประชุม", "cutoff": "medium", "expected": "เอก~สาร~ประ~กอบ~การ~ประ~ชุม~<s/>", "ok": true}
+{"function": "syl_segment", "text": "สุราษฎร์ธานี", "cutoff": "medium", "expected": "สุ~ราษฎร์~ธา~นี~<s/>", "ok": true}
+{"function": "syl_segment", "text": "ทรงผม", "cutoff": "medium", "expected": "ทรง~ผม~<s/>", "ok": true}
+{"function": "syl_segment", "text": "ทราบ", "cutoff": "medium", "expected": "ทราบ~<s/>", "ok": true}
+{"function": "syl_segment", "text": "กรุณา", "cutoff": "medium", "expected": "กรุ~ณา~<s/>", "ok": true}
+{"function": "syl_segment", "text": "กฤษณา", "cutoff": "medium", "expected": "กฤษณา~<s/>", "ok": true}
+{"function": "syl_segment", "text": "ฤดูฝน", "cutoff": "medium", "expected": "ฤ~ดู~ฝน~<s/>", "ok": true}
+{"function": "syl_segment", "text": "กลัว", "cutoff": "medium", "expected": "กลัว~<s/>", "ok": true}
+{"function": "syl_segment", "text": "กลางคืน", "cutoff": "medium", "expected": "กลาง~คืน~<s/>", "ok": true}
+{"function": "syl_segment", "text": "แสงดี", "cutoff": "medium", "expected": "แสง~ดี~<s/>", "ok": true}
+{"function": "syl_segment", "text": "ควายตาม", "cutoff": "medium", "expected": "ควาย~ตาม~<s/>", "ok": true}
+{"function": "syl_segment", "text": "มะลิซ้อน", "cutoff": "medium", "expected": "มะ~ลิ~ซ้อน~<s/>", "ok": true}
+{"function": "syl_segment", "text": "เรียวเธอคนดอ", "cutoff": "medium", "expected": "เรียว~เธอค~นดอ~<s/>", "ok": true}
+{"function": "syl_segment", "text": "อยากกินข้าว", "cutoff": "medium", "expected": "อยาก~กิน~ข้าว~<s/>", "ok": true}
+{"function": "syl_segment", "text": "หนึ่งสองสาม", "cutoff": "medium", "expected": "หนึ่ง~สอง~สาม~<s/>", "ok": true}
+{"function": "syl_segment", "text": "๑๒๓๔", "cutoff": "medium", "expected": "๑๒๓๔~<s/>", "ok": true}
+{"function": "syl_segment", "text": "๑๙ ตุลา", "cutoff": "medium", "expected": "๑๙~<s/>ตุ~ลา~<s/>", "ok": true}
+{"function": "syl_segment", "text": "๐๑๐๒", "cutoff": "medium", "expected": "๐๑๐๒~<s/>", "ok": true}
+{"function": "syl_segment", "text": "แมวกินปลาทะเล", "cutoff": "medium", "expected": "แมว~กิน~ปลา~ทะ~เล~<s/>", "ok": true}
+{"function": "syl_segment", "text": "ผมชอบกินข้าวผัดกะเพราหมูสับ", "cutoff": "medium", "expected": "ผม~ชอบ~กิน~ข้าว~ผัด~กะ~เพรา~หมู~สับ~<s/>", "ok": true}
+{"function": "syl_segment", "text": "กรุงเทพมหานครเป็นเมืองหลวงของประเทศไทย", "cutoff": "medium", "expected": "กรุง~เทพ~มหา~นคร~เป็น~เมือง~หลวง~ของ~ประ~เทศ~ไทย~<s/>", "ok": true}
+{"function": "syl_segment", "text": "วันนี้อากาศดีมาก ๆ", "cutoff": "medium", "expected": "วัน~นี้~อา~กาศ~ดี~มาก~ๆ~<s/>", "ok": true}
+{"function": "syl_segment", "text": "เขาไปตลาดซื้อผัก ผลไม้ และของชำ", "cutoff": "medium", "expected": "เขา~ไป~ตลาด~ซื้อ~ผัก~<s/>ผล~ไม้~<s/>และ~ของ~ชำ~<s/>", "ok": true}
+{"function": "syl_segment", "text": "การประชุมวิชาการจัดขึ้นเมื่อวันที่ 18 มิถุนายน 2566", "cutoff": "medium", "expected": "การ~ประ~ชุม~วิ~ชา~การ~จัด~ขึ้น~เมื่อ~วัน~ที่~<s/>18~<s/>มิ~ถุ~นา~ยน~<s/>2566~<s/>", "ok": true}
+{"function": "syl_segment", "text": "นายสมชายซื้อของที่จังหวัดเชียงใหม่", "cutoff": "medium", "expected": "นาย~สม~ชาย~ซื้อ~ของ~ที่~จัง~หวัด~เชียง~ใหม่~<s/>", "ok": true}
+{"function": "syl_segment", "text": "บริษัทไทยพาณิชย์จำกัด (มหาชน) เปิดสำนักงานใหม่", "cutoff": "medium", "expected": "บริ~ษัท~ไทย~พา~ณิชย์~จำ~กัด~<s/>(~มหา~ชน~)~<s/>เปิด~สำ~นัก~งาน~ใหม่~<s/>", "ok": true}
+{"function": "syl_segment", "text": "I love Thai food มาก", "cutoff": "medium", "expected": "I~<s/>love~<s/>Thai~<s/>food~<s/>มาก~<s/>", "ok": true}
+{"function": "syl_segment", "text": "COVID-19 ระบาดในปี 2563", "cutoff": "medium", "expected": "COVID-19~<s/>ระ~บาด~ใน~ปี~<s/>2563~<s/>", "ok": true}
+{"function": "syl_segment", "text": "กินข้าวหรือยัง?", "cutoff": "medium", "expected": "กิน~ข้าว~หรือ~ยัง~?~<s/>", "ok": true}
+{"function": "syl_segment", "text": "ราคา 199.- ถูกมาก!", "cutoff": "medium", "expected": "รา~คา~<s/>199.-~<s/>ถูก~มาก~!~<s/>", "ok": true}
+{"function": "syl_segment", "text": "อ่านหนังสือ...เฉย ๆ", "cutoff": "medium", "expected": "อ่าน~หนัง~สือ~...~เฉย~ๆ~<s/>", "ok": true}
+{"function": "syl_segment", "text": "เอบีเอ็น แอมพีเอ็ม", "cutoff": "medium", "expected": "เอ~บี~เอ็น~<s/>แอม~พี~เอ็ม~<s/>", "ok": true}
+{"function": "syl_segment", "text": "น.ส.สริตา ดอนม่วง ไป สน.ลุมพินี", "cutoff": "medium", "expected": "น.~ส.~สริ~ตา~<s/>ดอน~ม่วง~<s/>ไป~<s/>สน.~ลุม~พิ~นี~<s/>", "ok": true}
+{"function": "syl_segment", "text": "เมื่อวานนี้ฝนตกหนักมากจนน้ำท่วมถนนหลายสายทำให้การจราจรติดขัดเป็นอย่างมาก", "cutoff": "medium", "expected": "เมื่อ~วาน~นี้~ฝน~ตก~หนัก~มาก~จน~น้ำ~ท่วม~ถนน~หลาย~สาย~ทำ~ให้~การ~จรา~จร~ติด~ขัด~เป็น~อย่าง~มาก~<s/>", "ok": true}
+{"function": "syl_segment", "text": "ที่ดักไขมันเป็นอุปกรณ์ที่ใช้ในการแยกไขมันออกจากน้ำเสียก่อนที่จะระบายต่อไป", "cutoff": "medium", "expected": "ที่~ดัก~ไข~มัน~เป็น~อุป~กรณ์~ที่~ใช้~ใน~การ~แยก~ไข~มัน~ออก~จาก~น้ำ~เสีย~ก่อน~ที่~จะ~ระ~บาย~ต่อ~ไป~<s/>", "ok": true}
+{"function": "g2p", "text": "แมว", "cutoff": "medium", "expected": "แมว<tr/>mxxw0|<s/>", "ok": true}
+{"function": "g2p", "text": "กิน", "cutoff": "medium", "expected": "กิน<tr/>kin0|<s/>", "ok": true}
+{"function": "g2p", "text": "ปลา", "cutoff": "medium", "expected": "ปลา<tr/>plaa0|<s/>", "ok": true}
+{"function": "g2p", "text": "แมวกินปลา", "cutoff": "medium", "expected": "แมว~กิน~ปลา<tr/>mxxw0~kin0~plaa0|<s/>", "ok": true}
+{"function": "g2p", "text": "สวัสดีครับ", "cutoff": "medium", "expected": "สวัส~ดี~ครับ<tr/>sa1'wat1~dii0~khrap3|<s/>", "ok": true}
+{"function": "g2p", "text": "ภาษาไทย", "cutoff": "medium", "expected": "ภา~ษา~ไทย<tr/>phaa0~saa4~thaj0|<s/>", "ok": true}
+{"function": "g2p", "text": "กรุงเทพมหานคร", "cutoff": "medium", "expected": "กรุง~เทพ~มหา~นคร<tr/>kruN0~theep2~ma3'haa4~na3'khOOn0|<s/>", "ok": true}
+{"function": "g2p", "text": "ประเทศไทย", "cutoff": "medium", "expected": "ประ~เทศ~ไทย<tr/>pra1~theet2~thaj0|<s/>", "ok": true}
+{"function": "g2p", "text": "การเดินทาง", "cutoff": "medium", "expected": "การ~เดิน~ทาง<tr/>kaan0~d@@n0~thaaN0|<s/>", "ok": true}
+{"function": "g2p", "text": "อาหารอร่อย", "cutoff": "medium", "expected": "อา~หาร~อร่อย<tr/>?aa0~haan4~?a1'rOOj1|<s/>", "ok": true}
+{"function": "g2p", "text": "คอมพิวเตอร์", "cutoff": "medium", "expected": "คอม~พิว~เตอร์<tr/>khOOm0~phiw0~t@@2|<s/>", "ok": true}
+{"function": "g2p", "text": "มหาวิทยาลัย", "cutoff": "medium", "expected": "มหา~วิท~ยา~ลัย<tr/>ma3'haa4~wit3'tha3~jaa0~laj0|<s/>", "ok": true}
+{"function": "g2p", "text": "แมวกินปลาทะเล", "cutoff": "medium", "expected": "แมว~กิน~ปลา~ทะ~เล<tr/>mxxw0~kin0~plaa0~tha3~lee0|<s/>", "ok": true}
+{"function": "g2p", "text": "ผมชอบกินข้าวผัดกะเพราหมูสับ", "cutoff": "medium", "expected": "ผม~ชอบ~กิน~ข้าว~ผัด~กะ~เพรา~หมู~สับ<tr/>phom4~chOOp2~kin0~khaaw2~phat1~ka1~phraw0~muu4~sap1|<s/>", "ok": true}
+{"function": "g2p", "text": "กรุงเทพมหานครเป็นเมืองหลวงของประเทศไทย", "cutoff": "medium", "expected": "กรุง~เทพ~มหา~นคร~เป็น~เมือง~หลวง~ของ~ประ~เทศ~ไทย<tr/>kruN0~theep2~ma3'haa4~na3'khOOn0~pen0~mUUaN0~luuaN4~khOON4~pra1~theet2~thaj0|<s/>", "ok": true}
+{"function": "g2p", "text": "วันนี้อากาศดีมาก ๆ", "cutoff": "medium", "expected": "วัน~นี้~อา~กาศ~ดี~มาก|ๆ<tr/>wan0~nii3~?aa0~kaat1~dii0~maak2|wan0~nii3~?aa0~kaat1~dii0~maak2|<s/>", "ok": true}
+{"function": "g2p", "text": "เขาไปตลาดซื้อผัก ผลไม้ และของชำ", "cutoff": "medium", "expected": "เขา~ไป~ตลาด~ซื้อ~ผัก<tr/>khaw4~paj0~ta1'laat1~sUU3~phak1|<s/>ผล~ไม้<tr/>phon4'la3~maaj3|<s/>และ~ของ~ชำ<tr/>lx3~khOON4~cham0|<s/>", "ok": true}
+{"function": "g2p", "text": "การประชุมวิชาการจัดขึ้นเมื่อวันที่ 18 มิถุนายน 2566", "cutoff": "medium", "expected": "การ~ประ~ชุม~วิ~ชา~การ~จัด~ขึ้น~เมื่อ~วัน~ที่<tr/>kaan0~pra1~chum0~wi3~chaa0~kaan0~cat1~khUn2~mUUa2~wan0~thii2|<s/>18<tr/>18|<s/>มิ~ถุ~นา~ยน<tr/>mi3~thu1~naa0~jon0|<s/>2566<tr/>2566|<s/>", "ok": true}
+{"function": "g2p", "text": "นายสมชายซื้อของที่จังหวัดเชียงใหม่", "cutoff": "medium", "expected": "นาย~สม~ชาย~ซื้อ~ของ~ที่~จัง~หวัด~เชียง~ใหม่<tr/>naaj0~som4~chaaj0~sUU3~khOON4~thii2~caN0~wat1~chiiaN0~maj1|<s/>", "ok": true}
+{"function": "g2p", "text": "บริษัทไทยพาณิชย์จำกัด (มหาชน) เปิดสำนักงานใหม่", "cutoff": "medium", "expected": "บริ~ษัท~ไทย~พา~ณิชย์~จำ~กัด<tr/>bOO0'ri3~sat1~thaj0~phaa0~nit3~cam0~kat1|<s/>(<tr/>(|มหา~ชน<tr/>ma3'haa4~chon0|)<tr/>)|<s/>เปิด~สำ~นัก~งาน~ใหม่<tr/>p@@t1~sam4~nak3~Naan0~maj1|<s/>", "ok": true}
+{"function": "th2ipa", "text": "แมว", "cutoff": "medium", "expected": "mɛːw1 <s/>", "ok": true}
+{"function": "th2ipa", "text": "กิน", "cutoff": "medium", "expected": "kin1 <s/>", "ok": true}
+{"function": "th2ipa", "text": "ปลา", "cutoff": "medium", "expected": "plaː1 <s/>", "ok": true}
+{"function": "th2ipa", "text": "แมวกินปลา", "cutoff": "medium", "expected": "mɛːw1.kin1.plaː1 <s/>", "ok": true}
+{"function": "th2ipa", "text": "สวัสดีครับ", "cutoff": "medium", "expected": "sa2.wat2.diː1.kʰrap4 <s/>", "ok": true}
+{"function": "th2ipa", "text": "ภาษาไทย", "cutoff": "medium", "expected": "pʰaː1.saː5.tʰaj1 <s/>", "ok": true}
+{"function": "th2ipa", "text": "กรุงเทพมหานคร", "cutoff": "medium", "expected": "kruŋ1.tʰeːp3.ma4.haː5.na4.kʰᴐːn1 <s/>", "ok": true}
+{"function": "th2ipa", "text": "ประเทศไทย", "cutoff": "medium", "expected": "pra2.tʰeːt3.tʰaj1 <s/>", "ok": true}
+{"function": "th2ipa", "text": "การเดินทาง", "cutoff": "medium", "expected": "kaːn1.dɤːn1.tʰaːŋ1 <s/>", "ok": true}
+{"function": "th2ipa", "text": "อาหารอร่อย", "cutoff": "medium", "expected": "ʔaː1.haːn5.ʔa2.rᴐːj2 <s/>", "ok": true}
+{"function": "th2ipa", "text": "คอมพิวเตอร์", "cutoff": "medium", "expected": "kʰᴐːm1.pʰiw1.tɤː3 <s/>", "ok": true}
+{"function": "th2ipa", "text": "มหาวิทยาลัย", "cutoff": "medium", "expected": "ma4.haː5.wit4.tʰa4.jaː1.laj1 <s/>", "ok": true}
+{"function": "th2ipa", "text": "แมวกินปลาทะเล", "cutoff": "medium", "expected": "mɛːw1.kin1.plaː1.tʰa4.leː1 <s/>", "ok": true}
+{"function": "th2ipa", "text": "ผมชอบกินข้าวผัดกะเพราหมูสับ", "cutoff": "medium", "expected": "pʰom5.cʰᴐːp3.kin1.kʰaːw3.pʰat2.ka2.pʰraw1.muː5.sap2 <s/>", "ok": true}
+{"function": "th2ipa", "text": "กรุงเทพมหานครเป็นเมืองหลวงของประเทศไทย", "cutoff": "medium", "expected": "kruŋ1.tʰeːp3.ma4.haː5.na4.kʰᴐːn1.pen1.mɯːaŋ1.luːaŋ5.kʰᴐːŋ5.pra2.tʰeːt3.tʰaj1 <s/>", "ok": true}
+{"function": "th2ipa", "text": "วันนี้อากาศดีมาก ๆ", "cutoff": "medium", "expected": "wan1.niː4.ʔaː1.kaːt2.diː1.maːk3 wan1.niː4.ʔaː1.kaːt2.diː1.maːk3 <s/>", "ok": true}
+{"function": "th2ipa", "text": "เขาไปตลาดซื้อผัก ผลไม้ และของชำ", "cutoff": "medium", "expected": "kʰaw5.paj1.ta2.laːt2.sɯː4.pʰak2 <s/>pʰon5.la4.maːj4 <s/>lɛ4.kʰᴐːŋ5.cʰam1 <s/>", "ok": true}
+{"function": "th2ipa", "text": "การประชุมวิชาการจัดขึ้นเมื่อวันที่ 18 มิถุนายน 2566", "cutoff": "medium", "expected": "kaːn1.pra2.cʰum1.wi4.cʰaː1.kaːn1.cat2.kʰɯn3.mɯːa3.wan1.tʰiː3 <s/>28 <s/>mi4.tʰu2.naː1.jon1 <s/>3566 <s/>", "ok": true}
+{"function": "th2roman", "text": "แมว", "cutoff": "medium", "expected": "maeo <s/>", "ok": true}
+{"function": "th2roman", "text": "กิน", "cutoff": "medium", "expected": "kin <s/>", "ok": true}
+{"function": "th2roman", "text": "ปลา", "cutoff": "medium", "expected": "pla <s/>", "ok": true}
+{"function": "th2roman", "text": "แมวกินปลา", "cutoff": "medium", "expected": "maeokinpla <s/>", "ok": true}
+{"function": "th2roman", "text": "สวัสดีครับ", "cutoff": "medium", "expected": "sawatdikhrap <s/>", "ok": true}
+{"function": "th2roman", "text": "ภาษาไทย", "cutoff": "medium", "expected": "phasathai <s/>", "ok": true}
+{"function": "th2roman", "text": "กรุงเทพมหานคร", "cutoff": "medium", "expected": "krungthepmahanakhon <s/>", "ok": true}
+{"function": "th2roman", "text": "ประเทศไทย", "cutoff": "medium", "expected": "prathetthai <s/>", "ok": true}
+{"function": "th2roman", "text": "การเดินทาง", "cutoff": "medium", "expected": "kandoenthang <s/>", "ok": true}
+{"function": "th2roman", "text": "อาหารอร่อย", "cutoff": "medium", "expected": "ahan-aroi <s/>", "ok": true}
+{"function": "th2roman", "text": "คอมพิวเตอร์", "cutoff": "medium", "expected": "khomphiotoe <s/>", "ok": true}
+{"function": "th2roman", "text": "มหาวิทยาลัย", "cutoff": "medium", "expected": "mahawitthayalai <s/>", "ok": true}
+{"function": "th2roman", "text": "แมวกินปลาทะเล", "cutoff": "medium", "expected": "maeokinplathale <s/>", "ok": true}
+{"function": "th2roman", "text": "ผมชอบกินข้าวผัดกะเพราหมูสับ", "cutoff": "medium", "expected": "phomchopkinkhaophatkaphraomusap <s/>", "ok": true}
+{"function": "th2roman", "text": "กรุงเทพมหานครเป็นเมืองหลวงของประเทศไทย", "cutoff": "medium", "expected": "krungthepmahanakhonpenmueangluangkhongprathetthai <s/>", "ok": true}
+{"function": "th2roman", "text": "วันนี้อากาศดีมาก ๆ", "cutoff": "medium", "expected": "wanni-akatdimak wanni-akatdimak <s/>", "ok": true}
+{"function": "th2roman", "text": "เขาไปตลาดซื้อผัก ผลไม้ และของชำ", "cutoff": "medium", "expected": "khaopaitalatsuephak <s/>phonlamai <s/>laekhongcham <s/>", "ok": true}
+{"function": "th2roman", "text": "การประชุมวิชาการจัดขึ้นเมื่อวันที่ 18 มิถุนายน 2566", "cutoff": "medium", "expected": "kanprachumwichakanchatkhuenmueawanthi <s/> <s/>mithunayon <s/> <s/>", "ok": true}
+{"function": "th2read", "text": "แมว", "cutoff": "medium", "expected": "แมว-", "ok": true}
+{"function": "th2read", "text": "กิน", "cutoff": "medium", "expected": "กิน-", "ok": true}
+{"function": "th2read", "text": "ปลา", "cutoff": "medium", "expected": "ปฺลา-", "ok": true}
+{"function": "th2read", "text": "แมวกินปลา", "cutoff": "medium", "expected": "แมว-กิน-ปฺลา-", "ok": true}
+{"function": "th2read", "text": "สวัสดีครับ", "cutoff": "medium", "expected": "สะ-หฺวัด-ดี-คฺรับ-", "ok": true}
+{"function": "th2read", "text": "ภาษาไทย", "cutoff": "medium", "expected": "พา-สา-ไท-", "ok": true}
+{"function": "th2read", "text": "กรุงเทพมหานคร", "cutoff": "medium", "expected": "กฺรุง-เทบ-มะ-หา-นะ-คอน-", "ok": true}
+{"function": "th2read", "text": "ประเทศไทย", "cutoff": "medium", "expected": "ปฺระ-เทด-ไท-", "ok": true}
+{"function": "th2read", "text": "การเดินทาง", "cutoff": "medium", "expected": "กาน-เดิน-ทาง-", "ok": true}
+{"function": "th2read", "text": "อาหารอร่อย", "cutoff": "medium", "expected": "อา-หาน-อะ-หฺร่อย-", "ok": true}
+{"function": "th2read", "text": "แมวกินปลาทะเล", "cutoff": "medium", "expected": "แมว-กิน-ปฺลา-ทะ-เล-", "ok": true}
+{"function": "th2read", "text": "ผมชอบกินข้าวผัดกะเพราหมูสับ", "cutoff": "medium", "expected": "ผม-ชอบ-กิน-ค่าว-ผัด-กะ-เพฺรา-หฺมู-สับ-", "ok": true}
+{"function": "th2read", "text": "กรุงเทพมหานครเป็นเมืองหลวงของประเทศไทย", "cutoff": "medium", "expected": "กฺรุง-เทบ-มะ-หา-นะ-คอน-เป็น-เมือง-หฺลวง-ของ-ปฺระ-เทด-ไท-", "ok": true}
+{"function": "th2read", "text": "วันนี้อากาศดีมาก ๆ", "cutoff": "medium", "expected": "วัน-นี้-อา-กาด-ดี-มาก-วัน-นี้-อา-กาด-ดี-มาก-", "ok": true}
+{"function": "th2read", "text": "เขาไปตลาดซื้อผัก ผลไม้ และของชำ", "cutoff": "medium", "expected": "เขา-ไป-ตะ-หฺลาด-ซือ้-ผัก-ผน-ละ-ม้าย-และ-ของ-ชัม-", "ok": true}
+{"function": "spell_variants", "text": "แมวกินปลา", "cutoff": "medium", "expected": "['แมวกินปลา', 'แมวกิลปลา', 'แมวกิรปลา']", "ok": true}
+{"function": "spell_variants", "text": "มะลิซ้อน", "cutoff": "medium", "expected": "['มะฬิซ้อน', 'มะลิซ้อน']", "ok": true}
+{"function": "spell_variants", "text": "สุราษฎร์ธานี", "cutoff": "medium", "expected": "['สุราษฎร์ทาณี', 'สุราษฎร์ทานี', 'สุราษฎร์ธาณี', 'สุราษฎร์ธานี', 'สุราษฎร์ฑาณี', 'สุราษฎร์ฑานี', 'สุราษฎร์ฒาณี', 'สุราษฎร์ฒานี', 'ษุราษฎร์ทาณี', 'ษุราษฎร์ทานี', 'ษุราษฎร์ธาณี', 'ษุราษฎร์ธานี', 'ษุราษฎร์ฑาณี', 'ษุราษฎร์ฑานี', 'ษุราษฎร์ฒาณี', 'ษุราษฎร์ฒานี', 'ศุราษฎร์ทาณี', 'ศุราษฎร์ทานี', 'ศุราษฎร์ธาณี', 'ศุราษฎร์ธานี', 'ศุราษฎร์ฑาณี', 'ศุราษฎร์ฑานี', 'ศุราษฎร์ฒาณี', 'ศุราษฎร์ฒานี']", "ok": true}
+{"function": "spell_variants", "text": "กรุงเทพ", "cutoff": "medium", "expected": "['กรุงเทพ', 'กรุงเทภ', 'กรุงเทบ', 'กรุงเทฟ']", "ok": true}
+{"function": "spell_variants", "text": "ทรงผม", "cutoff": "medium", "expected": "['ทรงผม', 'ซงผม']", "ok": true}
+{"function": "spell_variants", "text": "กฤษณา", "cutoff": "medium", "expected": "['กฤษณา']", "ok": true}
+{"function": "spell_variants", "text": "สวัสดี", "cutoff": "medium", "expected": "['สวัสดี', 'สวัสฎี', 'ษวรรษดี', 'ษวรรษฎี', 'ศวรรธดี', 'ศวรรธฎี', 'สวัษดี', 'สวัษฎี', 'สวัตดี', 'สวัตฎี', 'ศวรรษดี', 'ศวรรษฎี', 'สวัดดี', 'สวัดฎี', 'ศวัสดี', 'ศวัสฎี']", "ok": true}
+{"function": "spell_variants", "text": "ครับ", "cutoff": "medium", "expected": "['ครับ', 'ครัพ']", "ok": true}
+{"function": "spell_variants", "text": "ขอบคุณ", "cutoff": "medium", "expected": "['ขอบคุณ', 'ขอบคุร', 'ขอบคุน', 'ขอบคุญ', 'ขอบคุล', 'ขอบหคุณ']", "ok": true}
+{"function": "spoonerism", "text": "แสงดี", "cutoff": "medium", "expected": "['สี-แดง', 'ซี-แด๋ง']", "ok": true}
+{"function": "spoonerism", "text": "ควายตาม", "cutoff": "medium", "expected": "['คฺวาม-ตาย']", "ok": true}
+{"function": "spoonerism", "text": "มะลิซ้อน", "cutoff": "medium", "expected": "['ม้อน-ลิ-ซะ']", "ok": true}
+{"function": "spoonerism", "text": "ไฟเราแงน", "cutoff": "medium", "expected": "['แฟน-เรา-ไง']", "ok": true}
+{"function": "spoonerism", "text": "แมวกินปลา", "cutoff": "medium", "expected": "['มา-กิน-แปฺลว']", "ok": true}
+{"function": "spoonerism", "text": "สวัสดี", "cutoff": "medium", "expected": "'dat'", "ok": false}
+{"function": "spoonerism", "text": "ประเทศไทย", "cutoff": "medium", "expected": "['ไปฺร-เทศ-ถะ']", "ok": true}
+{"function": "pos_tag", "text": "แมวกินปลาทะเล", "cutoff": "medium", "expected": "แมว/NOUN กิน/VERB ปลาทะเล/NOUN <s/>/PUNCT", "ok": true}
+{"function": "pos_tag", "text": "ผมชอบกินข้าวผัดกะเพราหมูสับ", "cutoff": "medium", "expected": "ผม/PRON ชอบ/VERB กิน/VERB ข้าวผัดกะเพราหมู/NOUN สับ/VERB <s/>/PUNCT", "ok": true}
+{"function": "pos_tag", "text": "กรุงเทพมหานครเป็นเมืองหลวงของประเทศไทย", "cutoff": "medium", "expected": "กรุงเทพมหานคร/PROPN เป็น/VERB เมืองหลวง/NOUN ของ/ADP ประเทศ/NOUN ไทย/PROPN <s/>/PUNCT", "ok": true}
+{"function": "pos_tag", "text": "วันนี้อากาศดีมาก ๆ", "cutoff": "medium", "expected": "วันนี้/NOUN อากาศ/NOUN ดี/ADJ มาก/ADV ๆ/PUNCT <s/>/PUNCT", "ok": true}
+{"function": "pos_tag", "text": "เขาไปตลาดซื้อผัก ผลไม้ และของชำ", "cutoff": "medium", "expected": "เขา/PRON ไป/VERB ตลาด/NOUN ซื้อ/VERB ผัก/NOUN <s/>/PUNCT\nผลไม้/NOUN <s/>/PUNCT\nและ/CCONJ ของชำ/NOUN <s/>/PUNCT", "ok": true}
+{"function": "pos_tag", "text": "การประชุมวิชาการจัดขึ้นเมื่อวันที่ 18 มิถุนายน 2566", "cutoff": "medium", "expected": "การ/NOUN ประชุม/VERB วิชาการ/NOUN จัด/VERB ขึ้น/ADV เมื่อ/ADP วันที่/NOUN <s/>/PUNCT\n18/NUM <s/>/PUNCT\nมิถุนายน/NOUN <s/>/PUNCT\n2566/NUM <s/>/PUNCT", "ok": true}
+{"function": "pos_tag", "text": "นายสมชายซื้อของที่จังหวัดเชียงใหม่", "cutoff": "medium", "expected": "นาย/NOUN สม/PROPN ชาย/NOUN ซื้อของ/ADJ ที่/ADP จังหวัด/NOUN เชียงใหม่/PROPN <s/>/PUNCT", "ok": true}
+{"function": "pos_tag", "text": "บริษัทไทยพาณิชย์จำกัด (มหาชน) เปิดสำนักงานใหม่", "cutoff": "medium", "expected": "บริษัท/NOUN ไทยพาณิชย์/NOUN จำกัด/VERB <s/>/PUNCT\n(/PUNCT มหาชน/NOUN )/PUNCT <s/>/PUNCT\nเปิด/VERB สำนักงาน/NOUN ใหม่/ADJ <s/>/PUNCT", "ok": true}
+{"function": "pos_tag", "text": "I love Thai food มาก", "cutoff": "medium", "expected": "I/SYM <s/>/PUNCT\nlove/SYM <s/>/PUNCT\nThai/SYM <s/>/PUNCT\nfood/SYM <s/>/PUNCT\nมาก/ADV <s/>/PUNCT", "ok": true}
+{"function": "pos_tag", "text": "COVID-19 ระบาดในปี 2563", "cutoff": "medium", "expected": "COVID-19/NOUN <s/>/PUNCT\nระบาด/VERB ใน/ADP ปี/NOUN <s/>/PUNCT\n2563/NUM <s/>/PUNCT", "ok": true}
+{"function": "pos_tag", "text": "แมวกินปลา", "cutoff": "medium", "expected": "แมว/NOUN กิน/VERB ปลา/NOUN <s/>/PUNCT", "ok": true}
+{"function": "pos_tag", "text": "ครับ", "cutoff": "medium", "expected": "ครับ/NOUN <s/>/PUNCT", "ok": true}
+{"function": "ner_tag", "text": "แมวกินปลาทะเล", "cutoff": "medium", "expected": "แมวกินปลาทะเล ", "ok": true}
+{"function": "ner_tag", "text": "ผมชอบกินข้าวผัดกะเพราหมูสับ", "cutoff": "medium", "expected": "ผมชอบกินข้าวผัดกะเพราหมูสับ ", "ok": true}
+{"function": "ner_tag", "text": "กรุงเทพมหานครเป็นเมืองหลวงของประเทศไทย", "cutoff": "medium", "expected": "<NEl>กรุงเทพมหานคร</NEl>เป็นเมืองหลวงของ<NEl>ประเทศไทย</NEl> ", "ok": true}
+{"function": "ner_tag", "text": "วันนี้อากาศดีมาก ๆ", "cutoff": "medium", "expected": "วันนี้อากาศดีมากๆ ", "ok": true}
+{"function": "ner_tag", "text": "เขาไปตลาดซื้อผัก ผลไม้ และของชำ", "cutoff": "medium", "expected": "เขาไปตลาดซื้อผัก ผลไม้ และของชำ ", "ok": true}
+{"function": "ner_tag", "text": "การประชุมวิชาการจัดขึ้นเมื่อวันที่ 18 มิถุนายน 2566", "cutoff": "medium", "expected": "การประชุมวิชาการจัดขึ้นเมื่อวันที่ 18 มิถุนายน 2566 ", "ok": true}
+{"function": "ner_tag", "text": "นายสมชายซื้อของที่จังหวัดเชียงใหม่", "cutoff": "medium", "expected": "<NEp>นายสมชาย</NEp>ซื้อของที่<NEl>จังหวัดเชียงใหม่</NEl> ", "ok": true}
+{"function": "ner_tag", "text": "บริษัทไทยพาณิชย์จำกัด (มหาชน) เปิดสำนักงานใหม่", "cutoff": "medium", "expected": "<NEo>บริษัทไทยพาณิชย์จำกัด (มหาชน)</NEo> เปิดสำนักงานใหม่ ", "ok": true}
+{"function": "segment", "text": "แมวกินปลาทะเล", "cutoff": "medium", "expected": "node array from the pickle has an incompatible dtype:\n- expected: {'names': ['left_child', 'right_child', 'feature', 'threshold', 'impurity', 'n_node_samples', 'weighted_n_node_samples', 'missing_go_to_left'], 'formats': ['<i8', '<i8', '<i8', '<f8', '<f8', '<i8', '<f8', 'u1'], 'offsets': [0, 8, 16, 24, 32, 40, 48, 56], 'itemsize': 64}\n- got     : [('left_child', '<i8'), ('right_child', '<i8'), ('feature', '<i8'), ('threshold', '<f8'), ('impurity', '<f8'), ('n_node_samples', '<i8'), ('weighted_n_node_samples', '<f8')]", "ok": false}
+{"function": "segment", "text": "ผมชอบกินข้าวผัดกะเพราหมูสับ", "cutoff": "medium", "expected": "This Pipeline instance is not fitted yet. Call 'fit' with appropriate arguments before using this estimator.", "ok": false}
+{"function": "segment", "text": "กรุงเทพมหานครเป็นเมืองหลวงของประเทศไทย", "cutoff": "medium", "expected": "This Pipeline instance is not fitted yet. Call 'fit' with appropriate arguments before using this estimator.", "ok": false}
+{"function": "segment", "text": "วันนี้อากาศดีมาก ๆ", "cutoff": "medium", "expected": "This Pipeline instance is not fitted yet. Call 'fit' with appropriate arguments before using this estimator.", "ok": false}
+{"function": "segment", "text": "เขาไปตลาดซื้อผัก ผลไม้ และของชำ", "cutoff": "medium", "expected": "This Pipeline instance is not fitted yet. Call 'fit' with appropriate arguments before using this estimator.", "ok": false}
+{"function": "similar_words", "text": "กิน", "cutoff": "low", "expected": "รับประทาน, ทาน, เคี้ยว, รองท้อง, ดื่ม, กินน้ำ, คลุก, กินที่, หิว, ข้าวต้ม", "ok": true}
+{"function": "similar_words", "text": "กิน", "cutoff": "medium", "expected": "รับประทาน, ทาน, เคี้ยว, รองท้อง, ดื่ม, กินน้ำ, คลุก, กินที่, หิว, ข้าวต้ม", "ok": true}
+{"function": "similar_words", "text": "กิน", "cutoff": "high", "expected": "รับประทาน, ทาน, เคี้ยว", "ok": true}
+{"function": "similar_words", "text": "แมว", "cutoff": "low", "expected": "ลิง, กระต่าย, สุนัข, หมา, เหมียว, สิงโต, หมาป่า, หมี, งู, ชะนี", "ok": true}
+{"function": "similar_words", "text": "แมว", "cutoff": "medium", "expected": "ลิง, กระต่าย, สุนัข, หมา, เหมียว, สิงโต, หมาป่า, หมี, งู, ชะนี", "ok": true}
+{"function": "similar_words", "text": "แมว", "cutoff": "high", "expected": "ลิง, กระต่าย, สุนัข, หมา, เหมียว, สิงโต, หมาป่า, หมี, งู", "ok": true}
+{"function": "similar_words", "text": "กรุงเทพ", "cutoff": "low", "expected": "คอนโด, เวตาล, พณ, แตร์, เลขา, แบต, สวิต, สหรัฐ, อุทยาน, ไฮโซ", "ok": true}
+{"function": "similar_words", "text": "กรุงเทพ", "cutoff": "medium", "expected": "คอนโด, เวตาล, พณ, แตร์, เลขา, แบต, สวิต, สหรัฐ, อุทยาน, ไฮโซ", "ok": true}
+{"function": "similar_words", "text": "กรุงเทพ", "cutoff": "high", "expected": "คอนโด, เวตาล, พณ", "ok": true}
+{"function": "similarity", "text": "แมว หมา", "cutoff": "medium", "expected": "ความคล้ายระหว่าง 'แมว' กับ 'หมา' = 0.7433", "ok": true}
+{"function": "similarity", "text": "กิน ข้าว", "cutoff": "medium", "expected": "ความคล้ายระหว่าง 'กิน' กับ 'ข้าว' = 0.4130", "ok": true}
+{"function": "similarity", "text": "กรุงเทพ เชียงใหม่", "cutoff": "medium", "expected": "ความคล้ายระหว่าง 'กรุงเทพ' กับ 'เชียงใหม่' = 0.0000", "ok": true}
+{"function": "similarity", "text": "กิน กิน", "cutoff": "medium", "expected": "ความคล้ายระหว่าง 'กิน' กับ 'กิน' = 1.0000", "ok": true}
+{"function": "similarity", "text": "แมว แมว", "cutoff": "medium", "expected": "ความคล้ายระหว่าง 'แมว' กับ 'แมว' = 1.0000", "ok": true}
+{"function": "ner_tag", "text": "นายประยุทธ์ จันทร์โอชา เดินทางไปหารือ นางโอบาก ที่กรุงเทพฯ", "cutoff": "medium", "expected": "<NEp>นายประยุทธ์ จันทร์โอชา</NEp> เดินทางไปหารือ <NEp>นางโอบาก </NEp>ที่<NEl>กรุงเทพฯ</NEl> ", "ok": true}
+{"function": "ner_tag", "text": "บมจ. ปตท. เปิดเผยกำไรไตรมาสสาม", "cutoff": "medium", "expected": "<NEo>บมจ. ปตท.</NEo> เปิดเผยกำไรไตรมาสสาม ", "ok": true}
+{"function": "ner_tag", "text": "กทม. ประกาศเตือนประชาชนในพื้นที่ริมแม่น้ำเจ้าพระยา", "cutoff": "medium", "expected": "<NEo>กทม.</NEo> ประกาศเตือนประชาชนในพื้นที่ริมแม่น้ำเจ้าพระยา ", "ok": true}
+{"function": "ner_tag", "text": "มหาวิทยาลัยจุฬาลงกรณ์มหาวิทยาลัยจัดประชุมวิชาการที่หัวหิน", "cutoff": "medium", "expected": "<NEo>มหาวิทยาลัยจุฬาลงกรณ์มหาวิทยาลัย</NEo>จัดประชุมวิชาการที่หัวหิน ", "ok": true}
+{"function": "ner_tag", "text": "ธนาคารแห่งประเทศไทยปรับดอกเบี้ยขึ้น 0.25%", "cutoff": "medium", "expected": "<NEo>ธนาคารแห่งประเทศไทย</NEo>ปรับดอกเบี้ยขึ้น 0.25% ", "ok": true}
+{"function": "ner_tag", "text": "พายุโซนร้อนกำลังเคลื่อนเข้าฝั่งภาคใต้", "cutoff": "medium", "expected": "พายุโซนร้อนกำลังเคลื่อนเข้าฝั่งภาคใต้ ", "ok": true}
+{"function": "ner_tag", "text": "รองเท้าไนกี้รุ่นใหม่วางจำหน่ายแล้ว", "cutoff": "medium", "expected": "รองเท้าไนกี้รุ่นใหม่วางจำหน่ายแล้ว ", "ok": true}
+{"function": "ner_tag", "text": "สมเด็จพระนางเจ้าพระบรมราชินีนาถ เสด็จพระราชดำเนิน", "cutoff": "medium", "expected": "<NEo>สมเด็จพระนางเจ้าพระบรมราชินีนาถ เสด็จพระราชดำเนิน</NEo> ", "ok": true}
+{"function": "ner_tag", "text": "กระทรวงศึกษาธิการประกาศผลสอบในวันที่ 20 พฤษภาคม", "cutoff": "medium", "expected": "<NEo>กระทรวงศึกษาธิการ</NEo>ประกาศผลสอบในวันที่ 20 <NEp>พฤษภาคม </NEp>", "ok": true}
+{"function": "ner_tag", "text": "ช้อปปิ้งที่เซ็นทรัลลาดพร้าว แล้วไปกินข้าวที่สยามพารากอน", "cutoff": "medium", "expected": "ช้อปปิ้งที่เซ็นทรัลลาดพร้าว แล้วไปกินข้าวที่สยามพารากอน ", "ok": true}
+{"function": "ner_tag", "text": "โรงพยาบาลศิริราช ปิดผ่าตัดด้วยหุ่นยนต์", "cutoff": "medium", "expected": "<NEo>โรงพยาบาลศิริราช</NEo> ปิดผ่าตัดด้วยหุ่นยนต์ ", "ok": true}
+{"function": "ner_tag", "text": "หุ้น Thai Oil ร่วงหนัก", "cutoff": "medium", "expected": "<NEp>หุ้น Thai Oil ร่วงหนัก </NEp>", "ok": true}
+{"function": "ner_tag", "text": "นายกนุพล แก้วตะโค ชี้ประเด็นในสภา", "cutoff": "medium", "expected": "<NEp>นายกนุพล แก้วตะโค </NEp>ชี้ประเด็นในสภา ", "ok": true}
+{"function": "ner_tag", "text": "แอปเปิลเปิดตัวไอโฟนรุ่นใหม่ที่แอปเปิลพาร์ก", "cutoff": "medium", "expected": "แอปเปิลเปิดตัวไอโฟนรุ่นใหม่ที่แอปเปิลพาร์ก ", "ok": true}
+{"function": "ner_tag", "text": "กูเกิลซื้อกิจการของยูทูบเมื่อปี 2549", "cutoff": "medium", "expected": "กูเกิลซื้อกิจการของยูทูบเมื่อปี 2549 ", "ok": true}

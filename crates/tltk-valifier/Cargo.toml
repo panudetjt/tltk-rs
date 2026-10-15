@@ -1,0 +1,15 @@
+[package]
+name = "tltk-valifier"
+description = "Parity harness: run tltk-core over a corpus and diff against golden responses (stichula validator / local python oracle)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+tltk-core = { path = "../tltk-core", default-features = false }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[[bin]]
+name = "valifier"
+path = "src/main.rs"

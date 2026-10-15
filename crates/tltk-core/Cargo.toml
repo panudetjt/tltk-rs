@@ -1,0 +1,19 @@
+[package]
+name = "tltk-core"
+description = "Rust rewrite of TLTK (Thai Language Toolkit) inference primitives — modelless, deterministic"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+regex = "1"
+flate2 = "1"
+
+[dev-dependencies]
+serde_json = "1"
+
+[features]
+default = ["embedded-models"]
+# Embed the five small model blobs (thdict/sylseg/sylvar/phs/pos) via include_bytes!.
+# edu + w2v stay external (R2/loader) — see tltk-worker.
+embedded-models = []

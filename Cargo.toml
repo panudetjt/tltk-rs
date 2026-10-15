@@ -1,0 +1,19 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/tltk-core",
+    "crates/tltk-worker",
+    "crates/tltk-valifier",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+repository = "https://github.com/panudetjt/tltk"
+
+[profile.release]
+opt-level = "s"
+lto = true
+# NOTE: no `strip = true` here — stripping the wasm drops the externref table
+# and wasm-bindgen's catch wrappers fail ("externref table required").

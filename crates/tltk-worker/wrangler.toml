@@ -1,0 +1,17 @@
+name = "tltk-rs"
+main = "build/index.js"
+compatibility_date = "2025-09-01"
+
+# Big models (edu.bin.gz, w2v.bin.gz, ner.bin.gz) live in an R2 bucket bound
+# as MODELS; they are fetched once per isolate at cold start and cached in a
+# global. Small models (thdict/sylseg/sylvar/phs/pos) are embedded in the WASM.
+[[r2_buckets]]
+binding = "MODELS"
+bucket_name = "tltk-models"
+
+[vars]
+# optional: serve under the same path prefix as the original validator
+BASE_PATH = "/py/tltk"
+
+[build]
+command = "cargo install -q worker-build && worker-build --release"
