@@ -460,8 +460,8 @@ impl<'a> Session<'a> {
     pub fn sylparse(&mut self, input: &str) -> String {
         self.pronun.clear();
         let dbg = debug_enabled();
-        let chars: Vec<char> = input.chars().collect();
-        let n = chars.len();
+        let offs: Vec<usize> = input.char_indices().map(|(b, _)| b).collect();
+        let n = offs.len();
         let mut schart: Vec<SpanMap<Vec<String>>> = (0..=n).map(|_| SpanMap::new()).collect();
         let mut prob_end: HashMap<(usize, usize), f64> = HashMap::new();
         static RE_THORR: std::sync::OnceLock<regex::Regex> = std::sync::OnceLock::new();
@@ -471,8 +471,8 @@ impl<'a> Session<'a> {
 
         for pp in &self.m.pron {
             for i in 0..n {
-                let rest: String = chars[i..].iter().collect();
-                let m = match pp.re.captures(&rest) {
+                let rest = &input[offs[i]..];
+                let m = match pp.re.captures(rest) {
                     Some(m) => m,
                     None => continue,
                 };

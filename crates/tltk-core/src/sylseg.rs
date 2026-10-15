@@ -194,8 +194,8 @@ impl<'a> Session<'a> {
 
     /// Port of sylseg — trigram chart parse over syllable-pattern edges.
     pub fn sylseg(&mut self, input: &str) -> String {
-        let chars: Vec<char> = input.chars().collect();
-        let n = chars.len();
+        let offs: Vec<usize> = input.char_indices().map(|(b, _)| b).collect();
+        let n = offs.len();
         let mut schart: Vec<SpanMap<Vec<String>>> = (0..=n).map(|_| SpanMap::new()).collect();
         let mut prob_end: std::collections::HashMap<(usize, usize), f64> = std::collections::HashMap::new();
 
@@ -203,8 +203,8 @@ impl<'a> Session<'a> {
         let dbg = debug_enabled();
         for pp in &self.m.pron {
             for i in 0..n {
-                let rest: String = chars[i..].iter().collect();
-                if let Some(m) = pp.re.captures(&rest) {
+                let rest = &input[offs[i]..];
+                if let Some(m) = pp.re.captures(rest) {
                     let whole = m.get(0).unwrap();
                     let k = i + whole.as_str().chars().count();
                     let form = whole.as_str().to_string();
