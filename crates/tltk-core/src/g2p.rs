@@ -253,7 +253,8 @@ pub fn tone_assign(keymatch: &str, phone_in: &str, codematch: &str, charmatch: &
     let mut lead = String::new();
     let init;
     let has_x = codematch.contains('X') || codematch == "GH" || codematch == "EF";
-    let re_akcr = regex::Regex::new("AK|CR").unwrap();
+    static RE_AKCR: std::sync::OnceLock<regex::Regex> = std::sync::OnceLock::new();
+    let re_akcr = RE_AKCR.get_or_init(|| regex::Regex::new("AK|CR").unwrap());
     if has_x {
         let lx: Vec<&str> = charmatch.split(' ').collect();
         lead = String::new();
