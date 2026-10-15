@@ -370,8 +370,7 @@ pub fn transform_syl(form: &str, phone: &str) -> (String, String) {
 
 /// Port of ProbPhone.
 pub fn prob_phone(sess: &Session, p: &str, pw: &str, w: &str, nw: &str) -> f64 {
-    static DEBUG: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
-    let dbg = *DEBUG.get_or_init(|| std::env::var("TLTK_DEBUG").is_ok());
+    let dbg = debug_enabled();
     let m = &sess.m.phs;
     let id = |s: &str| -> u32 { m.syl_id(s) };
     let (iw, iww, inw, ip) = (id(w), id(pw), id(nw), id(p));
@@ -459,7 +458,7 @@ impl<'a> Session<'a> {
     /// populated in self.pronun (cleared per call, like the Python global).
     pub fn sylparse(&mut self, input: &str) -> String {
         self.pronun.clear();
-        let dbg = std::env::var("TLTK_DEBUG").is_ok();
+        let dbg = debug_enabled();
         let chars: Vec<char> = input.chars().collect();
         let n = chars.len();
         let mut schart: Vec<SpanMap<Vec<String>>> = (0..=n).map(|_| SpanMap::new()).collect();

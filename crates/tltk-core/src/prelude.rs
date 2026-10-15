@@ -12,6 +12,12 @@ pub const SSEG_SEP_STR: &str = "\u{1E}";
 pub fn is_thai_char(c: char) -> bool {
     ('\u{0E01}'..='\u{0E4E}').contains(&c)
 }
+static DEBUG_ENABLED: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+
+pub fn debug_enabled() -> bool {
+    *DEBUG_ENABLED.get_or_init(|| std::env::var("TLTK_DEBUG").is_ok())
+}
+
 
 /// Python: re.match(r"[^ก-์]+", inp) — some match iff first char is NOT in [ก-์].
 pub fn starts_non_thai(inp: &str) -> bool {

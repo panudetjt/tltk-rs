@@ -110,8 +110,7 @@ impl<'a> Session<'a> {
         let mi = (bi * self.total_word as f64) / (c1 * c2);
         // Python: value = abs(math.log(mi, 2)) — abs of the LOG, not of mi
         let value = mi.log2().abs();
-        static DEBUG: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
-        if *DEBUG.get_or_init(|| std::env::var("TLTK_DEBUG").is_ok()) {
+        if debug_enabled() {
             eprintln!("colloc mi {:?},{:?} bi={} c1={} c2={} TW={} -> {}", w1, w2, bi, c1, c2, self.total_word, value);
         }
         value
@@ -120,8 +119,7 @@ impl<'a> Session<'a> {
     /// Port of prob_wb — Witten-Bell smoothed trigram probability (log space),
     /// tltk 1.10 coefficients (0.8 / 0.15 / 0.1 / 1/N).
     pub fn prob_wb(&self, w: &str, pw1: &str, pw2: &str) -> f64 {
-        static DEBUG: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
-        let dbg = *DEBUG.get_or_init(|| std::env::var("TLTK_DEBUG").is_ok());
+        let dbg = debug_enabled();
         let mut p3 = 0.0;
         let mut p2 = 0.0;
         let mut p1 = 0.0;
@@ -202,7 +200,7 @@ impl<'a> Session<'a> {
         let mut prob_end: std::collections::HashMap<(usize, usize), f64> = std::collections::HashMap::new();
 
         // edge generation: every pattern (insertion order) × every position
-        let dbg = std::env::var("TLTK_DEBUG").is_ok();
+        let dbg = debug_enabled();
         for pp in &self.m.pron {
             for i in 0..n {
                 let rest: String = chars[i..].iter().collect();
@@ -227,7 +225,7 @@ impl<'a> Session<'a> {
                     merged_list.extend_from_slice(&s1);
                     merged_list.extend_from_slice(s2);
                     let tmp = mergekaran(&merged_list);
-                    let dbg = std::env::var("TLTK_DEBUG").is_ok();
+                    let dbg = debug_enabled();
                     if !row0.contains(k) {
                         if dbg {
                             eprintln!("round j={} NEW (0,{}) tmp={:?} p={:.6}", j, k, tmp, self.prob_trisyl(&tmp));
