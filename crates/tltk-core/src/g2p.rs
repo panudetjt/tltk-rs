@@ -406,7 +406,7 @@ pub fn prob_phone(sess: &Session, p: &str, pw: &str, w: &str, nw: &str) -> f64 {
     let abs_w: String = w
         .chars()
         .filter(|c| !matches!(c, '\u{0E48}' | '\u{0E49}' | '\u{0E4A}' | '\u{0E4B}'))
-        .map(|c| if ('\u{0E01}'..='\u{0E4A}').contains(&c) { 'C' } else { c })
+        .map(|c| if ('\u{0E01}'..='\u{0E2E}').contains(&c) { 'C' } else { c })
         .collect();
     let abs_p: String = p
         .chars()
@@ -754,5 +754,29 @@ impl<'a> Session<'a> {
             }
         }
         chart[0].contains(end_of_sent)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::embedded;
+    use crate::Tltk;
+
+    #[test]
+    fn test_prob_phone_abs_w_vowel_range() {
+        let tltk = Tltk::new(embedded::models());
+        let sess = tltk.session();
+
+        // In Python 1.10 ProbPhone:
+        // abs_w = re.sub(r"[ก-ฮ]", "C", abs_w) maps only consonants ก-ฮ (0E01..=0E2E).
+        // For w="การ" (ก + า + ร), consonants ก and ร become 'C', preserving vowel 'า' -> "CาC".
+        // abs_p for "kaan0" becomes "CaaC".
+        // AbsUnigram[("CาC", "CaaC")] = 4135.0, yielding p0 ~ 0.9628.
+        // Under the buggy range 0E01..=0E4A, vowel 'า' was also mapped to 'C' -> "CCC",
+        // where AbsUnigram[("CCC", "CaaC")] was 0, incorrectly zeroing p0.
+        let prob = prob_phone(&sess, "kaan0", "|", "การ", "|");
+        // Oracle ProbPhone('kaan0', '|', 'การ', '|') == 0.988481885347311
+        assert!((prob - 0.988481885347311).abs() < 1e-6);
     }
 }
