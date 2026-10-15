@@ -54,10 +54,9 @@ with binary search at load:
 | sylvar | 0.06 MB | sylform_var.pklz | embedded |
 | phs | 1.2 MB | PhSTrigram.sts (8 derived tables) | embedded |
 | pos | 1.1 MB | pos_tagger.pklz (PerceptronTagger) | embedded |
+| ner | 0.09 MB | crfsuite model (see NER note) | embedded |
 | edu | 6.2 MB | sent_segment.pklz (DictVectorizer+RF) | **R2** (`MODELS` binding) |
 | w2v | 11.6 MB | TNCc5model3.bin (gensim KeyedVectors) | **R2** |
-| ner | 0.09 MB | crfsuite model (see NER note) | R2 (optional) |
-
 Workers cap uploads at 10 MB gz, which is why edu + w2v ride in R2 and are
 fetched once per isolate at cold start.
 
@@ -109,13 +108,13 @@ python3 tools/convert/convert.py <tltk-package-dir> crates/tltk-core/data \
 ```bash
 npx wrangler login
 npx wrangler r2 bucket create tltk-models          # once
-./scripts/upload_r2.sh tltk-models                 # edu + w2v (+ ner)
+./scripts/upload_r2.sh tltk-models                 # edu + w2v
 cd crates/tltk-worker && npx wrangler deploy       # builds wasm + uploads
 ```
 
 Local dev (models fetched from R2 live): `npx wrangler dev` inside
-`crates/tltk-worker`. Without the R2 binding, the five embedded models still
-serve 11 of 16 functions; edu/w2v functions return an explicit error.
+`crates/tltk-worker`. Without the R2 binding, the six embedded models still
+serve 12 of 16 functions; edu/w2v functions return an explicit error.
 
 ## Credits
 
