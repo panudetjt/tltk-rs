@@ -216,21 +216,19 @@ impl<'a> Session<'a> {
         }
 
         for j in 0..n {
-            let mut schartx: Vec<SpanMap<Vec<String>>> =
-                schart.iter().map(|r| r.deep()).collect();
             if let Some(s1) = schart[0].get(j).cloned() {
-                let row_j: Vec<(usize, Vec<String>)> = schart[j].items.clone();
-                for (k, s2) in row_j {
+                let mut row0 = std::mem::take(&mut schart[0]);
+                for &(k, ref s2) in &schart[j].items {
                     let mut merged_list: Vec<String> = Vec::with_capacity(s1.len() + s2.len());
                     merged_list.extend_from_slice(&s1);
-                    merged_list.extend_from_slice(&s2);
+                    merged_list.extend_from_slice(s2);
                     let tmp = mergekaran(&merged_list);
                     let dbg = std::env::var("TLTK_DEBUG").is_ok();
-                    if !schart[0].contains(k) {
+                    if !row0.contains(k) {
                         if dbg {
                             eprintln!("round j={} NEW (0,{}) tmp={:?} p={:.6}", j, k, tmp, self.prob_trisyl(&tmp));
                         }
-                        schartx[0].set(k, tmp.clone());
+                        row0.set(k, tmp.clone());
                         prob_end.insert((0, k), self.prob_trisyl(&tmp));
                     } else {
                         let p = self.prob_trisyl(&tmp);
@@ -239,13 +237,13 @@ impl<'a> Session<'a> {
                             eprintln!("round j={} CMP (0,{}) tmp={:?} p={:.6} cur={:.6} take={}", j, k, tmp, p, cur, p > cur);
                         }
                         if p > cur {
-                            schartx[0].set(k, tmp.clone());
+                            row0.set(k, tmp.clone());
                             prob_end.insert((0, k), p);
                         }
                     }
                 }
+                schart[0] = row0;
             }
-            schart = schartx;
         }
 
         if let Some(final_syls) = schart[0].get(n) {

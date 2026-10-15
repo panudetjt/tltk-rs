@@ -552,29 +552,27 @@ impl<'a> Session<'a> {
         }
 
         for j in 0..n {
-            let mut schartx: Vec<SpanMap<Vec<String>>> =
-                schart.iter().map(|r| r.deep()).collect();
             if let Some(s1) = schart[0].get(j).cloned() {
-                let row_j: Vec<(usize, Vec<String>)> = schart[j].items.clone();
-                for (k, s2) in row_j {
+                let mut row0 = std::mem::take(&mut schart[0]);
+                for &(k, ref s2) in &schart[j].items {
                     let mut merged: Vec<String> = Vec::with_capacity(s1.len() + s2.len());
                     merged.extend_from_slice(&s1);
-                    merged.extend_from_slice(&s2);
+                    merged.extend_from_slice(s2);
                     let tmp = mergekaran1(self, &merged);
-                    if !schart[0].contains(k) {
-                        schartx[0].set(k, tmp.clone());
+                    if !row0.contains(k) {
+                        row0.set(k, tmp.clone());
                         prob_end.insert((0, k), self.prob_trisyl(&tmp));
                     } else {
                         let p = self.prob_trisyl(&tmp);
                         let cur = prob_end.get(&(0, k)).copied().unwrap_or(0.0);
                         if p > cur {
-                            schartx[0].set(k, tmp.clone());
+                            row0.set(k, tmp.clone());
                             prob_end.insert((0, k), p);
                         }
                     }
                 }
+                schart[0] = row0;
             }
-            schart = schartx;
         }
 
         if let Some(final_syls) = schart[0].get(n) {
@@ -729,33 +727,31 @@ impl<'a> Session<'a> {
     /// 0..EndOfSent chain exists; leaves the best chain in chart[0][EndOfSent].
     pub fn chart_parse(
         &mut self,
-        chart: &mut Vec<SpanMap<Vec<String>>>,
+        chart: &mut [SpanMap<Vec<String>>],
         colloc_st: &mut HashMap<(usize, usize), f64>,
         end_of_sent: usize,
     ) -> bool {
         for j in 0..end_of_sent {
-            let mut chartx: Vec<SpanMap<Vec<String>>> =
-                chart.iter().map(|r| r.deep()).collect();
             // Python: `if j in chart[0]` only — CollocSt is a defaultdict(float)
             if let Some(s1) = chart[0].get(j).cloned() {
+                let mut row0 = std::mem::take(&mut chart[0]);
                 let st0j = colloc_st.get(&(0, j)).copied().unwrap_or(0.0);
-                let row_j: Vec<(usize, Vec<String>)> = chart[j].items.clone();
-                for (k, s2) in row_j {
+                for &(k, ref s2) in &chart[j].items {
                     let stjk = colloc_st.get(&(j, k)).copied().unwrap_or(0.0);
                     let combined = st0j + stjk;
                     let mut newlist: Vec<String> = Vec::with_capacity(s1.len() + s2.len());
                     newlist.extend_from_slice(&s1);
-                    newlist.extend_from_slice(&s2);
-                    if !chart[0].contains(k) {
-                        chartx[0].set(k, newlist);
+                    newlist.extend_from_slice(s2);
+                    if !row0.contains(k) {
+                        row0.set(k, newlist);
                         colloc_st.insert((0, k), combined);
                     } else if combined > colloc_st.get(&(0, k)).copied().unwrap_or(0.0) {
                         colloc_st.insert((0, k), combined);
-                        chartx[0].set(k, newlist);
+                        row0.set(k, newlist);
                     }
                 }
+                chart[0] = row0;
             }
-            *chart = chartx;
         }
         chart[0].contains(end_of_sent)
     }
