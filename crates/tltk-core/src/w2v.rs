@@ -21,7 +21,7 @@ fn unit_vec(v: &[f32], norm: f32) -> Vec<f32> {
     }
 }
 
-fn mean_of(vvs: &[Vec<f32>]) -> Vec<f32> {
+fn mean_of(vvs: &[&[f32]]) -> Vec<f32> {
     let dim = vvs[0].len();
     let mut m = vec![0.0f32; dim];
     for v in vvs {
@@ -56,12 +56,10 @@ impl<'a> Session<'a> {
         topn: usize,
     ) -> Option<Vec<(String, f64)>> {
         let wv = self.m.w2v.as_ref()?;
-        let dim = wv.dim;
         let mut dists: Vec<(usize, f32)> = Vec::with_capacity(wv.words.len());
         for i in 0..wv.words.len() {
-            let row = &wv.vectors[i * dim..(i + 1) * dim];
-            let unit: Vec<f32> = row.iter().map(|x| x / wv.norms[i]).collect();
-            dists.push((i, dot(&unit, mean)));
+            let unit = wv.vector_unit(i);
+            dists.push((i, dot(unit, mean)));
         }
         dists.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
         let mut out = Vec::new();
@@ -81,10 +79,10 @@ impl<'a> Session<'a> {
     pub fn w2v_most_similar(&self, w: &str, topn: usize) -> Option<Vec<(String, f64)>> {
         let wv = self.m.w2v.as_ref()?;
         let qi = wv.index(w)?;
-        let mean = unit_vec(wv.vector(qi), wv.norms[qi]);
+        let mean = wv.vector_unit(qi);
         let mut ex = std::collections::HashSet::new();
         ex.insert(w);
-        self.w2v_most_similar_general(&mean, &ex, topn)
+        self.w2v_most_similar_general(mean, &ex, topn)
     }
 
     /// gensim doesnt_match — the word least similar to the mean of the unit vectors.
@@ -94,17 +92,12 @@ impl<'a> Session<'a> {
         if used.is_empty() {
             return None;
         }
-        let vecs: Vec<Vec<f32>> = used
-            .iter()
-            .map(|&i| unit_vec(wv.vector(i), wv.norms[i]))
-            .collect();
+        let vecs: Vec<&[f32]> = used.iter().map(|&i| wv.vector_unit(i)).collect();
         let m0 = mean_of(&vecs);
         let mean = unit_vec(&m0, dot(&m0, &m0).sqrt());
         let mut dists: Vec<(f32, &str)> = Vec::with_capacity(used.len());
         for &i in &used {
-            let row = wv.vector(i);
-            let unit: Vec<f32> = row.iter().map(|x| x / wv.norms[i]).collect();
-            dists.push((dot(&unit, &mean), wv.words[i].as_str()));
+            dists.push((dot(wv.vector_unit(i), &mean), wv.words[i].as_str()));
         }
         // sorted(zip(dists, words))[0][1]
         dists.sort_by(|a, b| {
@@ -225,7 +218,7 @@ impl<'a> Session<'a> {
         for (words, sign) in [(positive, 1.0f32), (negative, -1.0f32)] {
             for w in words {
                 if let Some(i) = wv.index(w) {
-                    let u = unit_vec(wv.vector(i), wv.norms[i]);
+                    let u = wv.vector_unit(i);
                     for j in 0..dim {
                         accum[j] += sign * u[j];
                     }

@@ -471,6 +471,10 @@ pub struct W2v {
     pub dim: usize,
     /// row-major f32 [vocab][dim]
     pub vectors: Vec<f32>,
+    /// row-major f32 [vocab][dim] normalized: each row = row / norm.
+    /// Memory cost: one extra f32 matrix (n * dim * 4 bytes, doubling vector memory)
+    /// to eliminate per-query unit vector allocations while keeping raw vectors for exact similarity parity.
+    pub vectors_unit: Vec<f32>,
     /// per-row L2 norm (gensim fill_norms)
     pub norms: Vec<f32>,
     idx: HashMap<String, usize>,
@@ -501,7 +505,15 @@ impl W2v {
             let s: f32 = row.iter().map(|x| x * x).sum();
             norms.push(s.sqrt());
         }
-        Ok(W2v { words, dim, vectors, norms, idx })
+        let mut vectors_unit = Vec::with_capacity(cnt);
+        for i in 0..n {
+            let row = &vectors[i * dim..(i + 1) * dim];
+            let norm = norms[i];
+            for &x in row {
+                vectors_unit.push(x / norm);
+            }
+        }
+        Ok(W2v { words, dim, vectors, vectors_unit, norms, idx })
     }
     pub fn contains(&self, w: &str) -> bool {
         self.idx.contains_key(w)
@@ -511,6 +523,9 @@ impl W2v {
     }
     pub fn vector(&self, i: usize) -> &[f32] {
         &self.vectors[i * self.dim..(i + 1) * self.dim]
+    }
+    pub fn vector_unit(&self, i: usize) -> &[f32] {
+        &self.vectors_unit[i * self.dim..(i + 1) * self.dim]
     }
 }
 
