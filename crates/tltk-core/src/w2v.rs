@@ -351,7 +351,7 @@ fn encode_png(rgb: &[u8], w: u32, h: u32) -> Vec<u8> {
 
 fn base64_encode(data: &[u8]) -> String {
     const T: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-    let mut out = String::with_capacity((data.len() + 2) / 3 * 4);
+    let mut out = String::with_capacity(data.len().div_ceil(3) * 4);
     for chunk in data.chunks(3) {
         let b = [
             chunk[0],
@@ -367,15 +367,6 @@ fn base64_encode(data: &[u8]) -> String {
     out
 }
 
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn png_encoder_smoke() {
-        let img = vec![255u8; 4 * 4 * 3];
-        let png = super::encode_png(&img, 4, 4);
-        assert_eq!(&png[..8], &[0x89, b'P', b'N', b'G', 0x0D, 0x0A, 0x1A, 0x0A]);
-    }
-}
 fn pca2(pts: &[Vec<f32>]) -> (Vec<f32>, Vec<f32>) {
     let dim = pts[0].len();
     let mut mean = vec![0.0f32; dim];
@@ -430,3 +421,12 @@ fn pca2(pts: &[Vec<f32>]) -> (Vec<f32>, Vec<f32>) {
     (p1, p2)
 }
 
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn png_encoder_smoke() {
+        let img = vec![255u8; 4 * 4 * 3];
+        let png = super::encode_png(&img, 4, 4);
+        assert_eq!(&png[..8], &[0x89, b'P', b'N', b'G', 0x0D, 0x0A, 0x1A, 0x0A]);
+    }
+}

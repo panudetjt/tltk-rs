@@ -34,7 +34,7 @@ impl<'a> Session<'a> {
     /// returns inside the loop).
     pub fn wordseg_colloc(&mut self, input: &str) -> String {
         let part: Vec<&str> = input.split(SEG_SEP).collect();
-        for inx in part {
+        if let Some(&inx) = part.first() {
             let syl_out = self.syl_segment(inx);
             let mut syl_lst: Vec<String> = syl_out.split(SYL_SEP).map(|s| s.to_string()).collect();
             if syl_lst.last().map(|s| s.as_str()) == Some("<s/>") {
@@ -97,11 +97,12 @@ impl<'a> Session<'a> {
             }
             if self.chart_parse(&mut chart, &mut colloc_st, n) {
                 let words = chart[0].get(n).unwrap();
-                return words.join("|");
+                words.join("|")
             } else {
-                return format!("<Fail>{}</Fail>", input);
+                format!("<Fail>{}</Fail>", input)
             }
+        } else {
+            String::new()
         }
-        String::new()
     }
 }

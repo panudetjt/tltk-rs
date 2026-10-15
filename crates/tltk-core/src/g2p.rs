@@ -166,8 +166,6 @@ pub fn dead_syl(phone: &str) -> &'static str {
     let inx = phone.replace("ch", "C");
     let inx = strip_tone_digits(&inx);
     let chars: Vec<char> = inx.chars().collect();
-    let last = chars.last().copied();
-    let last2: String = if chars.len() >= 2 { chars[chars.len() - 2..].iter().collect() } else { inx.clone() };
     if ends_with_opt8(&["m", "n", "w", "j", "l", "N"], &chars) {
         return "L";
     }
@@ -177,7 +175,6 @@ pub fn dead_syl(phone: &str) -> &'static str {
     if has_double_vowel(&inx) {
         return "L";
     }
-    let _ = (last, last2);
     "D"
 }
 
@@ -255,27 +252,17 @@ pub fn tone_assign(keymatch: &str, phone_in: &str, codematch: &str, charmatch: &
     }
     let mut lead = String::new();
     let init;
-    let mut finalc = String::new();
     let has_x = codematch.contains('X') || codematch == "GH" || codematch == "EF";
     let re_akcr = regex::Regex::new("AK|CR").unwrap();
     if has_x {
         let lx: Vec<&str> = charmatch.split(' ').collect();
         lead = String::new();
         init = lx[0].to_string();
-        if lx.len() > 1 {
-            finalc = lx[1].to_string();
-        } else {
-            finalc = String::new();
-        }
     } else if re_akcr.is_match(codematch) {
         let lx: Vec<&str> = charmatch.split(' ').collect();
         lead = lx[0].to_string();
-        if lx.len() > 2 {
-            finalc = lx[2].to_string();
+        if lx.len() > 1 {
             init = lx[1].to_string();
-        } else if lx.len() > 1 {
-            init = lx[1].to_string();
-            finalc = String::new();
         } else {
             init = String::new();
         }
@@ -304,17 +291,13 @@ pub fn tone_assign(keymatch: &str, phone_in: &str, codematch: &str, charmatch: &
         } else {
             if m1 { "9" } else if m2 { "2" } else if m3 { "3" } else if m4 { "4" } else { "1" }
         }
-    } else if "ขฃฉฐถผฝสศษห".contains(&init) {
+    } else if "ขฃฉฐถผฝสศษห".contains(&init)
+        || ("งญณนมยรลวฬ".contains(&init) && !lead.is_empty() && "ขฃฉฐถผฝสศษห".contains(&lead))
+    {
         if deadsyll == "L" {
-            if m1 { "1" } else if m2 { "2" } else if m3 { "9" } else if m4 { "9" } else { "4" }
+            if m1 { "1" } else if m2 { "2" } else if m3 || m4 { "9" } else { "4" }
         } else {
-            if m1 { "9" } else if m2 { "2" } else if m3 { "9" } else if m4 { "9" } else { "1" }
-        }
-    } else if "งญณนมยรลวฬ".contains(&init) && !lead.is_empty() && "ขฃฉฐถผฝสศษห".contains(&lead) {
-        if deadsyll == "L" {
-            if m1 { "1" } else if m2 { "2" } else if m3 { "9" } else if m4 { "9" } else { "4" }
-        } else {
-            if m1 { "9" } else if m2 { "2" } else if m3 { "9" } else if m4 { "9" } else { "1" }
+            if m1 { "9" } else if m2 { "2" } else if m3 || m4 { "9" } else { "1" }
         }
     } else if "งญณนมยรลวฬ".contains(&init) && !lead.is_empty() && "กจดตฎฏบปอ".contains(&lead) {
         if deadsyll == "L" {
@@ -324,11 +307,11 @@ pub fn tone_assign(keymatch: &str, phone_in: &str, codematch: &str, charmatch: &
         }
     } else if "คฅฆชฌซฑฒทธพภฟฮงญณนมยรลวฬฤฦ".contains(&init) {
         if deadsyll == "L" {
-            if m1 { "2" } else if m2 { "3" } else if m3 { "9" } else if m4 { "9" } else { "0" }
+            if m1 { "2" } else if m2 { "3" } else if m3 || m4 { "9" } else { "0" }
         } else if has_double_vowel(&phone) {
             if m1 { "9" } else if m2 { "3" } else if m3 { "9" } else if m4 { "4" } else { "2" }
         } else {
-            if m1 { "2" } else if m2 { "9" } else if m3 { "9" } else if m4 { "4" } else { "3" }
+            if m1 { "2" } else if m2 || m3 { "9" } else if m4 { "4" } else { "3" }
         }
     } else {
         // Python falls through: returns None implicitly -> tuple unpack would
@@ -373,11 +356,9 @@ pub fn transform_syl(form: &str, phone: &str) -> (String, String) {
     } else if r[2].is_match(&phone) {
         phone = phone.replace("@@", "@");
     }
-    if re_case1.is_match(form) && phone.contains('\'') {
-        if let Some(pos) = phone.rfind('\'') {
-            phone = phone[pos + 1..].to_string();
-        }
-    } else if form.contains('ห') && phone.contains("ha1") && !re_hn.is_match(form) {
+    if (re_case1.is_match(form) && phone.contains('\''))
+        || (form.contains('ห') && phone.contains("ha1") && !re_hn.is_match(form))
+    {
         if let Some(pos) = phone.rfind('\'') {
             phone = phone[pos + 1..].to_string();
         }
@@ -483,6 +464,10 @@ impl<'a> Session<'a> {
         let n = chars.len();
         let mut schart: Vec<SpanMap<Vec<String>>> = (0..=n).map(|_| SpanMap::new()).collect();
         let mut prob_end: HashMap<(usize, usize), f64> = HashMap::new();
+        static RE_THORR: std::sync::OnceLock<regex::Regex> = std::sync::OnceLock::new();
+        static RE_THR: std::sync::OnceLock<regex::Regex> = std::sync::OnceLock::new();
+        let re_thorr = RE_THORR.get_or_init(|| regex::Regex::new(r"^ทร").unwrap());
+        let re_thr = RE_THR.get_or_init(|| regex::Regex::new(r"^thr").unwrap());
 
         for pp in &self.m.pron {
             for i in 0..n {
@@ -542,8 +527,6 @@ impl<'a> Session<'a> {
                             }
                             // ทร -> s variant
                             let km: String = keymatch2;
-                            let re_thorr = regex::Regex::new(r"^ทร").unwrap();
-                            let re_thr = regex::Regex::new(r"^thr").unwrap();
                             if re_thorr.is_match(&km) && re_thr.is_match(&phone) {
                                 let phone2 = phone.replace("thr", "s");
                                 let form_key: String =
@@ -678,10 +661,7 @@ pub fn select_phones(sess: &Session, slst_in: &[String]) -> String {
         let mut outp = String::new();
         for p in &cands {
             let pr = prob_phone(sess, p, &slst[i - 1], &slst[i], &slst[i + 1]);
-            if pr > prmax {
-                prmax = pr;
-                outp = p.clone();
-            } else if pr == prmax && p.contains('\'') && p.chars().count() > outp.chars().count() {
+            if pr > prmax || (pr == prmax && p.contains('\'') && p.chars().count() > outp.chars().count()) {
                 prmax = pr;
                 outp = p.clone();
             }
@@ -694,8 +674,12 @@ pub fn select_phones(sess: &Session, slst_in: &[String]) -> String {
 impl<'a> Session<'a> {
     /// Port of wordparse — word segmentation over parsed syllables + phone selection.
     pub fn wordparse(&mut self, input: &str) -> String {
+        static RE_MY: std::sync::OnceLock<regex::Regex> = std::sync::OnceLock::new();
+        let re_my = RE_MY.get_or_init(|| {
+            regex::Regex::new(r"(<tr/>|\|)([?a-zENOU0-9~'@^]+?)[|~]ๆ").unwrap()
+        });
         let parts: Vec<&str> = input.split(SEG_SEP).collect();
-        for inx in parts {
+        if let Some(&inx) = parts.first() {
             let syl_lst: Vec<String> = inx.split(SYL_SEP).map(|s| s.to_string()).collect();
             let n = syl_lst.len();
             let mut chart: Vec<SpanMap<Vec<String>>> = (0..=n).map(|_| SpanMap::new()).collect();
@@ -730,18 +714,15 @@ impl<'a> Session<'a> {
                 }
                 outx.push_str(&outp.join("|"));
                 // ๆ duplication: (<tr/>|\|)([?a-zENOU0-9~'@^]+?)[|~]ๆ -> \1\2|\2
-                static RE_MY: std::sync::OnceLock<regex::Regex> = std::sync::OnceLock::new();
-                let re_my = RE_MY.get_or_init(|| {
-                    regex::Regex::new(r"(<tr/>|\|)([?a-zENOU0-9~'@^]+?)[|~]ๆ").unwrap()
-                });
                 let s = outx;
                 outx = re_my.replace_all(&s, "${1}${2}|${2}").into_owned();
-                return outx;
+                outx
             } else {
-                return format!("<Fail>{}</Fail>", input);
+                format!("<Fail>{}</Fail>", input)
             }
+        } else {
+            String::new()
         }
-        String::new()
     }
 
     /// Port of chart_parse (maximal collocation chain). Returns true when a full
