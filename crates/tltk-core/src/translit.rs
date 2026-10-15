@@ -314,21 +314,46 @@ pub fn phone_to_thai(syl: &str) -> Result<String, String> {
     vt = vt.replace('x', &it);
     let mut tsyl = vt + &ft;
     if !ft.is_empty() {
-        tsyl = regex::Regex::new(r"แ([ก-ฮ]?\u{0E3A}?[ก-ฮ])([่-๋]?)ะ").unwrap().replace_all(&tsyl, "แ${1}็${2}/").into_owned();
-        tsyl = regex::Regex::new(r"โ([ก-ฮ]?\u{0E3A}?[ก-ฮ])([่-๋]?)ะ").unwrap().replace_all(&tsyl, "${1}${2}").into_owned();
-        tsyl = regex::Regex::new(r"เ([ก-ฮ]?\u{0E3A}?[ก-ฮ])([่-๋]?)อะ").unwrap().replace_all(&tsyl, "เ${1}ิ${2}").into_owned();
-        tsyl = regex::Regex::new(r"เ([ก-ฮ]?\u{0E3A}?[ก-ฮ])([่-๋]?)อ").unwrap().replace_all(&tsyl, "เ${1}ิ${2}").into_owned();
-        tsyl = regex::Regex::new(r"เ([ก-ฮ]?\u{0E3A}?[ก-ฮ])([่-๋]?)าะ").unwrap().replace_all(&tsyl, "${1}็${2}อ").into_owned();
-        tsyl = regex::Regex::new(r"^([ก-ฮ]?\u{0E3A}?[ก-ฮ])ื([่-๋]?)อ").unwrap().replace_all(&tsyl, "${1}ื${2}").into_owned();
-        tsyl = regex::Regex::new(r"เ([ก-ฮ]?\u{0E3A}?[ก-ฮ])([่-๋]?)ะ").unwrap().replace_all(&tsyl, "เ${1}็${2}").into_owned();
-        tsyl = regex::Regex::new(r"([ก-ฮ]?\u{0E3A}?[ก-ฮ])([่-๋]?)ะย").unwrap().replace_all(&tsyl, "ไ${1}${2}").into_owned();
+        static RE_AE: std::sync::OnceLock<regex::Regex> = std::sync::OnceLock::new();
+        static RE_O: std::sync::OnceLock<regex::Regex> = std::sync::OnceLock::new();
+        static RE_E_OE_A: std::sync::OnceLock<regex::Regex> = std::sync::OnceLock::new();
+        static RE_E_OE: std::sync::OnceLock<regex::Regex> = std::sync::OnceLock::new();
+        static RE_E_AW: std::sync::OnceLock<regex::Regex> = std::sync::OnceLock::new();
+        static RE_UE: std::sync::OnceLock<regex::Regex> = std::sync::OnceLock::new();
+        static RE_E: std::sync::OnceLock<regex::Regex> = std::sync::OnceLock::new();
+        static RE_A_Y: std::sync::OnceLock<regex::Regex> = std::sync::OnceLock::new();
+        static RE_A_W: std::sync::OnceLock<regex::Regex> = std::sync::OnceLock::new();
+        static RE_A: std::sync::OnceLock<regex::Regex> = std::sync::OnceLock::new();
+        static RE_UA: std::sync::OnceLock<regex::Regex> = std::sync::OnceLock::new();
+        static RE_TONE: std::sync::OnceLock<regex::Regex> = std::sync::OnceLock::new();
+
+        let re_ae = RE_AE.get_or_init(|| regex::Regex::new(r"แ([ก-ฮ]?\u{0E3A}?[ก-ฮ])([่-๋]?)ะ").unwrap());
+        let re_o = RE_O.get_or_init(|| regex::Regex::new(r"โ([ก-ฮ]?\u{0E3A}?[ก-ฮ])([่-๋]?)ะ").unwrap());
+        let re_e_oe_a = RE_E_OE_A.get_or_init(|| regex::Regex::new(r"เ([ก-ฮ]?\u{0E3A}?[ก-ฮ])([่-๋]?)อะ").unwrap());
+        let re_e_oe = RE_E_OE.get_or_init(|| regex::Regex::new(r"เ([ก-ฮ]?\u{0E3A}?[ก-ฮ])([่-๋]?)อ").unwrap());
+        let re_e_aw = RE_E_AW.get_or_init(|| regex::Regex::new(r"เ([ก-ฮ]?\u{0E3A}?[ก-ฮ])([่-๋]?)าะ").unwrap());
+        let re_ue = RE_UE.get_or_init(|| regex::Regex::new(r"^([ก-ฮ]?\u{0E3A}?[ก-ฮ])ื([่-๋]?)อ").unwrap());
+        let re_e = RE_E.get_or_init(|| regex::Regex::new(r"เ([ก-ฮ]?\u{0E3A}?[ก-ฮ])([่-๋]?)ะ").unwrap());
+        let re_a_y = RE_A_Y.get_or_init(|| regex::Regex::new(r"([ก-ฮ]?\u{0E3A}?[ก-ฮ])([่-๋]?)ะย").unwrap());
+        tsyl = re_ae.replace_all(&tsyl, "แ${1}็${2}/").into_owned();
+        tsyl = re_o.replace_all(&tsyl, "${1}${2}").into_owned();
+        tsyl = re_e_oe_a.replace_all(&tsyl, "เ${1}ิ${2}").into_owned();
+        tsyl = re_e_oe.replace_all(&tsyl, "เ${1}ิ${2}").into_owned();
+        tsyl = re_e_aw.replace_all(&tsyl, "${1}็${2}อ").into_owned();
+        tsyl = re_ue.replace_all(&tsyl, "${1}ื${2}").into_owned();
+        tsyl = re_e.replace_all(&tsyl, "เ${1}็${2}").into_owned();
+        tsyl = re_a_y.replace_all(&tsyl, "ไ${1}${2}").into_owned();
         if syl.contains("aw") {
-            tsyl = regex::Regex::new(r"([ก-ฮ]?\u{0E3A}?[ก-ฮ])([่-๋]?)ะว").unwrap().replace_all(&tsyl, "เ${1}${2}า").into_owned();
+            let re_a_w = RE_A_W.get_or_init(|| regex::Regex::new(r"([ก-ฮ]?\u{0E3A}?[ก-ฮ])([่-๋]?)ะว").unwrap());
+            tsyl = re_a_w.replace_all(&tsyl, "เ${1}${2}า").into_owned();
         } else {
-            tsyl = regex::Regex::new(r"([ก-ฮ]?\u{0E3A}?[ก-ฮ])([่-๋]?)ะ").unwrap().replace_all(&tsyl, "${1}ั${2}").into_owned();
+            let re_a = RE_A.get_or_init(|| regex::Regex::new(r"([ก-ฮ]?\u{0E3A}?[ก-ฮ])([่-๋]?)ะ").unwrap());
+            tsyl = re_a.replace_all(&tsyl, "${1}ั${2}").into_owned();
         }
-        tsyl = regex::Regex::new(r"([ก-ฮ]?\u{0E3A}?[ก-ฮ])ั([่-๋]?)ว([กดบมนยง])").unwrap().replace_all(&tsyl, "${1}${2}ว${3}").into_owned();
-        tsyl = regex::Regex::new(r"็([่-๋])").unwrap().replace_all(&tsyl, "${1}").into_owned();
+        let re_ua = RE_UA.get_or_init(|| regex::Regex::new(r"([ก-ฮ]?\u{0E3A}?[ก-ฮ])ั([่-๋]?)ว([กดบมนยง])").unwrap());
+        let re_tone = RE_TONE.get_or_init(|| regex::Regex::new(r"็([่-๋])").unwrap());
+        tsyl = re_ua.replace_all(&tsyl, "${1}${2}ว${3}").into_owned();
+        tsyl = re_tone.replace_all(&tsyl, "${1}").into_owned();
     }
     Ok(tsyl)
 }

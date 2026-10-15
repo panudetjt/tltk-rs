@@ -517,10 +517,8 @@ impl W2v {
 /// NR01 — CRF state/transition weights (from a crfsuite model via pycrfsuite info())
 pub struct NerModel {
     pub labels: Vec<String>,
-    /// (from, to) -> weight
-    pub transitions: Vec<(String, String, f64)>,
-    /// (attribute, label) -> weight
-    pub attributes: Vec<(String, String, f64)>,
+    pub transitions_idx: HashMap<(String, String), f64>,
+    pub attributes_idx: HashMap<(String, String), f64>,
 }
 
 impl NerModel {
@@ -533,22 +531,26 @@ impl NerModel {
             labels.push(r.str_().to_string());
         }
         let n = r.uvarint();
-        let mut transitions = Vec::with_capacity(n);
+        let mut transitions_idx = HashMap::with_capacity(n);
         for _ in 0..n {
             let a = r.str_().to_string();
             let b = r.str_().to_string();
             let w = r.f64_();
-            transitions.push((a, b, w));
+            transitions_idx.insert((a, b), w);
         }
         let n = r.uvarint();
-        let mut attributes = Vec::with_capacity(n);
+        let mut attributes_idx = HashMap::with_capacity(n);
         for _ in 0..n {
             let a = r.str_().to_string();
             let b = r.str_().to_string();
             let w = r.f64_();
-            attributes.push((a, b, w));
+            attributes_idx.insert((a, b), w);
         }
-        Ok(NerModel { labels, transitions, attributes })
+        Ok(NerModel {
+            labels,
+            transitions_idx,
+            attributes_idx,
+        })
     }
 }
 

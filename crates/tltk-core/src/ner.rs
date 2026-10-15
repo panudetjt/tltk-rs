@@ -137,16 +137,8 @@ pub fn ner(sess: &mut Session, sent: &[(String, String)]) -> Vec<(String, String
             let feats: Vec<Vec<String>> = (0..sent.len()).map(|i| word2features(sent, i)).collect();
             let tags = crf_viterbi(
                 &model.labels,
-                &model
-                    .transitions
-                    .iter()
-                    .map(|(a, b, w)| ((a.clone(), b.clone()), *w))
-                    .collect(),
-                &model
-                    .attributes
-                    .iter()
-                    .map(|(a, b, w)| ((a.clone(), b.clone()), *w))
-                    .collect(),
+                &model.transitions_idx,
+                &model.attributes_idx,
                 &feats,
             );
             for (i, (w, p)) in sent.iter().enumerate() {
