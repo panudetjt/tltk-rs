@@ -47,8 +47,10 @@ impl<'a> Session<'a> {
 
     /// BiCount[(w1,w2)] with compute_colloc's bump overlay applied.
     pub fn bi_count(&self, w1: &str, w2: &str) -> f64 {
-        if let Some(v) = self.bicount_ov.get(&(w1.to_string(), w2.to_string())) {
-            return *v as f64;
+        if !self.bicount_ov.is_empty() {
+            if let Some(v) = self.bicount_ov.get(&(w1.to_string(), w2.to_string())) {
+                return *v as f64;
+            }
         }
         match (self.syl_id(w1), self.syl_id(w2)) {
             (Some(a), Some(b)) => self.m.sylseg.bi_count_get(a, b) as f64,
@@ -56,8 +58,10 @@ impl<'a> Session<'a> {
         }
     }
     pub fn count(&self, w: &str) -> f64 {
-        if let Some(v) = self.count_ov.get(w) {
-            return *v as f64;
+        if !self.count_ov.is_empty() {
+            if let Some(v) = self.count_ov.get(w) {
+                return *v as f64;
+            }
         }
         match self.syl_id(w) {
             Some(a) => self.m.sylseg.count_get(a) as f64,
@@ -88,7 +92,7 @@ impl<'a> Session<'a> {
         let c2 = self.count(w2);
         if bi < 1.0 || c1 < 1.0 || c2 < 1.0 {
             let key = (w1.to_string(), w2.to_string());
-            if !self.colloc_bumped.contains(&key) {
+            if self.colloc_bumped.is_empty() || !self.colloc_bumped.contains(&key) {
                 self.colloc_bumped.insert(key.clone());
                 // += 1 on BiCount[(w1,w2)], Count[w1], Count[w2]
                 let base_bi = self.bi_count(w1, w2) as i64;
