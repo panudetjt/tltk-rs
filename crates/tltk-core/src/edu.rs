@@ -155,6 +155,7 @@ impl<'a> Session<'a> {
         let mut syl_seq = String::new();
         for (w, t) in par.iter().zip(tags.iter()) {
             if *t == "<u/>" {
+                let _ = self.word_segment(&syl_seq);
                 let out = self.wordseg_colloc(&syl_seq);
                 output.push_str(&out);
                 output.push_str("<u/>");
@@ -171,5 +172,46 @@ impl<'a> Session<'a> {
         let output = re3.replace_all(&output, "${1}|<s/>").into_owned();
         let output = re4.replace_all(&output, "<s/>|${1}").into_owned();
         output
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::embedded;
+    use crate::Tltk;
+    use std::collections::HashMap;
+
+    fn test_session() -> Tltk {
+        let manifest_dir = env!("CARGO_MANIFEST_DIR");
+        let path = std::path::Path::new(manifest_dir).join("data/edu.bin.gz");
+        let data = std::fs::read(&path).expect("edu.bin.gz should exist");
+        let mut extra = HashMap::new();
+        extra.insert("edu.bin.gz".to_string(), data);
+        Tltk::new(embedded::with_models(&extra))
+    }
+
+    #[test]
+    fn test_segment_oracle_parity() {
+        let tltk = test_session();
+        let mut sess = tltk.session();
+
+        // 3 corpus segment texts:
+        assert_eq!(
+            sess.segment("แมวกินปลาทะเล"),
+            "แมว|กิน|ปลาทะเล|<s/><u/>"
+        );
+        assert_eq!(
+            sess.segment("ผมชอบกินข้าวผัดกะเพราหมูสับ"),
+            "ผม|ชอบ|กิน|ข้าวผัดกะเพราหมู|สับ|<s/><u/>"
+        );
+        assert_eq!(
+            sess.segment("กรุงเทพมหานครเป็นเมืองหลวงของประเทศไทย"),
+            "กรุงเทพมหานคร|เป็น|เมืองหลวง|ของ|ประเทศ|ไทย|<s/><u/>"
+        );
+        // 1 crafted longer text:
+        assert_eq!(
+            sess.segment("แมวกินปลาทะเลและผมชอบกินข้าวผัดกะเพราหมูสับที่กรุงเทพมหานคร"),
+            "แมว|กิน|ปลาทะเล|และ|ผม|ชอบ|กิน|ข้าวผัดกะเพราหมู|สับ|ที่|กรุงเทพมหานคร|<s/><u/>"
+        );
     }
 }
