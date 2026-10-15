@@ -2,8 +2,6 @@
 //! same-named nlp.py functions).
 
 use crate::g2p::dead_sylx;
-#[allow(unused_imports)]
-use crate::g2p::pcompose as _pcompose;
 use crate::Session;
 
 const IPA_NORMALIZE: &[(&str, &str)] = &[
@@ -102,6 +100,8 @@ impl<'a> Session<'a> {
         let re_j = RE_J.get_or_init(|| regex::Regex::new(r"([aeiou])j").unwrap());
         let re_ch = RE_CH.get_or_init(|| regex::Regex::new(r"c([^h])").unwrap());
         let re_dash = RE_DASH.get_or_init(|| regex::Regex::new(r"\-([^aeiou])").unwrap());
+        static RE_DIGIT: std::sync::OnceLock<regex::Regex> = std::sync::OnceLock::new();
+        let re_digit = RE_DIGIT.get_or_init(|| regex::Regex::new(r"[0-9]").unwrap());
 
         let mut out = String::new();
         let inx = self.g2p(txt);
@@ -114,7 +114,7 @@ impl<'a> Session<'a> {
                 None => continue,
             };
             let mut tran = sub_double_vowel(&tran, "");
-            tran = regex::Regex::new(r"[0-9]").unwrap().replace_all(&tran, "").into_owned();
+            tran = re_digit.replace_all(&tran, "").into_owned();
             for (k, v) in NORMALIZE_ROM {
                 tran = tran.replace(k, v);
             }
@@ -131,6 +131,8 @@ impl<'a> Session<'a> {
     /// Port of th2read.
     pub fn th2read(&mut self, txt: &str) -> Result<String, crate::ProcessError> {
         let mut out = String::new();
+        static RE_SPL: std::sync::OnceLock<regex::Regex> = std::sync::OnceLock::new();
+        let re_spl = RE_SPL.get_or_init(|| regex::Regex::new(r"~|\||\^|'").unwrap());
         let inx = self.g2p(txt);
         for seg in inx.split("<s/>") {
             if seg.is_empty() {
@@ -140,8 +142,6 @@ impl<'a> Session<'a> {
                 Some(p) => p,
                 None => continue,
             };
-            static RE_SPL: std::sync::OnceLock<regex::Regex> = std::sync::OnceLock::new();
-            let re_spl = RE_SPL.get_or_init(|| regex::Regex::new(r"~|\||\^|'").unwrap());
             for syl in re_spl.split(&tran) {
                 if !syl.is_empty() {
                     let thread = phone_to_thai(syl)

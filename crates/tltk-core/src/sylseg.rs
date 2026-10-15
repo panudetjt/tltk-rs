@@ -27,6 +27,11 @@ impl<T> SpanMap<T> {
         self.items.iter().any(|(kk, _)| *kk == k)
     }
 }
+impl<T> Default for SpanMap<T> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 impl<T: Clone> SpanMap<T> {
     pub fn deep(&self) -> Self {

@@ -92,45 +92,6 @@ pub fn preprocess(input: &str) -> String {
     s
 }
 
-/// Python float repr (shortest round-trip with ".0" and exponent rules) — used
-/// where the server renders Python values into strings. For the functions this
-/// crate serves, only `%.4f` (see fmt4) appears; repr is provided for parity
-/// tooling.
-pub fn py_float_repr(x: f64) -> String {
-    if x.is_nan() {
-        return "nan".into();
-    }
-    if x.is_infinite() {
-        return if x > 0.0 { "inf".into() } else { "-inf".into() };
-    }
-    let ax = x.abs();
-    if x != 0.0 && (ax >= 1e16 || ax < 1e-4) {
-        // Python repr switches to exponent notation; e.g. 1e-05, 1.234e+16
-        let s = format!("{:e}", x);
-        // Rust: "1.234e-5" ; Python: "1.234e-05" — pad exponent to 2 digits
-        if let Some(pos) = s.find('e') {
-            let (mant, exp) = s.split_at(pos);
-            let exp = &exp[1..];
-            let (sign, digits) = match exp.strip_prefix('-') {
-                Some(d) => ('-', d),
-                None => ('+', exp),
-            };
-            if digits.len() < 2 {
-                return format!("{}e{}0{}", mant, sign, digits);
-            }
-            return format!("{}e{}{}", mant, sign, digits);
-        }
-        s
-    } else {
-        let s = format!("{}", x);
-        if s.contains('.') || s.contains('e') {
-            s
-        } else {
-            format!("{}.0", s)
-        }
-    }
-}
-
 /// Python "%.4f" formatting (round-half-even on the exact binary value —
 /// identical output to Rust's {:.4}).
 pub fn fmt4(x: f64) -> String {

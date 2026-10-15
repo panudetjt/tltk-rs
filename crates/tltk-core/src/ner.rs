@@ -80,8 +80,6 @@ fn crf_viterbi(
     if n == 0 {
         return Vec::new();
     }
-    let _li: HashMap<&str, usize> =
-        labels.iter().enumerate().map(|(i, l)| (l.as_str(), i)).collect();
     let k = labels.len();
     let neg_inf = f64::NEG_INFINITY;
 

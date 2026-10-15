@@ -20,21 +20,20 @@ pub mod wordseg;
 use std::collections::HashMap;
 use std::sync::Arc;
 
+pub use model::Models;
 pub use prelude::{SEG_SEP, SSEG_SEP, SYL_SEP, WORD_SEP};
 
 /// The loaded model set (immutable, shareable).
 pub struct Tltk {
-    pub models: Arc<Models2>,
+    pub models: Arc<Models>,
 }
-
-pub type Models2 = model::Models;
 
 /// Per-request mutable workspace. Python tltk keeps these as module globals,
 /// mutated across calls in one process; the worker mirrors that with one
 /// Session per isolate, the valifier uses one Session per request (== a fresh
 /// Python process).
 pub struct Session<'a> {
-    pub m: &'a Models2,
+    pub m: &'a Models,
 
     // ---- compute_colloc / read_stat state (mutated once-ever per pair) ----
     pub total_word: i64,
@@ -61,7 +60,7 @@ impl std::fmt::Display for ProcessError {
 impl std::error::Error for ProcessError {}
 
 impl Tltk {
-    pub fn new(models: Models2) -> Tltk {
+    pub fn new(models: Models) -> Tltk {
         Tltk { models: Arc::new(models) }
     }
 
@@ -109,7 +108,7 @@ pub mod embedded;
 
 #[cfg(feature = "embedded-models")]
 impl Tltk {
-    /// Small embedded model set (thdict/sylseg/sylvar/phs/pos). edu + w2v are
+    /// Small embedded model set (thdict/sylseg/sylvar/phs/pos/ner). edu + w2v are
     /// optional (worker loads them from R2; valifier from disk).
     pub fn embedded() -> Tltk {
         Tltk::new(embedded::models())
