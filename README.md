@@ -195,6 +195,35 @@ converted artifacts of TLTK 1.10 (BSD-3-Clause) and a Thai font atlas — see
 [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md) for the notices that travel
 with distributions.
 
+## Performance
+
+Recorded at the optimization cut (2026-10-16, native `--release` build, best-of-3
+× repeat=10 medians, interleaved A/B on one box — see `mise run bench` to
+reproduce). "Before" = the post-round-1 baseline, i.e. already including the
+regex-hoisting wins; the untouched original was slower still.
+
+| function | before (µs/pass) | after (µs/pass) | gain |
+|---|---:|---:|---:|
+| th2read | 110,924 | 21,937 | **5.1×** |
+| spoonerism | 30,258 | 5,629 | 5.4× |
+| ner_tag | 255,902 | 94,523 | 2.7× |
+| word_segment | 197,044 | 75,269 | 2.6× |
+| syl_segment | 188,567 | 81,433 | 2.3× |
+| g2p | 103,096 | 40,760 | 2.5× |
+| th2ipa | 73,527 | 27,762 | 2.6× |
+| similar_words | 36,670 | 4,170 | 8.8× |
+| **whole corpus pass** | **1,227,417** | **467,804** | **2.6×** |
+
+- Memory: peak RSS **257 MB vs 258–263 MB original** — faster *and* smaller than
+  the pre-optimization baseline (the w2v unit-vector trade is documented in the
+  bench history; `mise run mem` reproduces).
+- The biggest single wins: regex hoisting, chart-loop clone elimination,
+  allocation-free edge generation, CHD perfect-hash lookups, AVX2/simd128 w2v.
+- In the browser: simd128 is runtime-probed (scalar fallback), the service
+  worker precaches tier 1 → tier 2 assets and **pre-decodes the engine in the
+  background after first paint**, so the first query is instant on a warm
+  visit, and the toolbox works fully offline after the first load.
+
 ## Run on a new machine
 
 Toolchains are pinned by [mise](https://mise.jdx.dev) (`rust 1.99.1 / python 3.12 / node 24 LTS / uv`),

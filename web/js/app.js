@@ -371,6 +371,13 @@ if ('serviceWorker' in navigator) {
       await quiet(`wasm/${flavor}/tltk_web.js`);
       await quiet(`wasm/${flavor}/tltk_web.wasm`);
       for (const f of TIER2_FILES) await quiet(assetUrl(f));
+
+      // Assets are warm — now secretly BUILD the engine (wasm init + model
+      // decode, tier 1 then tier 2). ensureTier1/2 cache their promises, so a
+      // user query racing this simply awaits the same work: first click feels
+      // instant. All failures stay silent (the query path rethrows properly).
+      await manager.ensureTier1().catch(() => {});
+      await manager.ensureTier2().catch(() => {});
     };
     window.requestIdleCallback
       ? window.requestIdleCallback(() => { prefetch(); })
