@@ -5,7 +5,7 @@
 import { selectFlavor, probeSimd } from './probe.js';
 import { TltkManager, TIER2_FUNCTIONS, TIER1_FILES, TIER2_FILES, assetUrl } from './loader.js';
 
-// Metadata and Thai descriptions for all 17 TLTK functions
+// Metadata and Thai descriptions for TLTK functions
 export const FUNCTIONS = [
   {
     id: 'word_segment',
@@ -142,6 +142,22 @@ export const FUNCTIONS = [
     thaiName: 'วิเคราะห์คุณลักษณะข้อความ (Text Analysis)',
     desc: 'คำนวณคุณลักษณะระดับข้อความ เช่น จำนวนคำ/พยางค์ ความหลากหลายของคำ (LdvTTR) ระดับคำศัพท์ TNC/TTC และความถูกต้องการอ่านออกเสียง (ใส่หลายย่อหน้าคั่นด้วยบรรทัดใหม่) ผลลัพธ์เป็น JSON',
     placeholder: 'แมวกินปลาอยู่ในครัว\nหมูกินข้าวในถัง',
+    tier: 1
+  },
+  {
+    id: 'th2ipa_all',
+    name: 'th2ipa_all',
+    thaiName: 'แปลงตัวเขียนเป็นสัทอักษรสากลทุกรูปแบบ (Thai to IPA All Candidates)',
+    desc: 'แสดงรูปการแปลงสัทอักษรสากล (IPA) ทุกความเป็นไปได้ของการตัดพยางค์และการออกเสียง',
+    placeholder: 'แมวกินปลา',
+    tier: 1
+  },
+  {
+    id: 'sylparse_all',
+    name: 'sylparse_all',
+    thaiName: 'แจกแจงโครงสร้างพยางค์ทุกรูปแบบ (Syllable Parse All Candidates)',
+    desc: 'วิเคราะห์โครงสร้างพยางค์และการอ่านออกเสียงทุกรูปแบบที่เป็นไปได้ของคำหรือข้อความ',
+    placeholder: 'แมว',
     tier: 1
   }
 ];

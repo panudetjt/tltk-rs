@@ -31,9 +31,9 @@ Status legend:
 
 | status | names |
 |---|---|
-| wire (12) | `word_segment`, `syl_segment`, `spell_variants`, `pos_tag`, `segment`, `ner_tag`, `g2p`, `th2ipa`, `th2roman`, `th2read`, `spoonerism`, `textana` |
+| wire (14) | `word_segment`, `syl_segment`, `spell_variants`, `pos_tag`, `segment`, `ner_tag`, `g2p`, `th2ipa`, `th2roman`, `th2read`, `spoonerism`, `textana`, `th2ipa_all`, `sylparse_all` |
 | internal (6) | `initial` (→ `Models::load`), `spell_candidates` (`spell.rs:53`), `pos_tag_wordlist` (folded into `pos.rs::pos_tag`), `ner` (`ner.rs:133`), `SylAna` + `WordAna` (`textana.rs`, with non-export helpers `ARF`/`Duplicate_word`/`pack_ner`) |
-| MISSING (13) | see below |
+| MISSING (11) | see below |
 
 ### 1a. Segmentation variants — MISSING
 
@@ -68,12 +68,12 @@ Data status: the word-tier lexicon TextAna reads (`word.pklz` → WT01) is
 | `MaltParser`, `MaltParser_wordlist` | UD dependency parsing, model `thamalt.mco`. Hardest single item: transition-based parser + model conversion. `TextAna(UDParse="Malt")` depends on it. |
 | `print_dtree`, `dg_print`, `dg_save`, `scan_dtree`, `get_tree_depth`, `tree_max_depth` | tree helpers around MaltParser output. |
 
-### 1d. Transliteration variants — MISSING
+### 1d. Transliteration variants — wire
 
 | upstream | notes |
 |---|---|
-| `th2ipa_all(inp)` | all-candidate IPA (vs the single best path `th2ipa` returns). |
-| `sylparse_all` | all-candidate variant of `sylparse` (which is ported, `g2p.rs:459`). |
+| `th2ipa_all(inp)` | ✅ wire — all-candidate IPA (vs the single best path `th2ipa` returns). |
+| `sylparse_all` | ✅ wire — all-candidate variant of `sylparse` (`g2p.rs`). |
 
 ### 1e. thaidict management — MISSING
 
@@ -173,7 +173,7 @@ corpus order (colloc counter state accumulates exactly like the verifier's
 single session) — and extend its dispatch when the corpus gains a function.
 `textana.rs`'s module doc is the worked example of the whole dance.
 
-1. `th2ipa_all`, `sylparse_all` — variants of already-ported logic.
+1. ~~`th2ipa_all`, `sylparse_all`~~ — ✅ wire (2026-10-16, g2p.rs).
 2. `chunk`, `TNC_tag` — pure composition of existing primitives.
 3. ~~`SylAna`, `WordAna`~~ — ✅ done 2026-10-16 (inside `textana.rs`).
 4. corpus.py word n-grams (`unigram`/`bigram`/`trigram`/`collocates`) — needs TNC3g download + converter + new goldens.
