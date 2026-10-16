@@ -13,6 +13,8 @@ import os
 sys.path.insert(0, sys.argv[1])
 import tltk  # noqa: E402
 from tltk import nlp  # noqa: E402
+import nltk  # noqa: E402
+from nltk.parse.dependencygraph import DependencyGraph  # noqa: E402
 
 mode = sys.argv[2]
 
@@ -155,6 +157,36 @@ elif mode == "corpus":
                 else:
                     r = "ความคล้ายระหว่าง '%s' กับ '%s' = %.4f" % (
                         parts[0], parts[1], corpus.similarity(parts[0], parts[1]))
+            elif fn in ("dg_print", "dg_save", "print_dtree", "scan_dtree",
+                        "get_tree_depth", "tree_max_depth"):
+                # tree helpers consume the dg_save dict; the corpus row text
+                # IS that dict (compact json.dumps of dg_save output from a
+                # fixed Malt-Tab DependencyGraph). get_tree_depth carries the
+                # node id in cutoff (default "0").
+                ud = json.loads(text)
+                if fn == "get_tree_depth":
+                    r = str(nlp.get_tree_depth(ud, int(cutoff) if cutoff != "medium" else 0))
+                elif fn == "tree_max_depth":
+                    r = str(nlp.tree_max_depth(ud))
+                elif fn == "dg_save":
+                    r = json.dumps(nlp.dg_save(
+                        DependencyGraph() if not ud["words"] else
+                        DependencyGraph("\n".join("%s\t%s\t%s\t%s" % (
+                            w["form"], w["pos"], w["head"], w["deprel"])
+                            for w in ud["words"] if w["id"] > 0) + "\n"),
+                        ud["sentence"]), ensure_ascii=False, separators=(",", ":"))
+                elif fn == "dg_print":
+                    r = str(nlp.dg_print(nltk.DependencyGraph(
+                        "\n".join("%s\t%s\t%s\t%s" % (
+                            w["form"], w["pos"], w["head"], w["deprel"])
+                            for w in ud["words"] if w["id"] > 0) + "\n")))
+                else:
+                    # upstream scan_dtree needs the module-global PRN_TREE
+                    # pre-initialised (print_dtree sets it); render the same
+                    # lines print_dtree prints, trailing print newline dropped
+                    nlp.PRN_TREE = []
+                    (nlp.print_dtree if fn == "print_dtree" else nlp.scan_dtree)(ud)
+                    r = "\n".join(f"{a['id']}:{a['msg']}" for a in sorted(nlp.PRN_TREE, key=lambda k: k['id']))
             elif fn == "th2ipa_all":
                 r = str(nlp.th2ipa_all(text))
             elif fn == "sylparse_all":

@@ -231,6 +231,55 @@ export const FUNCTIONS = [
     placeholder: 'คำใหม่1\nคำใหม่2',
     tier: 1
   }
+,
+  {
+    id: 'dg_print',
+    name: 'dg_print',
+    thaiName: 'พิมพ์ความสัมพันธ์การพึ่งพา (Dependency Relations)',
+    desc: 'แสดงรายการความสัมพันธ์ (deprel, word/tag-i, head/tag-j) จากผล parse แบบ dependency (วาง JSON dict ของ dg_save)',
+    placeholder: '{"sentence":"...","words":[{"id":0,"form":"root","pos":"TOP","head":null,"deprel":null}]}',
+    tier: 1
+  },
+  {
+    id: 'dg_save',
+    name: 'dg_save',
+    thaiName: 'บันทึกผล parse เป็น dict (Save Dependency Graph)',
+    desc: 'จัดรูปแบบผล dependency parse เป็น {"sentence","words":[{"id","form","pos","head","deprel"}]}',
+    placeholder: '{"sentence":"...","words":[{"id":1,"form":"กิน","pos":"VERB","head":0,"deprel":"root"}]}',
+    tier: 1
+  },
+  {
+    id: 'print_dtree',
+    name: 'print_dtree',
+    thaiName: 'พิมพ์ต้นไม้การพึ่งพา (Print Dependency Tree)',
+    desc: 'แสดงโครงสร้างต้นไม้ dependency ทีละบรรทัด เรียงตาม id',
+    placeholder: '{"sentence":"...","words":[{"id":0,"form":"root","pos":"TOP","head":null,"deprel":null},{"id":1,"form":"กิน","pos":"VERB","head":0,"deprel":"root"}]}',
+    tier: 1
+  },
+  {
+    id: 'scan_dtree',
+    name: 'scan_dtree',
+    thaiName: 'สแกนต้นไม้การพึ่งพา (Scan Dependency Tree)',
+    desc: 'สแกนโครงสร้างต้นไม้ dependency ผลลัพธ์เหมือน print_dtree',
+    placeholder: '{"sentence":"...","words":[{"id":0,"form":"root","pos":"TOP","head":null,"deprel":null},{"id":1,"form":"กิน","pos":"VERB","head":0,"deprel":"root"}]}',
+    tier: 1
+  },
+  {
+    id: 'get_tree_depth',
+    name: 'get_tree_depth',
+    thaiName: 'ความลึกของคำ (Tree Depth at Word)',
+    desc: 'คืนความลึกของต้นไม้ย่อยที่เริ่มจากคำที่ระบุ (ใส่ id ของคำในช่อง cutoff, ค่าเริ่มต้น 0 = ราก)',
+    placeholder: '{"sentence":"...","words":[{"id":0,"form":"root","pos":"TOP","head":null,"deprel":null},{"id":1,"form":"กิน","pos":"VERB","head":0,"deprel":"root"}]}',
+    tier: 1
+  },
+  {
+    id: 'tree_max_depth',
+    name: 'tree_max_depth',
+    thaiName: 'ความลึกสูงสุดของต้นไม้ (Maximum Tree Depth)',
+    desc: 'คืนความลึกสูงสุดของต้นไม้ dependency ทั้งต้น',
+    placeholder: '{"sentence":"...","words":[{"id":0,"form":"root","pos":"TOP","head":null,"deprel":null},{"id":1,"form":"กิน","pos":"VERB","head":0,"deprel":"root"}]}',
+    tier: 1
+  }
 ];
 
 // Map for quick lookup by ID

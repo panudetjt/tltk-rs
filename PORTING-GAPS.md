@@ -59,14 +59,14 @@ Data status: the word-tier lexicon TextAna reads (`word.pklz` → WT01) is
 **converted, decoded and in use** (`Models::wordtier`, consumed by
 `textana.rs`). The two RF classifiers and `thamalt.mco` are not converted.
 
-### 1c. Pipelines & parsing — MISSING
+### 1c. Pipelines & parsing — tree helpers ported, MaltParser MISSING
 
 | upstream | notes |
 |---|---|
 | ~~`chunk(txt)`~~ | ✅ wire (one-shot sylseg → EDU → wordseg → POS → NER). |
 | ~~`TNC_tag`~~ | ✅ wire (XML tagging transcription + POS for corpus prep). |
 | `MaltParser`, `MaltParser_wordlist` | UD dependency parsing, model `thamalt.mco`. Hardest single item: transition-based parser + model conversion. `TextAna(UDParse="Malt")` depends on it. |
-| `print_dtree`, `dg_print`, `dg_save`, `scan_dtree`, `get_tree_depth`, `tree_max_depth` | tree helpers around MaltParser output. |
+| ~~`print_dtree`, `dg_print`, `dg_save`, `scan_dtree`, `get_tree_depth`, `tree_max_depth`~~ | ✅ wire (`dtree.rs`) — consume the parse-RESULT dict (`dg_save` shape), NOT MaltParser; oracle goldens from nltk `DependencyGraph` via `ref_dump`. Cycle edge cases: `RecursionError` mirrored; pure-cycle `print_dtree` prints nothing upstream (nothing reachable from node 0). |
 
 ### 1d. Transliteration variants — wire
 
