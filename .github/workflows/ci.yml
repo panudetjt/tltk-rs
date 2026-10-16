@@ -60,7 +60,7 @@ jobs:
         run: |
           for c in corpus/corpus_fn_*.jsonl; do
             g="golden/local_python_fn_${c##*corpus_fn_}"
-            out=$(cargo run -q -p tltk-verifier -- check "$c" "$g" crates/tltk-core/data)
+            out=$(cargo run -q -p tltk-verifier -- check "$c" "$g" crates/tltk-core/data || true)
             echo "$out"
             # corpus_fn_plots is disclosed-diff by design (hand-rolled renderer
             # ≠ matplotlib bytes): every row must fail on PNG bytes, none missing.
