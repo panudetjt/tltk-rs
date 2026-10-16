@@ -1,7 +1,8 @@
 # Weekly watch for a newer tltk on PyPI vs the pinned port target.
 # Dependabot can't do this job: the pin lives in shell scripts, not a manifest
 # Dependabot reads. Reuses scripts/upstream_check.sh via the mise task; opens
-# one issue per new upstream version (exact-title dedup, no commit-back).
+# one issue per new upstream version (exact-title dedup, no commit-back) and
+# @mentions panudetjt in the body so the issue lands in their inbox.
 name: upstream-watch
 
 on:
@@ -56,7 +57,7 @@ jobs:
             exit 0
           fi
           {
-            echo "PyPI now ships **tltk ${LATEST}**; this repo ports **${PORTED}** (the version app.stichula.org runs)."
+            echo "@panudetjt — PyPI now ships **tltk ${LATEST}**; this repo ports **${PORTED}** (the version app.stichula.org runs)."
             echo
             echo '```'
             cat upstream-report.txt
