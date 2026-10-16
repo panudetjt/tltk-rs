@@ -1,0 +1,4 @@
+# Toolchain pin for tltk-rs (Rust has no LTS channel — every 6-week stable
+# rolls; pin the exact latest stable for reproducible builds).
+[tools]
+rust = "1.99.1"

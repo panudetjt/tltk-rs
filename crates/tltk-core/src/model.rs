@@ -128,13 +128,12 @@ fn perf_hash_str(s: &str) -> u64 {
     let bytes = s.as_bytes();
     let mut hash = 0u64;
     const K: u64 = 0x517cc1b727220a95;
-    let mut chunks = bytes.chunks_exact(8);
-    for chunk in &mut chunks {
-        let v = u64::from_le_bytes(chunk.try_into().unwrap());
+    let (chunks, rem) = bytes.as_chunks::<8>();
+    for chunk in chunks {
+        let v = u64::from_le_bytes(*chunk);
         hash = hash.rotate_left(5) ^ v;
         hash = hash.wrapping_mul(K);
     }
-    let rem = chunks.remainder();
     if !rem.is_empty() {
         let mut buf = [0u8; 8];
         buf[..rem.len()].copy_from_slice(rem);
@@ -708,16 +707,18 @@ impl W2v {
         for i in 0..n {
             let row_raw = &raw[i * row_bytes_len..(i + 1) * row_bytes_len];
             let s: f32 = row_raw
-                .chunks_exact(4)
+                .as_chunks::<4>()
+                .0
+                .iter()
                 .map(|c| {
-                    let x = f32::from_le_bytes(c.try_into().unwrap());
+                    let x = f32::from_le_bytes(*c);
                     x * x
                 })
                 .sum();
             let norm = s.sqrt();
             norms.push(norm);
-            for c in row_raw.chunks_exact(4) {
-                let x = f32::from_le_bytes(c.try_into().unwrap());
+            for c in row_raw.as_chunks::<4>().0 {
+                let x = f32::from_le_bytes(*c);
                 vectors_unit.push(x / norm);
             }
         }
@@ -994,8 +995,8 @@ mod tests {
         let cnt = n * dim;
         let mut vectors = Vec::with_capacity(cnt);
         let raw: &[u8] = r.bytes(cnt * 4);
-        for chunk in raw.chunks_exact(4) {
-            vectors.push(f32::from_le_bytes(chunk.try_into().unwrap()));
+        for chunk in raw.as_chunks::<4>().0 {
+            vectors.push(f32::from_le_bytes(*chunk));
         }
         let mut norms1 = Vec::with_capacity(n);
         for i in 0..n {
@@ -1029,16 +1030,18 @@ mod tests {
         for i in 0..n {
             let row_raw = &raw[i * row_bytes_len..(i + 1) * row_bytes_len];
             let s: f32 = row_raw
-                .chunks_exact(4)
+                .as_chunks::<4>()
+                .0
+                .iter()
                 .map(|c| {
-                    let x = f32::from_le_bytes(c.try_into().unwrap());
+                    let x = f32::from_le_bytes(*c);
                     x * x
                 })
                 .sum();
             let norm = s.sqrt();
             norms2.push(norm);
-            for c in row_raw.chunks_exact(4) {
-                let x = f32::from_le_bytes(c.try_into().unwrap());
+            for c in row_raw.as_chunks::<4>().0 {
+                let x = f32::from_le_bytes(*c);
                 vectors_unit2.push(x / norm);
             }
         }

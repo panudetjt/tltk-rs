@@ -39,11 +39,8 @@ unsafe fn dot_avx2(a: &[f32], b: &[f32]) -> f32 {
     let mut sum2 = _mm256_setzero_ps();
     let mut sum3 = _mm256_setzero_ps();
 
-    let a_chunks = a.chunks_exact(8);
-    let b_chunks = b.chunks_exact(8);
-
-    let rem_a = a_chunks.remainder();
-    let rem_b = b_chunks.remainder();
+    let (a_chunks, rem_a) = a.as_chunks::<8>();
+    let (b_chunks, rem_b) = b.as_chunks::<8>();
 
     let mut a_ptr = a.as_ptr();
     let mut b_ptr = b.as_ptr();
@@ -210,7 +207,7 @@ unsafe fn scan_avx2_dim100(
     let rem_b2 = *m_ptr.add(98);
     let rem_b3 = *m_ptr.add(99);
 
-    for (i, unit) in vectors_unit.chunks_exact(100).enumerate() {
+    for (i, unit) in vectors_unit.as_chunks::<100>().0.iter().enumerate() {
         let u_ptr = unit.as_ptr();
         let mut sum0 = _mm256_mul_ps(_mm256_loadu_ps(u_ptr), m0);
         let mut sum1 = _mm256_mul_ps(_mm256_loadu_ps(u_ptr.add(8)), m1);
