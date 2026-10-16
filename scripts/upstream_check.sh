@@ -29,6 +29,22 @@ get_wheel "$latest" "$WORK/new.whl"
 python3 -m zipfile -e "$WORK/old.whl" "$WORK/old"
 python3 -m zipfile -e "$WORK/new.whl" "$WORK/new"
 
+echo; echo "== release notes from PyPI (Updates section mentioning $latest)"
+curl -fsSL "https://pypi.org/pypi/tltk/$latest/json" | python3 -c '
+import json, sys, re
+desc = json.load(sys.stdin)["info"].get("description") or ""
+lines = desc.splitlines()
+for i, l in enumerate(lines):
+    if re.search(r"^\s*Version\s+%s\s*[:.]" % re.escape(sys.argv[1]), l, re.I):
+        print("\n".join(lines[i:i+6])); print("---"); break
+else:
+    for i, l in enumerate(lines):
+        if re.search(r"version\s*%s" % re.escape(sys.argv[1]), l, re.I):
+            print("\n".join(lines[i:i+6])); print("---"); break
+    else:
+        print("(no %s mention in description; full description on pypi.org)" % sys.argv[1])
+' "$latest"
+
 echo; echo "== changed files (tltk/*.py + data manifests)"
 ( cd "$WORK" && diff -rq old/tltk new/tltk 2>/dev/null | head -40 ) || true
 
