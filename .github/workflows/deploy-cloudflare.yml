@@ -55,7 +55,7 @@ jobs:
       - name: Parity gate on the shipped wasm (simd flavor)
         run: |
           node scripts/node_parity.mjs --wasm-dir web/wasm/simd --corpus corpus/corpus_extra.jsonl --golden golden/local_python_extra.jsonl
-          out=$(node scripts/node_parity.mjs --wasm-dir web/wasm/simd --corpus corpus/corpus.jsonl --golden golden/stichula.jsonl)
+          out=$(node scripts/node_parity.mjs --wasm-dir web/wasm/simd --corpus corpus/corpus.jsonl --golden golden/stichula.jsonl --expect-fails 3 || true)
           echo "$out"; echo "$out" | grep -q "pass=241 fail=3 missing=0"
 
       - name: Deploy static toolbox to Cloudflare
