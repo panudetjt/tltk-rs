@@ -7,7 +7,7 @@ set -euo pipefail
 # Expected parity baselines:
 #   stichula: pass=241 fail=3 missing_golden=0
 #   local:    pass=228 fail=7 missing_golden=9
-#   extra:    pass=75 fail=0 missing_golden=0
+#   extra:    pass=87 fail=0 missing_golden=0
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
@@ -89,7 +89,7 @@ run_check() {
 # 4. Run checks for all three golden sets
 run_check "stichula" "corpus/corpus.jsonl" "golden/stichula.jsonl" "valifier: pass=241 fail=3 missing_golden=0"
 run_check "local" "corpus/corpus.jsonl" "golden/local_python.jsonl" "valifier: pass=228 fail=7 missing_golden=9"
-run_check "extra" "corpus/corpus_extra.jsonl" "golden/local_python_extra.jsonl" "valifier: pass=75 fail=0 missing_golden=0"
+run_check "extra" "corpus/corpus_extra.jsonl" "golden/local_python_extra.jsonl" "valifier: pass=87 fail=0 missing_golden=0"
 
 # 5. Run selftest
 echo "==> Running selftest under wasmtime..."
