@@ -45,6 +45,11 @@ export const TIER2_FUNCTIONS = new Set([
  */
 const DEFAULT_VERSION = '8f42992';
 
+/** Asset URL in the same versioned form getAssetUrl produces (SW prefetch). */
+export function assetUrl(filename) {
+  return `data/${filename}?v=${DEFAULT_VERSION}`;
+}
+
 /**
  * Loads an asset as a Uint8Array, supporting browser fetch with 'force-cache'
  * and Node.js filesystem reading for headless test/smoke scripts.

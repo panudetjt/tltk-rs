@@ -4,6 +4,9 @@
   "$schema": "https://unpkg.com/wrangler/config-schema.json",
   "name": "tltk-toolbox",
   "compatibility_date": "2026-10-16",
+  // Custom domain (requires the panudet.dev zone on the deploying CF account;
+  // the workers.dev URL stays live alongside it).
+  "routes": [{ "pattern": "tltk.panudet.dev", "custom_domain": true }],
   "assets": {
     // "." is relative to this config file: web/ (index.html, css/, js/, wasm/, data/)
     // no "binding": assets-only Workers (no script) must not declare one

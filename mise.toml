@@ -66,3 +66,7 @@ run = "bash scripts/setup_segment_oracle.sh"
 [tasks.upstream-check]
 description = "PyPI newer tltk? diff vs ported 1.10 + re-port checklist"
 run = "bash scripts/upstream_check.sh"
+
+[tasks.release]
+description = "release: bump+tag+push (CI publishes crate) + GitHub Release w/ changelog"
+run = "bash scripts/release.sh"

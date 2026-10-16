@@ -233,3 +233,9 @@ diffs `nlp.py`/`corpus.py` against 1.10 (file level + function level), and
 prints the re-port checklist (bump pins, re-convert models, regenerate oracle
 goldens, run all parity lanes). Every parity diff after a bump is a real
 signal, not noise.
+
+## Releasing
+
+`mise run release -- 0.1.0` bumps the workspace version, tags `v0.1.0`, pushes
+(CI publishes `tltk-core` to crates.io), watches the publish workflow, then
+cuts a GitHub Release with a grouped conventional-commit changelog.

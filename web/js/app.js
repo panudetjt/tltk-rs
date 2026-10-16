@@ -3,7 +3,7 @@
  */
 
 import { selectFlavor, probeSimd } from './probe.js';
-import { TltkManager, TIER2_FUNCTIONS } from './loader.js';
+import { TltkManager, TIER2_FUNCTIONS, TIER1_FILES, TIER2_FILES, assetUrl } from './loader.js';
 
 // Metadata and Thai descriptions for all 16 TLTK functions
 export const FUNCTIONS = [
@@ -354,3 +354,26 @@ inputText.addEventListener('keydown', (e) => {
 
 // Initial Setup
 initFunctionSelect();
+
+
+// ---- PWA: service worker + background asset prefetch (tier 1 -> wasm -> tier 2)
+// Fills the SW cache after first paint so the toolbox works offline and the
+// first real query is instant. Never blocks the UI; failures are silent.
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(() => {});
+    const prefetch = async () => {
+      const sw = await navigator.serviceWorker.ready.catch(() => null);
+      if (!sw) return;
+      const quiet = (u) => fetch(u, { cache: 'force-cache' }).catch(() => {});
+      for (const f of TIER1_FILES) await quiet(assetUrl(f));
+      const flavor = selectFlavor();
+      await quiet(`wasm/${flavor}/tltk_web.js`);
+      await quiet(`wasm/${flavor}/tltk_web.wasm`);
+      for (const f of TIER2_FILES) await quiet(assetUrl(f));
+    };
+    window.requestIdleCallback
+      ? window.requestIdleCallback(() => { prefetch(); })
+      : setTimeout(prefetch, 2000);
+  });
+}
