@@ -14,7 +14,7 @@ To unlock the segment oracle without retraining or modifying the upstream model,
 - **pandas**: 1.5.3
 - **gensim**: 4.3.2
 - **nltk**, **sklearn-crfsuite**, **requests**
-Default venv path: `/tmp/seg-oracle-venv`
+Default venv path: `~/.local/share/tltk-rs/venv-segment-oracle` (persistent, survives /tmp wipes)
 
 ## Usage
 
@@ -29,7 +29,7 @@ This checks Python 3.9, the package versions, and runs a test probe on `segment(
 # 1. Ensure Python 3.9 is installed (via mise)
 mise install python@3.9
 
-# 2. Run the setup script to create /tmp/seg-oracle-venv with pinned packages
+# 2. Run the setup script to create $HOME/.local/share/tltk-rs/venv-segment-oracle with pinned packages
 bash scripts/setup_segment_oracle.sh
 ```
 
@@ -40,5 +40,5 @@ bash scripts/setup_segment_oracle.sh --force
 
 ### Running with the oracle
 ```bash
-PYTHONPATH=~/work/my-project/tltk-ref/tltk-110 /tmp/seg-oracle-venv/bin/python your_script.py
+PYTHONPATH=~/work/my-project/tltk-ref/tltk-110 $HOME/.local/share/tltk-rs/venv-segment-oracle/bin/python your_script.py
 ```

@@ -1,0 +1,60 @@
+name: deploy-cloudflare
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "crates/**"
+      - "static/**"
+      - "scripts/**"
+      - "tools/**"
+      - ".github/workflows/deploy-cloudflare.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-toolbox
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install pinned toolchain
+        uses: jdx/mise-action@v2
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Add wasm targets
+        run: rustup target add wasm32-unknown-unknown
+
+      - name: Fetch model blobs (edu/w2v)
+        run: bash scripts/fetch_models.sh
+
+      - name: Build web artifacts (scalar + simd128)
+        run: bash scripts/build_web.sh
+
+      - name: Stage model data for static serving
+        run: |
+          mkdir -p static/data
+          cp crates/tltk-core/data/*.bin.gz static/data/
+          cp crates/tltk-core/data/sylrule.txt static/data/
+          cp crates/tltk-core/data/thaisyl.txt static/data/
+          ls -la static/data/
+
+      # A deploy that fails parity is not a deploy.
+      - name: Parity gate on the shipped wasm (simd flavor)
+        run: |
+          node scripts/node_parity.mjs --wasm-dir static/wasm/simd --corpus corpus/corpus_extra.jsonl --golden golden/local_python_extra.jsonl
+          out=$(node scripts/node_parity.mjs --wasm-dir static/wasm/simd --corpus corpus/corpus.jsonl --golden golden/stichula.jsonl)
+          echo "$out"; echo "$out" | grep -q "pass=241 fail=3 missing=0"
+
+      - name: Deploy static toolbox to Cloudflare
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: static
+          wranglerVersion: "4"
+          command: deploy --config wrangler-toolbox.toml

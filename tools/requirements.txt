@@ -1,0 +1,12 @@
+# Python deps for repo tooling (installed by scripts/fetch_models.sh into a
+# persistent venv; gen_atlas.py needs only Pillow).
+#
+# scipy<1.13: gensim 4.3.x imports scipy.linalg.triu, removed in scipy 1.13.
+gensim>=4.3.3
+scipy<1.13
+numpy
+scikit-learn
+nltk
+python-crfsuite
+requests
+Pillow

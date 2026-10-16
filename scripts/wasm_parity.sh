@@ -13,15 +13,34 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 cd "$REPO_ROOT"
 
-# 1. Locate wasmtime: prefer command -v wasmtime, fallback to /tmp/wasmtime-dl/wasmtime, fail loudly if neither
+# 1. Locate wasmtime: PATH first, else auto-download a pinned build into a persistent cache
 WASMTIME=""
 if command -v wasmtime >/dev/null 2>&1; then
     WASMTIME="$(command -v wasmtime)"
-elif [[ -x "/tmp/wasmtime-dl/wasmtime" ]]; then
-    WASMTIME="/tmp/wasmtime-dl/wasmtime"
 else
-    echo "ERROR: wasmtime binary not found on PATH or at /tmp/wasmtime-dl/wasmtime" >&2
-    exit 1
+    # Auto-download a pinned wasmtime into a persistent cache (survives /tmp wipes)
+    WASMTIME_CACHE="${TLTK_WASMTIME_CACHE:-$HOME/.cache/tltk-rs/wasmtime}"
+    WASMTIME_VER="v49.0.3"
+    case "$(uname -m)-$(uname -s)" in
+        x86_64-Linux)  WASMTIME_ARCH="x86_64-linux" ;;
+        aarch64-Linux) WASMTIME_ARCH="aarch64-linux" ;;
+        arm64-Darwin)  WASMTIME_ARCH="aarch64-macos" ;;
+        x86_64-Darwin) WASMTIME_ARCH="x86_64-macos" ;;
+        *) echo "ERROR: unsupported platform for wasmtime auto-download: $(uname -m)-$(uname -s)" >&2; exit 1 ;;
+    esac
+    WASMTIME="$WASMTIME_CACHE/wasmtime"
+    if [[ ! -x "$WASMTIME" ]]; then
+        echo "==> Downloading wasmtime $WASMTIME_VER ($WASMTIME_ARCH) to $WASMTIME_CACHE"
+        mkdir -p "$WASMTIME_CACHE"
+        TARBALL="wasmtime-$WASMTIME_VER-$WASMTIME_ARCH.tar.xz"
+        curl -fsSL "https://github.com/bytecodealliance/wasmtime/releases/download/$WASMTIME_VER/$TARBALL" \
+            -o "$WASMTIME_CACHE/$TARBALL" || { echo "ERROR: wasmtime download failed" >&2; exit 1; }
+        tar -xJf "$WASMTIME_CACHE/$TARBALL" -C "$WASMTIME_CACHE" \
+            "wasmtime-$WASMTIME_VER-$WASMTIME_ARCH/wasmtime"
+        mv "$WASMTIME_CACHE/wasmtime-$WASMTIME_VER-$WASMTIME_ARCH/wasmtime" "$WASMTIME"
+        chmod +x "$WASMTIME"
+        rm -rf "$WASMTIME_CACHE/$TARBALL" "$WASMTIME_CACHE/wasmtime-$WASMTIME_VER-$WASMTIME_ARCH"
+    fi
 fi
 echo "Using wasmtime at: $WASMTIME"
 

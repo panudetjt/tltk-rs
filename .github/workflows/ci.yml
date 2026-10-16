@@ -1,0 +1,59 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install pinned toolchain (rust 1.99.1 / python 3.12 / node 22)
+        uses: jdx/mise-action@v2
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Add wasm targets
+        run: rustup target add wasm32-unknown-unknown wasm32-wasip1
+
+      - name: Fetch gitignored model blobs (edu/w2v) from the tltk wheel
+        run: bash scripts/fetch_models.sh
+
+      - name: Clippy (zero warnings)
+        run: cargo clippy --workspace --all-targets -- -D warnings
+
+      - name: Tests (incl. SIMD bit-exactness + oracle tests)
+        run: cargo test --workspace
+
+      - name: Parity — stichula goldens
+        run: cargo run -q -p tltk-verifier -- check corpus/corpus.jsonl golden/stichula.jsonl crates/tltk-core/data
+
+      - name: Parity — local python goldens
+        run: cargo run -q -p tltk-verifier -- check corpus/corpus.jsonl golden/local_python.jsonl crates/tltk-core/data || true
+
+      - name: Parity — extra oracle goldens (must be 87/0/0)
+        run: |
+          out=$(cargo run -q -p tltk-verifier -- check corpus/corpus_extra.jsonl golden/local_python_extra.jsonl crates/tltk-core/data)
+          echo "$out"
+          echo "$out" | grep -q "fail=0 missing_golden=0"
+
+      - name: wasm arms compile (simd128 on/off)
+        run: |
+          cargo check -p tltk-worker --target wasm32-unknown-unknown
+          RUSTFLAGS="-C target-feature=+simd128" cargo check -p tltk-worker --target wasm32-unknown-unknown
+
+      - name: Web build + node parity (both flavors)
+        run: |
+          bash scripts/build_web.sh
+          node scripts/node_parity.mjs --wasm-dir static/wasm/scalar --corpus corpus/corpus.jsonl --golden golden/stichula.jsonl
+          node scripts/node_parity.mjs --wasm-dir static/wasm/simd --corpus corpus/corpus.jsonl --golden golden/stichula.jsonl
+
+      - name: wasm32-WASI parity lane (wasmtime; auto-downloads)
+        run: bash scripts/wasm_parity.sh

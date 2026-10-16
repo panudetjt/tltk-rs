@@ -1,0 +1,23 @@
+name: publish-crates
+
+on:
+  push:
+    tags: ["v*"]
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install pinned toolchain
+        uses: jdx/mise-action@v2
+
+      - uses: Swatinem/rust-cache@v2
+
+      # Only tltk-core is published — it is the library. The verifier/worker/web
+      # crates are application/tooling and stay repo-only.
+      - name: Publish tltk-core to crates.io
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: cargo publish -p tltk-core

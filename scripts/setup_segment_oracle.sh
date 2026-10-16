@@ -14,7 +14,7 @@
 
 set -euo pipefail
 
-VENV_DIR="${VENV_DIR:-/tmp/seg-oracle-venv}"
+VENV_DIR="${VENV_DIR:-$HOME/.local/share/tltk-rs/venv-segment-oracle}"
 TLTK_REF="${TLTK_REF:-~/work/my-project/tltk-ref/tltk-110}"
 
 CHECK_ONLY=false

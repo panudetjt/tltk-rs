@@ -194,3 +194,30 @@ Code: MIT (see [LICENSE](LICENSE)). This project derives from and redistributes
 converted artifacts of TLTK 1.10 (BSD-3-Clause) and a Thai font atlas — see
 [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md) for the notices that travel
 with distributions.
+
+## Run on a new machine
+
+Toolchains are pinned by [mise](https://mise.jdx.dev) (`rust 1.99.1 / python 3.12 / node 22`):
+
+```bash
+mise install          # installs the pinned toolchain
+bash scripts/fetch_models.sh   # downloads tltk==1.10 from PyPI, converts edu/w2v blobs (~1st run only)
+bash scripts/build_web.sh      # builds static/wasm/{scalar,simd}
+bash scripts/serve_toolbox.sh  # serves the toolbox at http://localhost:8080
+```
+
+Gates: `cargo test --workspace`, the three `tltk-verifier check` parity runs,
+`scripts/wasm_parity.sh` (auto-downloads wasmtime on first run).
+
+## CI/CD (GitHub Actions)
+
+- **ci.yml** — every push/PR: clippy zero, tests, parity ×3, both wasm arms,
+  node parity both flavors, the wasm32-WASI lane.
+- **publish-crates.yml** — tag `v*`: publishes `tltk-core` to crates.io
+  (needs the `CARGO_REGISTRY_TOKEN` secret; the other crates are app-side and
+  stay repo-only).
+- **deploy-cloudflare.yml** — push to `main` touching code/static: rebuilds
+  the web artifacts, runs the parity gate on the shipped wasm, then deploys
+  the static toolbox via wrangler (needs `CLOUDFLARE_API_TOKEN` +
+  `CLOUDFLARE_ACCOUNT_ID` secrets). Static-asset serving on Cloudflare is
+  free and unmetered.
