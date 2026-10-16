@@ -102,6 +102,8 @@ impl<'a> Session<'a> {
             "analogy" => self.wire_analogy(text),
             "plotwords" => self.wire_plotwords(text),
             "textana" => textana::textana(self, text),
+            "th2ipa_all" => Ok(self.th2ipa_all(text)),
+            "sylparse_all" => Ok(self.sylparse_all(text)),
             other => Err(ProcessError(format!("Unknown function: {}", other))),
         }
     }
