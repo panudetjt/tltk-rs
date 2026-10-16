@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Local oracle: run the real tltk 1.10 (wheel) and dump internals + outputs.
+"""Local oracle: run the real tltk (wheel) and dump internals + outputs.
 
 Usage: ref_dump.py <tltk-pkg-dir> <mode>
   modes:

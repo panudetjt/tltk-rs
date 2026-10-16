@@ -28,7 +28,7 @@ fi
 
 echo "==> bench-report: $ROUNDS interleaved round(s) -> $OUT"
 for i in $(seq 1 "$ROUNDS"); do
-    echo "==> round $i/$ROUNDS: python oracle (tltk 1.10)"
+    echo "==> round $i/$ROUNDS: python oracle (tltk 1.11)"
     mise run bench-python > "$OUT/bench_py_$i.json" 2> "$OUT/bench_py_$i.log"
     echo "==> round $i/$ROUNDS: rust tltk-core (--release)"
     mise run bench > "$OUT/bench_rs_$i.json" 2> "$OUT/bench_rs_$i.log"

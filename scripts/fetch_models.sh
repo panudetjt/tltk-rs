@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Fetch the two gitignored model blobs (edu.bin.gz, w2v.bin.gz) by downloading
-# the tltk==1.10 wheel from PyPI and converting it with tools/convert/convert.py
+# the tltk==1.11 wheel from PyPI and converting it with tools/convert/convert.py
 # (deps are PEP 723 inline — uv resolves and caches them; no manual venv).
 # Re-runnable on any machine with mise (rust/python/node/uv) installed.
 set -euo pipefail
@@ -18,22 +18,22 @@ need uv
 need curl
 need python3
 
-# 1. Resolve the tltk==1.10 wheel URL from the PyPI JSON API and download it
-echo "==> Downloading tltk==1.10 wheel from PyPI"
-WHEEL_URL="$(curl -fsSL https://pypi.org/pypi/tltk/1.10/json | python3 -c '
+# 1. Resolve the tltk==1.11 wheel URL from the PyPI JSON API and download it
+echo "==> Downloading tltk==1.11 wheel from PyPI"
+WHEEL_URL="$(curl -fsSL https://pypi.org/pypi/tltk/1.11/json | python3 -c '
 import json, sys
 for f in json.load(sys.stdin)["urls"]:
     if f["filename"].endswith("py3-none-any.whl"):
         print(f["url"]); break
 ')"
-[ -n "$WHEEL_URL" ] || { echo "ERROR: no universal wheel found for tltk==1.10" >&2; exit 1; }
-curl -fsSL "$WHEEL_URL" -o "$WORK_DIR/tltk-1.10.whl"
+[ -n "$WHEEL_URL" ] || { echo "ERROR: no universal wheel found for tltk==1.11" >&2; exit 1; }
+curl -fsSL "$WHEEL_URL" -o "$WORK_DIR/tltk-1.11.whl"
 
 # 2. Extract: edu source lives in the wheel; the w2v model does NOT ship in
 #    the wheel — the tltk package itself downloads TNCc5model3.bin from
 #    Chula's server on first use (tltk/corpus.py W2V_load). Same official URL.
 echo "==> Extracting wheel"
-python3 -m zipfile -e "$WORK_DIR/tltk-1.10.whl" "$WORK_DIR/pkg"
+python3 -m zipfile -e "$WORK_DIR/tltk-1.11.whl" "$WORK_DIR/pkg"
 TLTK_DIR="$WORK_DIR/pkg/tltk"
 
 W2V_SRC="$TLTK_DIR/TNCc5model3.bin"

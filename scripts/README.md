@@ -2,7 +2,7 @@
 
 ## Background
 
-TLTK 1.10's `nlp.segment` function uses an EDU segmentation model (`sent_segment.pklz`) containing a scikit-learn `RandomForestClassifier` pickled with scikit-learn 1.0.2.
+TLTK 1.11's `nlp.segment` function uses an EDU segmentation model (`sent_segment.pklz`) containing a scikit-learn `RandomForestClassifier` pickled with scikit-learn 1.0.2.
 
 On modern environments (Python 3.12+ with scikit-learn >= 1.2), unpickling this estimator fails because the underlying tree `node` struct dtype changed in scikit-learn 1.2 (`node array from the pickle has an incompatible dtype`).
 
@@ -40,7 +40,7 @@ bash scripts/setup_segment_oracle.sh --force
 
 ### Running with the oracle
 ```bash
-PYTHONPATH=~/.cache/tltk-rs/tltk-1.10-pkg ~/.local/share/tltk-rs/venv-segment-oracle/bin/python your_script.py
+PYTHONPATH=~/.cache/tltk-rs/tltk-1.11-pkg ~/.local/share/tltk-rs/venv-segment-oracle/bin/python your_script.py
 ```
 
 ## Benchmark the Python oracle
@@ -90,6 +90,6 @@ Notes:
 - `TNCc5model3.bin` is not in the wheel; the bench seeds it into the package
   dir from `$TLTK_W2V_BIN` or `~/.cache/tltk-bench/TNCc5model3.bin`, and
   downloads it from the official URL (`corpus.py download_TNCw2v`) on first use.
-- Per-case exceptions are results, not bench failures — tltk 1.10 has
+- Per-case exceptions are results, not bench failures — tltk 1.11 has
   disclosed crash cases (e.g. `spoonerism('สวัสดี')` raises `KeyError: 'dat'`;
   the validator 500s on it and the goldens record it with `ok: false`).

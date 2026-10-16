@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # Check PyPI for a newer tltk release and diff it against the version we ported
-# (1.10). Prints function-level changes in nlp.py/corpus.py so the re-port
+# (1.11). Prints function-level changes in nlp.py/corpus.py so the re-port
 # surface is obvious. Exit 0 with "up to date", exit 0 with a report if newer.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-PORTED_VERSION="1.10"
+PORTED_VERSION="1.11"
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
 

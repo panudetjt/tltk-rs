@@ -8,7 +8,7 @@ writes/prints a markdown summary that embeds the recorded environments from
 the artifacts themselves — the published numbers and their measurement
 conditions always travel together.
 
-Lanes: python oracle (tltk 1.10), native rust (--release), and the shipped
+Lanes: python oracle (tltk 1.11), native rust (--release), and the shipped
 browser wasm (simd128 + scalar flavors) under Node.
 
 Usage: python3 scripts/bench_summary.py <artifacts-dir>
@@ -25,7 +25,7 @@ DISPLAY_ORDER = [
 ]
 
 LANES = [
-    ("py", "bench_py", "tltk 1.10 (Python) µs/pass"),
+    ("py", "bench_py", "tltk 1.11 (Python) µs/pass"),
     ("rs", "bench_rs", "native Rust µs/pass"),
     ("ws", "bench_wasm_simd", "wasm simd128 µs/pass"),
     ("wc", "bench_wasm_scalar", "wasm scalar µs/pass"),

@@ -2,9 +2,9 @@
 # scripts/setup_segment_oracle.sh
 #
 # Reproduces or checks the period-correct Python 3.9 environment required for
-# the TLTK 1.10 segment oracle (RandomForest pickle incompatibility with
+# the TLTK 1.11 segment oracle (RandomForest pickle incompatibility with
 # sklearn >= 1.2). Fully self-contained: uv downloads a managed Python 3.9,
-# and the tltk 1.10 reference tree is fetched from PyPI into a local cache —
+# and the tltk 1.11 reference tree is fetched from PyPI into a local cache —
 # no personal paths involved.
 #
 # Usage:
@@ -13,7 +13,7 @@
 set -euo pipefail
 
 VENV_DIR="${VENV_DIR:-$HOME/.local/share/tltk-rs/venv-segment-oracle}"
-TLTK_REF="${TLTK_REF:-$HOME/.cache/tltk-rs/tltk-1.10-pkg}"
+TLTK_REF="${TLTK_REF:-$HOME/.cache/tltk-rs/tltk-1.11-pkg}"
 
 CHECK_ONLY=false
 FORCE=false
@@ -35,10 +35,10 @@ need python3
 
 fetch_tltk_ref() {
     if [ -d "$TLTK_REF/tltk" ]; then return 0; fi
-    echo "==> Fetching tltk==1.10 reference tree from PyPI into $TLTK_REF"
+    echo "==> Fetching tltk==1.11 reference tree from PyPI into $TLTK_REF"
     local work; work="$(mktemp -d)"
     local url
-    url="$(curl -fsSL https://pypi.org/pypi/tltk/1.10/json | python3 -c '
+    url="$(curl -fsSL https://pypi.org/pypi/tltk/1.11/json | python3 -c '
 import json, sys
 for f in json.load(sys.stdin)["urls"]:
     if f["filename"].endswith("py3-none-any.whl"):

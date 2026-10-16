@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Dump oracle (tltk 1.10) PNG renders for the three plot functions.
+"""Dump oracle (tltk 1.11) PNG renders for the three plot functions.
 
 Usage: golden_renders.py <tltk-pkg-dir>  (writes JSONL to stdout; redirect)
 using the real matplotlib renderers (w2v_diffplot / w2v_dimplot /

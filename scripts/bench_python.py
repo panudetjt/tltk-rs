@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Benchmark the Python oracle (tltk 1.10) over the parity corpus.
+# Benchmark the Python oracle (tltk 1.11) over the parity corpus.
 #
 # Deps (installed by scripts/setup_segment_oracle.sh): numpy<1.24, scipy<1.13,
 # scikit-learn==1.1.1, pandas==1.5.3, gensim==4.3.2, nltk, sklearn-crfsuite,
@@ -23,7 +23,7 @@
 #
 # Usage: bench_python.py <corpus.jsonl> [--warmup W] [--repeat N] [--json]
 """
-Benchmark the Python oracle (tltk 1.10, era-correct venv) over the corpus.
+Benchmark the Python oracle (tltk 1.11, era-correct venv) over the corpus.
 """
 import os
 
@@ -44,7 +44,7 @@ from datetime import datetime, timezone
 import resource  # POSIX: ru_maxrss = peak RSS
 
 TLTK_PKG_DIR = os.environ.get(
-    "TLTK_PKG_DIR", os.path.expanduser("~/.cache/tltk-rs/tltk-1.10-pkg"))
+    "TLTK_PKG_DIR", os.path.expanduser("~/.cache/tltk-rs/tltk-1.11-pkg"))
 W2V_URL = "https://www.arts.chula.ac.th/~ling/contents/Upload/TNCc5model3.bin"
 W2V_CACHE = os.path.expanduser("~/.cache/tltk-bench/TNCc5model3.bin")
 
@@ -84,7 +84,7 @@ def ensure_w2v_bin(pkg_dir):
 def load_oracle():
     t0 = time.perf_counter()
     if not os.path.isdir(TLTK_PKG_DIR):
-        sys.exit(f"ERROR: tltk 1.10 reference tree not at {TLTK_PKG_DIR} "
+        sys.exit(f"ERROR: tltk 1.11 reference tree not at {TLTK_PKG_DIR} "
                  "(run: mise run oracle-setup)")
     sys.path.insert(0, TLTK_PKG_DIR)
     import tltk
@@ -103,7 +103,7 @@ def load_oracle():
     pkg_dir = os.path.dirname(os.path.abspath(corpus.__file__))
     ensure_w2v_bin(pkg_dir)
     corpus.w2v_load()
-    log(f"==> oracle ready: tltk {tltk.__version__ if hasattr(tltk, '__version__') else '1.10'} "
+    log(f"==> oracle ready: tltk {tltk.__version__ if hasattr(tltk, '__version__') else '1.11'} "
         f"on {platform.python_implementation()} {platform.python_version()} "
         f"(load {time.perf_counter() - t0:.1f}s)")
     return nlp, corpus, th2ipa
@@ -361,7 +361,7 @@ def main():
             groups[fn] = []
         groups[fn].append((text, cutoff))
 
-    # smoke each function once; per-case exceptions are data here — tltk 1.10
+    # smoke each function once; per-case exceptions are data here — tltk 1.11
     # has disclosed crash cases (e.g. spoonerism('สวัสดี') -> KeyError 'dat',
     # golden ok=false) that the validator itself 500s on
     smoke_errors = 0
