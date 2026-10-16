@@ -26,6 +26,23 @@ if [ ! -s web/wasm/simd/tltk_web.wasm ] || [ ! -s web/wasm/scalar/tltk_web.wasm 
     bash scripts/build_web.sh > "$OUT/build_web.log" 2>&1
 fi
 
+# Preflight every engine before spending rounds: a broken model blob or a
+# decode panic fails here in seconds instead of mid-run (each check loads all
+# models and touches every corpus case once; artifacts keep the logs).
+echo "==> preflight: native model load + anchors"
+cargo run --release -q -p tltk-verifier -- selftest crates/tltk-core/data \
+    > "$OUT/preflight_native.log" 2>&1
+echo "==> preflight: wasm engines (both flavors)"
+node scripts/node_bench.mjs --wasm-dir web/wasm/simd --corpus corpus/corpus.jsonl \
+    --label wasm-simd --smoke-only > "$OUT/preflight_wasm_simd.log" 2>&1
+node scripts/node_bench.mjs --wasm-dir web/wasm/scalar --corpus corpus/corpus.jsonl \
+    --label wasm-scalar --smoke-only > "$OUT/preflight_wasm_scalar.log" 2>&1
+echo "==> preflight: python oracle"
+PY_BIN="$HOME/.local/share/tltk-rs/venv-segment-oracle/bin/python"
+[ -x "$PY_BIN" ] || bash scripts/setup_segment_oracle.sh > "$OUT/preflight_venv.log" 2>&1
+"$PY_BIN" scripts/bench_python.py corpus/corpus.jsonl --warmup 0 --repeat 1 --smoke-only \
+    > "$OUT/preflight_py.log" 2>&1
+
 echo "==> bench-report: $ROUNDS interleaved round(s) -> $OUT"
 for i in $(seq 1 "$ROUNDS"); do
     echo "==> round $i/$ROUNDS: python oracle (tltk 1.11)"

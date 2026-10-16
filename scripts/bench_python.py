@@ -25,6 +25,7 @@
 """
 Benchmark the Python oracle (tltk 1.11, era-correct venv) over the corpus.
 """
+
 import os
 
 os.environ.setdefault("MPLBACKEND", "Agg")  # before anything imports pyplot
@@ -35,26 +36,43 @@ import io
 import json
 import os
 import platform
+import resource  # POSIX: ru_maxrss = peak RSS
 import socket
 import sys
 import time
 import warnings
 from copy import deepcopy
 from datetime import datetime, timezone
-import resource  # POSIX: ru_maxrss = peak RSS
 
 TLTK_PKG_DIR = os.environ.get(
-    "TLTK_PKG_DIR", os.path.expanduser("~/.cache/tltk-rs/tltk-1.11-pkg"))
+    "TLTK_PKG_DIR", os.path.expanduser("~/.cache/tltk-rs/tltk-1.11-pkg")
+)
 W2V_URL = "https://www.arts.chula.ac.th/~ling/contents/Upload/TNCc5model3.bin"
 W2V_CACHE = os.path.expanduser("~/.cache/tltk-bench/TNCc5model3.bin")
 
 # deps whose versions belong in every report (the measured stack, not just tltk)
-REPORT_DEPS = ("numpy", "pandas", "scikit-learn", "scipy", "gensim",
-               "nltk", "sklearn-crfsuite", "matplotlib", "requests")
+REPORT_DEPS = (
+    "numpy",
+    "pandas",
+    "scikit-learn",
+    "scipy",
+    "gensim",
+    "nltk",
+    "sklearn-crfsuite",
+    "matplotlib",
+    "requests",
+)
 
 # the module-global colloc counters a fresh tltk process starts with
-COUNTER_NAMES = ("TriCount", "BiCount", "BiType", "Count", "Type",
-                 "TotalWord", "TotalLex")
+COUNTER_NAMES = (
+    "TriCount",
+    "BiCount",
+    "BiType",
+    "Count",
+    "Type",
+    "TotalWord",
+    "TotalLex",
+)
 
 
 def log(line):
@@ -69,26 +87,32 @@ def ensure_w2v_bin(pkg_dir):
     if os.path.exists(target):
         return
     src = os.environ.get("TLTK_W2V_BIN") or (
-        W2V_CACHE if os.path.exists(W2V_CACHE) else None)
+        W2V_CACHE if os.path.exists(W2V_CACHE) else None
+    )
     if src is None:
         os.makedirs(os.path.dirname(W2V_CACHE), exist_ok=True)
         log(f"==> downloading TNCc5model3.bin (official tltk URL) -> {W2V_CACHE}")
         import urllib.request
+
         urllib.request.urlretrieve(W2V_URL, W2V_CACHE)
         src = W2V_CACHE
     log(f"==> seeding {target}")
     import shutil
+
     shutil.copy(src, target)
 
 
 def load_oracle():
     t0 = time.perf_counter()
     if not os.path.isdir(TLTK_PKG_DIR):
-        sys.exit(f"ERROR: tltk 1.11 reference tree not at {TLTK_PKG_DIR} "
-                 "(run: mise run oracle-setup)")
+        sys.exit(
+            f"ERROR: tltk 1.11 reference tree not at {TLTK_PKG_DIR} "
+            "(run: mise run oracle-setup)"
+        )
     sys.path.insert(0, TLTK_PKG_DIR)
     import tltk
-    from tltk import corpus, nlp, th2ipa  # noqa: F401  (all import-time work)
+    from tltk import corpus, nlp, th2ipa
+
     # model loads that production warm processes carry — same placement as
     # the Rust bench's load_models() (outside the timed region)
     nlp.pos_load()
@@ -97,15 +121,19 @@ def load_oracle():
         nlp.useg_model_load()
     except ValueError as e:
         if "incompatible dtype" in str(e):
-            sys.exit("ERROR: sent_segment.pklz needs scikit-learn<1.2 — "
-                     "run bench in the oracle venv (mise run oracle-setup)")
+            sys.exit(
+                "ERROR: sent_segment.pklz needs scikit-learn<1.2 — "
+                "run bench in the oracle venv (mise run oracle-setup)"
+            )
         raise
     pkg_dir = os.path.dirname(os.path.abspath(corpus.__file__))
     ensure_w2v_bin(pkg_dir)
     corpus.w2v_load()
-    log(f"==> oracle ready: tltk {tltk.__version__ if hasattr(tltk, '__version__') else '1.11'} "
+    log(
+        f"==> oracle ready: tltk {tltk.__version__ if hasattr(tltk, '__version__') else '1.11'} "
         f"on {platform.python_implementation()} {platform.python_version()} "
-        f"(load {time.perf_counter() - t0:.1f}s)")
+        f"(load {time.perf_counter() - t0:.1f}s)"
+    )
     return nlp, corpus, th2ipa
 
 
@@ -122,7 +150,7 @@ class Oracle:
     def bench_call(self, fn, text, cutoff):
         try:
             return str(self(fn, text, cutoff))
-        except Exception as e:  # upstream crash cases are results too
+        except Exception as e:  # noqa: BLE001 — upstream crash cases are results too
             return str(e)
 
     def __call__(self, fn, text, cutoff):
@@ -145,7 +173,8 @@ class Oracle:
             return str(nlp.spoonerism(text))
         if fn == "pos_tag":
             return "\n".join(
-                " ".join(f"{w}/{p}" for (w, p) in lst) for lst in nlp.pos_tag(text))
+                " ".join(f"{w}/{p}" for (w, p) in lst) for lst in nlp.pos_tag(text)
+            )
         if fn == "ner_tag":
             return nlp.ner_tag(text)
         if fn == "segment":
@@ -163,8 +192,10 @@ class Oracle:
             for w in parts:
                 if w not in vocabs:
                     return self.oov_msg.format(w)
-            return "ความคล้ายระหว่าง '%s' กับ '%s' = %.4f" % (
-                parts[0], parts[1], corpus.similarity(parts[0], parts[1]))
+            return (
+                f"ความคล้ายระหว่าง '{parts[0]}' กับ '{parts[1]}' = "
+                f"{corpus.similarity(parts[0], parts[1]):.4f}"
+            )
         if fn == "outofgroup":
             words = text.split()
             vocabs = list(corpus.w2v_model.wv.index_to_key)
@@ -180,8 +211,10 @@ class Oracle:
             ans = corpus.analogy(parts[0], parts[1], parts[2])
             if not ans:
                 return "ไม่พบคำตอบ"
-            (word, score), = ans
-            return f"{parts[0]} : {parts[1]} :: {parts[2]} : {word} (score: {score:.4f})"
+            ((word, score),) = ans
+            return (
+                f"{parts[0]} : {parts[1]} :: {parts[2]} : {word} (score: {score:.4f})"
+            )
         if fn == "plotwords":
             return self.plotwords(text)
         raise ValueError(f"unknown function {fn}")
@@ -197,10 +230,13 @@ class Oracle:
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")  # missing TH Sarabun New on dev boxes
             import logging
+
             logging.getLogger("matplotlib").setLevel(logging.ERROR)
             from matplotlib import pyplot
+
             corpus.matplotlib.rc(
-                "font", **{"family": "TH Sarabun New", "weight": "bold", "size": 14})
+                "font", family="TH Sarabun New", weight="bold", size=14
+            )
             xs = list(range(1, 101))
             fig = pyplot.figure(figsize=(12, 2), dpi=80)
             for word in words:
@@ -239,9 +275,10 @@ def median(values):
 
 def cpu_model():
     try:
-        for line in open("/proc/cpuinfo", encoding="utf-8"):
-            if line.startswith("model name"):
-                return line.split(":", 1)[1].strip()
+        with open("/proc/cpuinfo", encoding="utf-8") as f:
+            for line in f:
+                if line.startswith("model name"):
+                    return line.split(":", 1)[1].strip()
     except OSError:
         pass
     return platform.processor() or "unknown"
@@ -249,9 +286,10 @@ def cpu_model():
 
 def mem_total_kb():
     try:
-        for line in open("/proc/meminfo", encoding="utf-8"):
-            if line.startswith("MemTotal:"):
-                return int(line.split()[1])
+        with open("/proc/meminfo", encoding="utf-8") as f:
+            for line in f:
+                if line.startswith("MemTotal:"):
+                    return int(line.split()[1])
     except (OSError, ValueError, IndexError):
         pass
     return None
@@ -261,11 +299,12 @@ def read_proc_status():
     """VmRSS/VmHWM from /proc/self/status — same fields the Rust verifier records."""
     try:
         rss = hwm = None
-        for line in open("/proc/self/status", encoding="utf-8"):
-            if line.startswith("VmRSS:"):
-                rss = int(line.split()[1])
-            elif line.startswith("VmHWM:"):
-                hwm = int(line.split()[1])
+        with open("/proc/self/status", encoding="utf-8") as f:
+            for line in f:
+                if line.startswith("VmRSS:"):
+                    rss = int(line.split()[1])
+                elif line.startswith("VmHWM:"):
+                    hwm = int(line.split()[1])
         return {"rss_kb": rss, "vmhwm_kb": hwm}
     except OSError:
         return None
@@ -274,15 +313,24 @@ def read_proc_status():
 def git_state():
     """Short HEAD sha + dirty-file count, mirroring the Rust env block."""
     import subprocess
+
     try:
         sha = subprocess.run(
             ["git", "rev-parse", "--short", "HEAD"],
-            capture_output=True, text=True, timeout=10).stdout.strip()
+            capture_output=True,
+            text=True,
+            timeout=10,
+            check=False,
+        ).stdout.strip()
         if not sha:
             return None
         dirty = subprocess.run(
             ["git", "status", "--porcelain"],
-            capture_output=True, text=True, timeout=10).stdout.count("\n")
+            capture_output=True,
+            text=True,
+            timeout=10,
+            check=False,
+        ).stdout.count("\n")
         return f"{sha}+{dirty} dirty files" if dirty else sha
     except (OSError, subprocess.SubprocessError):
         return None
@@ -298,6 +346,7 @@ def environment_block(tltk_version):
     except OSError:
         load = None
     import importlib.metadata
+
     deps = {}
     for name in REPORT_DEPS:
         try:
@@ -324,6 +373,7 @@ def environment_block(tltk_version):
 
 def tltk_version():
     import importlib.metadata
+
     try:
         return importlib.metadata.version("tltk")
     except importlib.metadata.PackageNotFoundError:
@@ -336,15 +386,22 @@ def main():
     ap.add_argument("--warmup", type=int, default=3)
     ap.add_argument("--repeat", type=int, default=10)
     ap.add_argument("--json", action="store_true")
+    ap.add_argument(
+        "--smoke-only",
+        action="store_true",
+        help="load the oracle, run each case once, exit — the "
+        "preflight lane of bench_report.sh",
+    )
     args = ap.parse_args()
 
     cases = []
-    for line in open(args.corpus, encoding="utf-8"):
-        line = line.strip()
-        if not line or line.startswith("#"):
-            continue
-        row = json.loads(line)
-        cases.append((row["function"], row["text"], row.get("cutoff", "medium")))
+    with open(args.corpus, encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+            row = json.loads(line)
+            cases.append((row["function"], row["text"], row.get("cutoff", "medium")))
 
     env = environment_block(None)
     log(f"# env: {json.dumps(env, ensure_ascii=False)}")
@@ -369,11 +426,18 @@ def main():
         for text, cutoff in groups[fn]:
             try:
                 oracle(fn, text, cutoff)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — the oracle's raises are data
                 smoke_errors += 1
-                log(f"!! oracle raises (as upstream does): {fn} {text[:20]!r}: {str(e)[:60]}")
+                log(
+                    f"!! oracle raises (as upstream does): {fn} {text[:20]!r}: {str(e)[:60]}"
+                )
     if smoke_errors:
-        log(f"({smoke_errors} case(s) raise; timed passes will count them via the same wrapper)")
+        log(
+            f"({smoke_errors} case(s) raise; timed passes will count them via the same wrapper)"
+        )
+    if args.smoke_only:
+        log("smoke ok: oracle loads and every corpus case runs once")
+        return
 
     snap = make_snapshot(modules)
     sink = 0  # keep results alive the way black_box does for the Rust bench
@@ -392,7 +456,9 @@ def main():
                 sink += len(oracle.bench_call(fn, text, cutoff))
             pass_us.append((time.perf_counter_ns() - t0) // 1000)
         fn_results[fn] = {"cases": len(group), "median_us_per_pass": median(pass_us)}
-        log(f"{fn:<19}cases={len(group):<2}  median_us_per_pass={fn_results[fn]['median_us_per_pass']}")
+        log(
+            f"{fn:<19}cases={len(group):<2}  median_us_per_pass={fn_results[fn]['median_us_per_pass']}"
+        )
 
     total = sum(r["median_us_per_pass"] for r in fn_results.values())
     proc_after_pass = read_proc_status()
@@ -401,18 +467,29 @@ def main():
     log(f"peak_rss_kb={peak_rss_kb} sink={sink}")
 
     if args.json:
-        print(json.dumps({
-            "protocol": {"warmup": args.warmup, "repeat": args.repeat,
-                         "statistic": "median_us_per_pass"},
-            "environment": env,
-            "functions": fn_results,
-            "total_us_per_pass": total,
-            "memory": {
-                "after_load_kb": proc_after_load["rss_kb"] if proc_after_load else None,
-                "after_pass_kb": proc_after_pass["rss_kb"] if proc_after_pass else None,
-                "vmhwm_kb": peak_rss_kb,
-            },
-        }))
+        print(
+            json.dumps(
+                {
+                    "protocol": {
+                        "warmup": args.warmup,
+                        "repeat": args.repeat,
+                        "statistic": "median_us_per_pass",
+                    },
+                    "environment": env,
+                    "functions": fn_results,
+                    "total_us_per_pass": total,
+                    "memory": {
+                        "after_load_kb": proc_after_load["rss_kb"]
+                        if proc_after_load
+                        else None,
+                        "after_pass_kb": proc_after_pass["rss_kb"]
+                        if proc_after_pass
+                        else None,
+                        "vmhwm_kb": peak_rss_kb,
+                    },
+                }
+            )
+        )
     else:
         print(json.dumps(fn_results, ensure_ascii=False, indent=2))
 

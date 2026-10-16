@@ -1,0 +1,5 @@
+# Ruff runs at its opinionated defaults (mise gate: `ruff check` + `ruff format --check`).
+# The one fact ruff cannot infer without a project manifest: the oracle-lane
+# scripts (bench_python.py) must run on the era-correct CPython 3.9 venv, so
+# pin the target and version-gated rules (e.g. UP017's datetime.UTC) stay honest.
+target-version = "py39"

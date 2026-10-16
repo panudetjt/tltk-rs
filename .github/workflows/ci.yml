@@ -40,6 +40,13 @@ jobs:
       - name: Tests (incl. SIMD bit-exactness + oracle tests)
         run: cargo test --workspace
 
+      - name: Script lint+format (ruff, opinionated defaults) + bash/node syntax
+        run: |
+          uvx ruff check scripts
+          uvx ruff format --check scripts
+          for f in scripts/*.sh; do bash -n "$f"; done
+          for f in scripts/*.mjs; do node --check "$f"; done
+
       - name: Parity — baselines + per-function goldens (scripts/parity_fn.sh)
         run: bash scripts/parity_fn.sh
 

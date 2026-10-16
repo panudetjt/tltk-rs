@@ -59,7 +59,11 @@ before timing.
 `mise run bench-report` (env `ROUNDS=n` to change round count, default 3)
 runs ROUNDS interleaved rounds of all four lanes — python oracle, native rust,
 shipped browser wasm (simd128 + scalar flavors) under Node — plus a rust
-memory profile, and writes everything to `target/bench/<UTC-stamp>/`:
+memory profile, and writes everything to `target/bench/<UTC-stamp>/`. Before
+the rounds it preflights every engine (native `selftest`; `--smoke-only` on
+both `node_bench.mjs` flavors and on `bench_python.py` — load all models and
+touch every corpus case once), so a broken model blob fails in seconds with
+its `preflight_*.log` instead of mid-run:
 
 - `bench_py_<n>.json` / `bench_rs_<n>.json` — raw per-round results, each
   embedding a recorded `environment` block (timestamp, host, kernel, CPU

@@ -55,6 +55,7 @@ let label = null;
 let warmup = 3;
 let repeat = 10;
 let json = false;
+let smokeOnly = false;
 
 for (let i = 0; i < args.length; i++) {
   const arg = args[i];
@@ -75,6 +76,8 @@ for (let i = 0; i < args.length; i++) {
     repeat = parseInt(args[++i], 10);
   } else if (arg === '--json') {
     json = true;
+  } else if (arg === '--smoke-only') {
+    smokeOnly = true;
   } else {
     console.error(`Unknown or incomplete option: ${arg}`);
     printHelp();
@@ -194,6 +197,10 @@ function runCase(c) {
 // smoke every function once so lazy inits (glyph atlas etc.) land pre-timing
 for (const fn of fnOrder) {
   for (const c of groups.get(fn)) runCase(c);
+}
+if (smokeOnly) {
+  log(`smoke ok: ${label} — engine init + one pass over ${cases.length} cases in ${fnOrder.length} functions`);
+  process.exit(0);
 }
 
 const sink = { n: 0 }; // keep results alive the way black_box does natively

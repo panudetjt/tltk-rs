@@ -34,7 +34,9 @@ hand-type the commands they wrap.
   **probe the oracle first** — Python hides wire traps (dict insertion-order
   keys, `statistics.mean` int/float flips, repr floats, conditional key
   presence); `textana.rs`'s module doc is the worked example, and
-  PORTING-GAPS.md §4 carries the checklist.
+  PORTING-GAPS.md §4 carries the checklist. The wire↔oracle call mapping for
+  parity/bench work lives in `tools/convert/ref_dump.py` (corpus mode) and
+  `scripts/bench_python.py` (full 16).
 - Algorithm changes are allowed only when outputs stay byte-identical;
   verify with `mise run parity`, `mise run node-parity`, `mise run wasm-parity`
   — and `mise run web-e2e` for anything touching `web/js/` (the browser parses
@@ -45,7 +47,9 @@ hand-type the commands they wrap.
   / `mise run bench-python` / `mise run bench-wasm` / `mise run mem`. Every
   bench artifact carries its system environment block (wasm lanes add the
   sha256 of the measured tltk_web.wasm) — keep it that way. A number without a
-  same-box interleaved A/B is a measurement of the box, not the change.
+  same-box interleaved A/B is a measurement of the box, not the change. Cite
+  only numbers measured at a **pinned revision** — canonical runs happen in a
+  worktree at a known commit, and the artifact's `git` field is the receipt.
 
 ## Gotchas
 
