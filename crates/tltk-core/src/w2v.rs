@@ -205,13 +205,13 @@ impl<'a> Session<'a> {
     pub fn w2v_similarity(&self, w1: &str, w2: &str) -> Option<f64> {
         let wv = self.m.w2v.as_ref()?;
         let (i1, i2) = (wv.index(w1)?, wv.index(w2)?);
-        let v1 = wv.vector(i1);
-        let v2 = wv.vector(i2);
-        let n1 = dot(v1, v1) as f64;
-        let n2 = dot(v2, v2) as f64;
-        // gensim: dot(v1,v2) / (norm(v1)*norm(v2)) computed in float32 then float()
-        let s = dot(v1, v2);
-        Some((s / ((n1.sqrt() as f32) * (n2.sqrt() as f32))) as f64)
+        if i1 == i2 {
+            return Some(1.0);
+        }
+        let u1 = wv.vector(i1);
+        let u2 = wv.vector(i2);
+        let s = dot(u1, u2);
+        Some(s as f64)
     }
 
     /// gensim most_similar over unit vectors; returns (word, score) top-N
@@ -603,5 +603,35 @@ mod tests {
         let img = vec![255u8; 4 * 4 * 3];
         let png = super::encode_png(&img, 4, 4);
         assert_eq!(&png[..8], &[0x89, b'P', b'N', b'G', 0x0D, 0x0A, 0x1A, 0x0A]);
+    }
+    #[test]
+    fn test_similarity_golden_parity() {
+        use crate::embedded::with_models;
+        let manifest_dir = env!("CARGO_MANIFEST_DIR");
+        let p_w2v = std::path::Path::new(manifest_dir).join("data/w2v.bin.gz");
+        let d_w2v = std::fs::read(&p_w2v).expect("w2v.bin.gz");
+        let mut extra = std::collections::HashMap::new();
+        extra.insert("w2v.bin.gz".to_string(), d_w2v);
+        let m = with_models(&extra);
+        let tltk = crate::Tltk::new(m);
+        let sess = tltk.session();
+        let expected = [
+            ("แมว", "หมา", "0.7433"),
+            ("กิน", "ข้าว", "0.4130"),
+            ("กิน", "กิน", "1.0000"),
+            ("แมว", "แมว", "1.0000"),
+            ("พ่อ", "แม่", "0.8548"),
+            ("ครู", "นักเรียน", "0.6688"),
+            ("วิ่ง", "เดิน", "0.8610"),
+            ("เช้า", "เย็น", "0.6387"),
+            ("สูง", "ต่ำ", "0.8156"),
+            ("โต๊ะ", "เก้าอี้", "0.7511"),
+            ("หมู", "ไก่", "0.8562"),
+            ("น้ำ", "ไฟ", "0.4377"),
+        ];
+        for (w1, w2, exp) in expected {
+            let sim = sess.w2v_similarity(w1, w2).expect("both words in vocab");
+            assert_eq!(crate::prelude::fmt4(sim), exp, "mismatch for ({}, {})", w1, w2);
+        }
     }
 }

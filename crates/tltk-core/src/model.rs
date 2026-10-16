@@ -672,11 +672,7 @@ impl EduModel {
 pub struct W2v {
     pub words: Vec<String>,
     pub dim: usize,
-    /// row-major f32 [vocab][dim]
-    pub vectors: Vec<f32>,
     /// row-major f32 [vocab][dim] normalized: each row = row / norm.
-    /// Memory cost: one extra f32 matrix (n * dim * 4 bytes, doubling vector memory)
-    /// to eliminate per-query unit vector allocations while keeping raw vectors for exact similarity parity.
     pub vectors_unit: Vec<f32>,
     /// per-row L2 norm (gensim fill_norms)
     pub norms: Vec<f32>,
@@ -697,26 +693,33 @@ impl W2v {
             words.push(w);
         }
         let cnt = n * dim;
-        let mut vectors = Vec::with_capacity(cnt);
         let raw: &[u8] = r.bytes(cnt * 4);
-        for chunk in raw.chunks_exact(4) {
-            vectors.push(f32::from_le_bytes(chunk.try_into().unwrap()));
-        }
         let mut norms = Vec::with_capacity(n);
-        for i in 0..n {
-            let row = &vectors[i * dim..(i + 1) * dim];
-            let s: f32 = row.iter().map(|x| x * x).sum();
-            norms.push(s.sqrt());
-        }
         let mut vectors_unit = Vec::with_capacity(cnt);
+        let row_bytes_len = dim * 4;
         for i in 0..n {
-            let row = &vectors[i * dim..(i + 1) * dim];
-            let norm = norms[i];
-            for &x in row {
+            let row_raw = &raw[i * row_bytes_len..(i + 1) * row_bytes_len];
+            let s: f32 = row_raw
+                .chunks_exact(4)
+                .map(|c| {
+                    let x = f32::from_le_bytes(c.try_into().unwrap());
+                    x * x
+                })
+                .sum();
+            let norm = s.sqrt();
+            norms.push(norm);
+            for c in row_raw.chunks_exact(4) {
+                let x = f32::from_le_bytes(c.try_into().unwrap());
                 vectors_unit.push(x / norm);
             }
         }
-        Ok(W2v { words, dim, vectors, vectors_unit, norms, idx })
+        Ok(W2v {
+            words,
+            dim,
+            vectors_unit,
+            norms,
+            idx,
+        })
     }
     pub fn contains(&self, w: &str) -> bool {
         self.idx.contains_key(w)
@@ -725,13 +728,12 @@ impl W2v {
         self.idx.get(w).copied()
     }
     pub fn vector(&self, i: usize) -> &[f32] {
-        &self.vectors[i * self.dim..(i + 1) * self.dim]
+        &self.vectors_unit[i * self.dim..(i + 1) * self.dim]
     }
     pub fn vector_unit(&self, i: usize) -> &[f32] {
         &self.vectors_unit[i * self.dim..(i + 1) * self.dim]
     }
 }
-
 /// NR01 — CRF state/transition weights (from a crfsuite model via pycrfsuite info())
 pub struct NerModel {
     pub labels: Vec<String>,
@@ -924,4 +926,102 @@ pub fn build_pron(sylrule: &str, thaisyl: &str) -> Vec<(String, Vec<String>)> {
             (k, v)
         })
         .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_w2v_decode_bit_exactness() {
+        use flate2::read::GzDecoder;
+        use std::io::Read;
+
+        let manifest_dir = env!("CARGO_MANIFEST_DIR");
+        let p_w2v = std::path::Path::new(manifest_dir).join("data/w2v.bin.gz");
+        let gz_bytes = std::fs::read(&p_w2v).expect("w2v.bin.gz");
+        let mut decoder = GzDecoder::new(&gz_bytes[..]);
+        let mut raw_data = Vec::new();
+        decoder.read_to_end(&mut raw_data).expect("gunzip");
+
+        // Method 1: old decode
+        let mut r = Reader::new(&raw_data);
+        check_magic(&mut r, b"WV01").unwrap();
+        let n = r.uvarint();
+        let dim = r.uvarint();
+        for _ in 0..n {
+            let _ = r.str_();
+        }
+        let cnt = n * dim;
+        let mut vectors = Vec::with_capacity(cnt);
+        let raw: &[u8] = r.bytes(cnt * 4);
+        for chunk in raw.chunks_exact(4) {
+            vectors.push(f32::from_le_bytes(chunk.try_into().unwrap()));
+        }
+        let mut norms1 = Vec::with_capacity(n);
+        for i in 0..n {
+            let row = &vectors[i * dim..(i + 1) * dim];
+            let s: f32 = row.iter().map(|x| x * x).sum();
+            norms1.push(s.sqrt());
+        }
+        let mut vectors_unit1 = Vec::with_capacity(cnt);
+        for i in 0..n {
+            let row = &vectors[i * dim..(i + 1) * dim];
+            let norm = norms1[i];
+            for &x in row {
+                vectors_unit1.push(x / norm);
+            }
+        }
+
+        // Method 2: new single pass decode
+        let mut r = Reader::new(&raw_data);
+        check_magic(&mut r, b"WV01").unwrap();
+        let n2 = r.uvarint();
+        let dim2 = r.uvarint();
+        assert_eq!(n, n2);
+        assert_eq!(dim, dim2);
+        for _ in 0..n {
+            let _ = r.str_();
+        }
+        let raw: &[u8] = r.bytes(cnt * 4);
+        let mut norms2 = Vec::with_capacity(n);
+        let mut vectors_unit2 = Vec::with_capacity(cnt);
+        let row_bytes_len = dim * 4;
+        for i in 0..n {
+            let row_raw = &raw[i * row_bytes_len..(i + 1) * row_bytes_len];
+            let s: f32 = row_raw
+                .chunks_exact(4)
+                .map(|c| {
+                    let x = f32::from_le_bytes(c.try_into().unwrap());
+                    x * x
+                })
+                .sum();
+            let norm = s.sqrt();
+            norms2.push(norm);
+            for c in row_raw.chunks_exact(4) {
+                let x = f32::from_le_bytes(c.try_into().unwrap());
+                vectors_unit2.push(x / norm);
+            }
+        }
+
+        assert_eq!(norms1.len(), norms2.len());
+        for i in 0..norms1.len() {
+            assert_eq!(
+                norms1[i].to_bits(),
+                norms2[i].to_bits(),
+                "norm mismatch at row {}",
+                i
+            );
+        }
+        assert_eq!(vectors_unit1.len(), vectors_unit2.len());
+        for i in 0..vectors_unit1.len() {
+            assert_eq!(
+                vectors_unit1[i].to_bits(),
+                vectors_unit2[i].to_bits(),
+                "vector_unit mismatch at index {}",
+                i
+            );
+        }
+        println!("All {} norms and {} vector_unit elements BIT-EXACT!", norms1.len(), vectors_unit1.len());
+    }
 }
