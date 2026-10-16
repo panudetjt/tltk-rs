@@ -3,7 +3,7 @@
 //! Faithful port of tltk 1.10 (PyPI), the version the stichula.org validator
 //! runs. Model artifacts are converted from the Python pickles by
 //! `tools/convert/convert.py`. Behaviour parity is defined by the validator API
-//! and checked by `tltk-valifier`.
+//! and checked by `tltk-verifier`.
 
 pub mod edu;
 pub mod g2p;
@@ -30,7 +30,7 @@ pub struct Tltk {
 
 /// Per-request mutable workspace. Python tltk keeps these as module globals,
 /// mutated across calls in one process; the worker mirrors that with one
-/// Session per isolate, the valifier uses one Session per request (== a fresh
+/// Session per isolate, the verifier uses one Session per request (== a fresh
 /// Python process).
 pub struct Session<'a> {
     pub m: &'a Models,
@@ -109,7 +109,7 @@ pub mod embedded;
 #[cfg(feature = "embedded-models")]
 impl Tltk {
     /// Small embedded model set (thdict/sylseg/sylvar/phs/pos/ner). edu + w2v are
-    /// optional (worker loads them from R2; valifier from disk).
+    /// optional (worker loads them from R2; verifier from disk).
     pub fn embedded() -> Tltk {
         Tltk::new(embedded::models())
     }

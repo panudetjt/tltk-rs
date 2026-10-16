@@ -33,7 +33,7 @@ for model in "crates/tltk-core/data/edu.bin.gz" "crates/tltk-core/data/w2v.bin.g
     fi
 done
 
-# 3. Build valifier for wasm32-wasip1
+# 3. Build verifier for wasm32-wasip1
 # Select cargo toolchain with wasm32-wasip1 installed if default lacks it
 CARGO_CMD=("cargo")
 if ! rustup target list --installed 2>/dev/null | grep -qx "wasm32-wasip1"; then
@@ -45,10 +45,10 @@ if ! rustup target list --installed 2>/dev/null | grep -qx "wasm32-wasip1"; then
     done
 fi
 
-echo "Building valifier for wasm32-wasip1 using: ${CARGO_CMD[*]}..."
-"${CARGO_CMD[@]}" build --release -p tltk-valifier --target wasm32-wasip1
+echo "Building verifier for wasm32-wasip1 using: ${CARGO_CMD[*]}..."
+"${CARGO_CMD[@]}" build --release -p tltk-verifier --target wasm32-wasip1
 
-WASM_BIN="$REPO_ROOT/target/wasm32-wasip1/release/valifier.wasm"
+WASM_BIN="$REPO_ROOT/target/wasm32-wasip1/release/verifier.wasm"
 if [[ ! -f "$WASM_BIN" ]]; then
     echo "ERROR: Compiled WASM binary not found at $WASM_BIN" >&2
     exit 1
@@ -63,14 +63,14 @@ run_check() {
 
     echo "==> Running $name parity check under wasmtime..."
     local raw_output
-    # valifier check exits 1 when fail > 0 (expected for sets with known mismatches)
+    # verifier check exits 1 when fail > 0 (expected for sets with known mismatches)
     raw_output="$("$WASMTIME" run --dir .::. "$WASM_BIN" check "$corpus" "$golden" crates/tltk-core/data 2>&1 || true)"
 
     local summary
-    summary="$(echo "$raw_output" | grep -E '^valifier: pass=[0-9]+ fail=[0-9]+ missing_golden=[0-9]+' || true)"
+    summary="$(echo "$raw_output" | grep -E '^verifier: pass=[0-9]+ fail=[0-9]+ missing_golden=[0-9]+' || true)"
 
     if [[ -z "$summary" ]]; then
-        echo "FAIL: $name did not produce a valifier summary line" >&2
+        echo "FAIL: $name did not produce a verifier summary line" >&2
         echo "$raw_output" >&2
         return 1
     fi
@@ -87,9 +87,9 @@ run_check() {
 }
 
 # 4. Run checks for all three golden sets
-run_check "stichula" "corpus/corpus.jsonl" "golden/stichula.jsonl" "valifier: pass=241 fail=3 missing_golden=0"
-run_check "local" "corpus/corpus.jsonl" "golden/local_python.jsonl" "valifier: pass=228 fail=7 missing_golden=9"
-run_check "extra" "corpus/corpus_extra.jsonl" "golden/local_python_extra.jsonl" "valifier: pass=87 fail=0 missing_golden=0"
+run_check "stichula" "corpus/corpus.jsonl" "golden/stichula.jsonl" "verifier: pass=241 fail=3 missing_golden=0"
+run_check "local" "corpus/corpus.jsonl" "golden/local_python.jsonl" "verifier: pass=228 fail=7 missing_golden=9"
+run_check "extra" "corpus/corpus_extra.jsonl" "golden/local_python_extra.jsonl" "verifier: pass=87 fail=0 missing_golden=0"
 
 # 5. Run selftest
 echo "==> Running selftest under wasmtime..."

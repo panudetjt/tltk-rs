@@ -4,7 +4,7 @@
  * scripts/node_parity.mjs — Parity verification gate using the browser wasm glue.
  *
  * Runs corpus test cases through tltk_web wasm under Node.js and compares
- * output against golden outputs byte-exact, matching the valifier output format.
+ * output against golden outputs byte-exact, matching the verifier output format.
  */
 
 import fs from 'node:fs';
@@ -191,8 +191,8 @@ for (const c of corpusCases) {
   }
 }
 
-// Print both formats for full compatibility with valifier and TASK assertions
-console.log(`valifier: pass=${pass} fail=${fail} missing_golden=${missing}`);
+// Print both formats for full compatibility with verifier and TASK assertions
+console.log(`verifier: pass=${pass} fail=${fail} missing_golden=${missing}`);
 console.log(`pass=${pass} fail=${fail} missing=${missing}`);
 
 if (fail > 0) {

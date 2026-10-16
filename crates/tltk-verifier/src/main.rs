@@ -1,14 +1,14 @@
 //! Valifier — parity harness and benchmark tool for tltk-core.
 //!
 //! Modes:
-//!   valifier run <corpus.jsonl> <models-dir>     run core, print results JSONL
-//!   valifier check <corpus.jsonl> <golden.jsonl> <models-dir>
+//!   verifier run <corpus.jsonl> <models-dir>     run core, print results JSONL
+//!   verifier check <corpus.jsonl> <golden.jsonl> <models-dir>
 //!       compare core output vs golden responses (from stichula capture or the
 //!       local python oracle); exit 1 on any mismatch, printing diffs
-//!   valifier selftest <models-dir>               a few known sanity checks
-//!   valifier bench <corpus.jsonl> <models-dir> [--warmup W] [--repeat N] [--json] [--long] [--mem]
+//!   verifier selftest <models-dir>               a few known sanity checks
+//!   verifier bench <corpus.jsonl> <models-dir> [--warmup W] [--repeat N] [--json] [--long] [--mem]
 //!       measure per-function and optional long-input pass latency and memory
-//!   valifier mem <corpus.jsonl> <models-dir>
+//!   verifier mem <corpus.jsonl> <models-dir>
 //!       measure memory usage (after load, after run, peak)
 //!
 //! corpus.jsonl rows: {"function": "...", "text": "...", "cutoff": "medium"(opt)}
@@ -134,11 +134,11 @@ fn build_synthetic_input(distinct: &[&str], target_chars: usize) -> String {
 fn print_help() {
     println!("Valifier — parity harness and benchmark tool for tltk-core.\n");
     println!("Usage:");
-    println!("  valifier run <corpus.jsonl> <models-dir>");
-    println!("  valifier check <corpus.jsonl> <golden.jsonl> <models-dir>");
-    println!("  valifier selftest <models-dir>");
-    println!("  valifier bench <corpus.jsonl> <models-dir> [--warmup W] [--repeat N] [--json] [--long] [--mem]");
-    println!("  valifier mem <corpus.jsonl> <models-dir>\n");
+    println!("  verifier run <corpus.jsonl> <models-dir>");
+    println!("  verifier check <corpus.jsonl> <golden.jsonl> <models-dir>");
+    println!("  verifier selftest <models-dir>");
+    println!("  verifier bench <corpus.jsonl> <models-dir> [--warmup W] [--repeat N] [--json] [--long] [--mem]");
+    println!("  verifier mem <corpus.jsonl> <models-dir>\n");
     println!("Bench options:");
     println!("  --warmup W    Number of warmup passes before timing (default: 3)");
     println!("  --repeat N    Number of timed passes (default: 10)");
@@ -151,7 +151,7 @@ fn print_help() {
 
 fn cmd_run(args: &[String]) {
     if args.len() < 4 {
-        eprintln!("usage: valifier run <corpus.jsonl> <models-dir>");
+        eprintln!("usage: verifier run <corpus.jsonl> <models-dir>");
         std::process::exit(2);
     }
     let cases = load_cases(&args[2]);
@@ -174,7 +174,7 @@ fn cmd_run(args: &[String]) {
 
 fn cmd_check(args: &[String]) {
     if args.len() < 5 {
-        eprintln!("usage: valifier check <corpus.jsonl> <golden.jsonl> <models-dir>");
+        eprintln!("usage: verifier check <corpus.jsonl> <golden.jsonl> <models-dir>");
         std::process::exit(2);
     }
     let cases = load_cases(&args[2]);
@@ -241,7 +241,7 @@ fn cmd_check(args: &[String]) {
         }
     }
     println!(
-        "valifier: pass={} fail={} missing_golden={}",
+        "verifier: pass={} fail={} missing_golden={}",
         pass, fail, missing
     );
     if fail > 0 {
@@ -251,7 +251,7 @@ fn cmd_check(args: &[String]) {
 
 fn cmd_selftest(args: &[String]) {
     if args.len() < 3 {
-        eprintln!("usage: valifier selftest <models-dir>");
+        eprintln!("usage: verifier selftest <models-dir>");
         std::process::exit(2);
     }
     let tltk = load_models(&args[2]);
@@ -340,7 +340,7 @@ fn cmd_bench(args: &[String]) {
 
     if positional.len() < 2 {
         eprintln!(
-            "usage: valifier bench <corpus.jsonl> <models-dir> [--warmup W] [--repeat N] [--json] [--long] [--mem]"
+            "usage: verifier bench <corpus.jsonl> <models-dir> [--warmup W] [--repeat N] [--json] [--long] [--mem]"
         );
         std::process::exit(2);
     }
@@ -579,11 +579,11 @@ fn cmd_bench(args: &[String]) {
 
 fn cmd_mem(args: &[String]) {
     if args.len() >= 3 && (args[2] == "--help" || args[2] == "-h") {
-        println!("usage: valifier mem <corpus.jsonl> <models-dir>");
+        println!("usage: verifier mem <corpus.jsonl> <models-dir>");
         return;
     }
     if args.len() < 4 {
-        eprintln!("usage: valifier mem <corpus.jsonl> <models-dir>");
+        eprintln!("usage: verifier mem <corpus.jsonl> <models-dir>");
         std::process::exit(2);
     }
     let cases = load_cases(&args[2]);
@@ -622,7 +622,7 @@ fn main() {
         Some("mem") => cmd_mem(&args),
         Some("--help") | Some("-h") => print_help(),
         _ => {
-            eprintln!("usage: valifier run|check|selftest|bench|mem ...");
+            eprintln!("usage: verifier run|check|selftest|bench|mem ...");
             std::process::exit(2);
         }
     }
@@ -639,7 +639,7 @@ mod tests {
 
     #[test]
     fn test_proc_status_parsing() {
-        let fake_proc = "Name:\tvalifier\nVmHWM:\t  270140 kB\nVmRSS:\t  258304 kB\nThreads:\t1\n";
+        let fake_proc = "Name:\tverifier\nVmHWM:\t  270140 kB\nVmRSS:\t  258304 kB\nThreads:\t1\n";
         let parsed = parse_proc_status(fake_proc.as_bytes()).unwrap();
         assert_eq!(parsed.vm_rss_kb, 258304);
         assert_eq!(parsed.vm_hwm_kb, 270140);
@@ -647,7 +647,7 @@ mod tests {
 
     #[test]
     fn test_proc_status_missing_fields() {
-        let fake_proc = "Name:\tvalifier\nVmRSS:\t  258304 kB\n";
+        let fake_proc = "Name:\tverifier\nVmRSS:\t  258304 kB\n";
         assert_eq!(parse_proc_status(fake_proc.as_bytes()), None);
     }
 }

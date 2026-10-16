@@ -6,14 +6,14 @@ Toolkit, Chulalongkorn University) — the Python package behind
 JSON API on a **Cloudflare Worker**.
 
 Parity is **defined by the stichula validator** and enforced by the
-`tltk-valifier` harness: every corpus case is sent to the live validator, the
+`tltk-verifier` harness: every corpus case is sent to the live validator, the
 response is stored as a golden row, and the Rust implementation must produce
 byte-identical output.
 
 ```
 corpus.jsonl ──▶ scripts/capture_stichula.py ──▶ golden/stichula.jsonl
       │                                                 │
-      └──▶ tltk-valifier check ◀─────────────────────────┘
+      └──▶ tltk-verifier check ◀─────────────────────────┘
 ```
 
 ## Layout
@@ -22,7 +22,7 @@ corpus.jsonl ──▶ scripts/capture_stichula.py ──▶ golden/stichula.jso
 |---|---|
 | `crates/tltk-core/` | the library: all 16 functions, no network, no async |
 | `crates/tltk-worker/` | Cloudflare Worker (workers-rs) — thin HTTP shell over the core |
-| `crates/tltk-valifier/` | parity harness (`run` / `check` / `selftest`) |
+| `crates/tltk-verifier/` | parity harness (`run` / `check` / `selftest`) |
 | `tools/convert/` | Python scripts: pickle → portable binary models, local oracle |
 | `corpus/` | test inputs (`{function, text, cutoff}` JSONL) |
 | `golden/` | captured responses (stichula + local Python oracle) |
@@ -60,7 +60,7 @@ with binary search at load:
 Workers cap uploads at 10 MB gz, which is why edu + w2v ride in R2 and are
 fetched once per isolate at cold start.
 
-## Parity status (valifier, corpus = corpus/corpus.jsonl, 244 cases)
+## Parity status (verifier, corpus = corpus/corpus.jsonl, 244 cases)
 
 - **vs the live stichula validator: 241/244 (98.8%)**
 - vs the local Python oracle (tltk 1.10 wheel in a venv): 227/229
@@ -86,17 +86,17 @@ Known, documented divergences:
 ## Commands
 
 ```bash
-# build the valifier
-cargo build -p tltk-valifier
+# build the verifier
+cargo build -p tltk-verifier
 
 # sanity checks on the anchor case
-./target/debug/valifier selftest crates/tltk-core/data
+./target/debug/verifier selftest crates/tltk-core/data
 
 # run the core over the corpus
-./target/debug/valifier run corpus/corpus.jsonl crates/tltk-core/data
+./target/debug/verifier run corpus/corpus.jsonl crates/tltk-core/data
 
 # parity check vs golden (pass/fail per case; exit 1 on any mismatch)
-./target/debug/valifier check corpus/corpus.jsonl golden/stichula.jsonl crates/tltk-core/data
+./target/debug/verifier check corpus/corpus.jsonl golden/stichula.jsonl crates/tltk-core/data
 
 # regenerate models from the Python sources (needs the venv in tools/convert)
 python3 tools/convert/convert.py <tltk-package-dir> crates/tltk-core/data \
@@ -111,9 +111,9 @@ Run parity verification under wasm32-WASI (`wasm32-wasip1`) using `wasmtime`:
 bash scripts/wasm_parity.sh
 ```
 
-- **What it proves**: The full valifier — all 16 functions incl. w2v — byte-identical inside wasm32-WASI.
+- **What it proves**: The full verifier — all 16 functions incl. w2v — byte-identical inside wasm32-WASI.
 - **What it does NOT prove**: The deployed worker target is `wasm32-unknown-unknown` with its own bindings; that crate is compile-checked per round and now also simd128-armed — the runtime lane uses `wasip1` because it needs std fs.
-- **How to run it**: Run `bash scripts/wasm_parity.sh` (or `./scripts/wasm_parity.sh`). It compiles `tltk-valifier` for `wasm32-wasip1`, runs all three golden sets (`stichula`, `local`, `extra`) and `selftest` under `wasmtime`, verifies output numbers match expected parity baselines, and exits 0 only when all pass.
+- **How to run it**: Run `bash scripts/wasm_parity.sh` (or `./scripts/wasm_parity.sh`). It compiles `tltk-verifier` for `wasm32-wasip1`, runs all three golden sets (`stichula`, `local`, `extra`) and `selftest` under `wasmtime`, verifies output numbers match expected parity baselines, and exits 0 only when all pass.
 
 ## Deploy the worker
 

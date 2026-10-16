@@ -3,7 +3,7 @@ resolver = "2"
 members = [
     "crates/tltk-core",
     "crates/tltk-worker",
-    "crates/tltk-valifier",
+    "crates/tltk-verifier",
     "crates/tltk-web",
 ]
 

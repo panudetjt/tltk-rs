@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate the valifier corpus (JSONL): {function, text, cutoff}."""
+"""Generate the verifier corpus (JSONL): {function, text, cutoff}."""
 import json
 import sys
 
