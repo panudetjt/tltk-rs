@@ -30,6 +30,7 @@ fn has_avx2() -> bool {
 
 #[cfg(target_arch = "x86_64")]
 #[target_feature(enable = "avx2")]
+#[inline]
 unsafe fn dot_avx2(a: &[f32], b: &[f32]) -> f32 {
     use std::arch::x86_64::*;
 
@@ -93,6 +94,7 @@ unsafe fn dot_avx2(a: &[f32], b: &[f32]) -> f32 {
 }
 #[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
 #[target_feature(enable = "simd128")]
+#[inline]
 unsafe fn dot_simd128(a: &[f32], b: &[f32]) -> f32 {
     use core::arch::wasm32::*;
 
@@ -180,6 +182,95 @@ fn dot(a: &[f32], b: &[f32]) -> f32 {
     dot_scalar(a, b)
 }
 
+#[cfg(target_arch = "x86_64")]
+#[target_feature(enable = "avx2")]
+unsafe fn scan_avx2_dim100(
+    vectors_unit: &[f32],
+    mean: &[f32],
+    dists: &mut Vec<(usize, f32)>,
+) {
+    use std::arch::x86_64::*;
+
+    let m_ptr = mean.as_ptr();
+    let m0 = _mm256_loadu_ps(m_ptr);
+    let m1 = _mm256_loadu_ps(m_ptr.add(8));
+    let m2 = _mm256_loadu_ps(m_ptr.add(16));
+    let m3 = _mm256_loadu_ps(m_ptr.add(24));
+    let m4 = _mm256_loadu_ps(m_ptr.add(32));
+    let m5 = _mm256_loadu_ps(m_ptr.add(40));
+    let m6 = _mm256_loadu_ps(m_ptr.add(48));
+    let m7 = _mm256_loadu_ps(m_ptr.add(56));
+    let m8 = _mm256_loadu_ps(m_ptr.add(64));
+    let m9 = _mm256_loadu_ps(m_ptr.add(72));
+    let m10 = _mm256_loadu_ps(m_ptr.add(80));
+    let m11 = _mm256_loadu_ps(m_ptr.add(88));
+
+    let rem_b0 = *m_ptr.add(96);
+    let rem_b1 = *m_ptr.add(97);
+    let rem_b2 = *m_ptr.add(98);
+    let rem_b3 = *m_ptr.add(99);
+
+    for (i, unit) in vectors_unit.chunks_exact(100).enumerate() {
+        let u_ptr = unit.as_ptr();
+        let mut sum0 = _mm256_mul_ps(_mm256_loadu_ps(u_ptr), m0);
+        let mut sum1 = _mm256_mul_ps(_mm256_loadu_ps(u_ptr.add(8)), m1);
+        let mut sum2 = _mm256_mul_ps(_mm256_loadu_ps(u_ptr.add(16)), m2);
+        let mut sum3 = _mm256_mul_ps(_mm256_loadu_ps(u_ptr.add(24)), m3);
+
+        sum0 = _mm256_add_ps(sum0, _mm256_mul_ps(_mm256_loadu_ps(u_ptr.add(32)), m4));
+        sum1 = _mm256_add_ps(sum1, _mm256_mul_ps(_mm256_loadu_ps(u_ptr.add(40)), m5));
+        sum2 = _mm256_add_ps(sum2, _mm256_mul_ps(_mm256_loadu_ps(u_ptr.add(48)), m6));
+        sum3 = _mm256_add_ps(sum3, _mm256_mul_ps(_mm256_loadu_ps(u_ptr.add(56)), m7));
+
+        sum0 = _mm256_add_ps(sum0, _mm256_mul_ps(_mm256_loadu_ps(u_ptr.add(64)), m8));
+        sum1 = _mm256_add_ps(sum1, _mm256_mul_ps(_mm256_loadu_ps(u_ptr.add(72)), m9));
+        sum2 = _mm256_add_ps(sum2, _mm256_mul_ps(_mm256_loadu_ps(u_ptr.add(80)), m10));
+        sum3 = _mm256_add_ps(sum3, _mm256_mul_ps(_mm256_loadu_ps(u_ptr.add(88)), m11));
+
+        let sum01 = _mm256_add_ps(sum0, sum1);
+        let sum23 = _mm256_add_ps(sum2, sum3);
+        let sum = _mm256_add_ps(sum01, sum23);
+
+        let rem_sum = *u_ptr.add(96) * rem_b0
+            + *u_ptr.add(97) * rem_b1
+            + *u_ptr.add(98) * rem_b2
+            + *u_ptr.add(99) * rem_b3;
+
+        let mut arr = [0.0f32; 8];
+        _mm256_storeu_ps(arr.as_mut_ptr(), sum);
+        let score = arr[0] + arr[1] + arr[2] + arr[3] + arr[4] + arr[5] + arr[6] + arr[7] + rem_sum;
+        dists.push((i, score));
+    }
+}
+
+#[cfg(target_arch = "x86_64")]
+#[target_feature(enable = "avx2")]
+unsafe fn scan_avx2(vectors_unit: &[f32], dim: usize, mean: &[f32], dists: &mut Vec<(usize, f32)>) {
+    if dim == 100 && mean.len() == 100 {
+        scan_avx2_dim100(vectors_unit, mean, dists);
+        return;
+    }
+    for (i, unit) in vectors_unit.chunks_exact(dim).enumerate() {
+        dists.push((i, dot_avx2(unit, mean)));
+    }
+}
+
+#[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
+#[target_feature(enable = "simd128")]
+unsafe fn scan_simd128(vectors_unit: &[f32], dim: usize, mean: &[f32], dists: &mut Vec<(usize, f32)>) {
+    for (i, unit) in vectors_unit.chunks_exact(dim).enumerate() {
+        dists.push((i, dot_simd128(unit, mean)));
+    }
+}
+
+#[inline]
+#[allow(dead_code)]
+fn scan_scalar(vectors_unit: &[f32], dim: usize, mean: &[f32], dists: &mut Vec<(usize, f32)>) {
+    for (i, unit) in vectors_unit.chunks_exact(dim).enumerate() {
+        dists.push((i, dot_scalar(unit, mean)));
+    }
+}
+
 fn unit_vec(v: &[f32], norm: f32) -> Vec<f32> {
     if norm == 0.0 {
         v.to_vec()
@@ -224,10 +315,22 @@ impl<'a> Session<'a> {
     ) -> Option<Vec<(String, f64)>> {
         let wv = self.m.w2v.as_ref()?;
         let mut dists: Vec<(usize, f32)> = Vec::with_capacity(wv.words.len());
-        for i in 0..wv.words.len() {
-            let unit = wv.vector_unit(i);
-            dists.push((i, dot(unit, mean)));
+        #[cfg(target_arch = "x86_64")]
+        {
+            if has_avx2() {
+                unsafe { scan_avx2(&wv.vectors_unit, wv.dim, mean, &mut dists) };
+            } else {
+                scan_scalar(&wv.vectors_unit, wv.dim, mean, &mut dists);
+            }
         }
+        #[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
+        unsafe {
+            scan_simd128(&wv.vectors_unit, wv.dim, mean, &mut dists);
+        }
+        #[cfg(all(target_arch = "wasm32", not(target_feature = "simd128")))]
+        scan_scalar(&wv.vectors_unit, wv.dim, mean, &mut dists);
+        #[cfg(not(any(target_arch = "x86_64", target_arch = "wasm32")))]
+        scan_scalar(&wv.vectors_unit, wv.dim, mean, &mut dists);
         let limit = topn + exclude.len();
         let cmp = |a: &(usize, f32), b: &(usize, f32)| {
             b.1.partial_cmp(&a.1)
@@ -633,5 +736,43 @@ mod tests {
             let sim = sess.w2v_similarity(w1, w2).expect("both words in vocab");
             assert_eq!(crate::prelude::fmt4(sim), exp, "mismatch for ({}, {})", w1, w2);
         }
+    }
+    #[test]
+    #[cfg(target_arch = "x86_64")]
+    fn test_scan_avx2_bit_exactness() {
+        use crate::embedded::with_models;
+        if !super::has_avx2() {
+            return;
+        }
+        let manifest_dir = env!("CARGO_MANIFEST_DIR");
+        let p_w2v = std::path::Path::new(manifest_dir).join("data/w2v.bin.gz");
+        let d_w2v = std::fs::read(&p_w2v).expect("w2v.bin.gz");
+        let mut extra = std::collections::HashMap::new();
+        extra.insert("w2v.bin.gz".to_string(), d_w2v);
+        let m = with_models(&extra);
+        let wv = m.w2v.as_ref().unwrap();
+        let mean = wv.vector_unit(0).to_vec();
+
+        let mut dists1 = Vec::new();
+        unsafe {
+            super::scan_avx2_dim100(&wv.vectors_unit, &mean, &mut dists1);
+        }
+
+        let mut dists2 = Vec::new();
+        for (i, unit) in wv.vectors_unit.chunks_exact(wv.dim).enumerate() {
+            dists2.push((i, unsafe { super::dot_avx2(unit, &mean) }));
+        }
+
+        assert_eq!(dists1.len(), dists2.len());
+        for i in 0..dists1.len() {
+            assert_eq!(dists1[i].0, dists2[i].0);
+            assert_eq!(
+                dists1[i].1.to_bits(),
+                dists2[i].1.to_bits(),
+                "mismatch at index {}",
+                i
+            );
+        }
+        println!("All {} dot products bit-exact identical between scan_avx2_dim100 and dot_avx2!", dists1.len());
     }
 }
