@@ -26,7 +26,7 @@ corpus.jsonl ──▶ scripts/capture_stichula.py ──▶ golden/stichula.jso
 | `tools/convert/` | Python scripts: pickle → portable binary models, local oracle |
 | `corpus/` | test inputs (`{function, text, cutoff}` JSONL) |
 | `golden/` | captured responses (stichula + local Python oracle) |
-| `scripts/` | corpus gen, stichula capture, R2 upload |
+| `scripts/` | corpus gen, stichula capture, web e2e validator |
 
 Core and server are **separate crates**: `tltk-worker` depends on `tltk-core`,
 which never touches HTTP so it can also be used as a plain library.
@@ -70,10 +70,12 @@ with binary search at load:
 | wordtier | 0.4 MB | word.pklz (TextAna tier lexicon) | embedded |
 | ner | 0.09 MB | crfsuite model (see NER note) | embedded |
 | textclass | 1.0 MB | chklevel_rf.pklz + chkgenre_rf.pklz | embedded |
-| edu | 6.2 MB | sent_segment.pklz (DictVectorizer+RF) | **R2** (`MODELS` binding) |
-| w2v | 11.6 MB | TNCc5model3.bin (gensim KeyedVectors) | **R2** |
-Workers cap uploads at 10 MB gz, which is why edu + w2v ride in R2 and are
-fetched once per isolate at cold start.
+| edu | 6.2 MB | sent_segment.pklz (DictVectorizer+RF) | web asset (`data/edu.bin.gz`) |
+| w2v | 11.6 MB | TNCc5model3.bin (gensim KeyedVectors) | web asset (`data/w2v.bin.gz`) |
+All blobs ship as site assets under `web/data/` (committed symlink →
+`crates/tltk-core/data/`) and are fetched once per tier by the loader —
+tier-1 upfront, edu/w2v lazily on the first tier-2 function. Nothing rides
+in R2 any more.
 
 ## Parity status (verifier, corpus = corpus/corpus.jsonl, 244 cases)
 
@@ -130,18 +132,32 @@ bash scripts/wasm_parity.sh
 - **What it does NOT prove**: The deployed worker target is `wasm32-unknown-unknown` with its own bindings; that crate is compile-checked per round and now also simd128-armed — the runtime lane uses `wasip1` because it needs std fs.
 - **How to run it**: Run `bash scripts/wasm_parity.sh` (or `./scripts/wasm_parity.sh`). It compiles `tltk-verifier` for `wasm32-wasip1`, runs all three golden sets (`stichula`, `local`, `extra`) and `selftest` under `wasmtime`, verifies output numbers match expected parity baselines, and exits 0 only when all pass.
 
-## Deploy the worker
+## Deploy
+
+**Toolbox (production)** — assets-only Workers, no bucket and no bindings.
+Push to main runs `deploy-cloudflare.yml`: `mise run build-web`, stage
+`web/data` as real copies (the committed symlink becomes plain files for
+the upload), parity-gate the shipped wasm, then
+`npx -y wrangler@4 deploy --config web/wrangler.jsonc`. The models are part
+of the site assets. Manual reproduction of just the deploy:
+`mise run build-web` then the same wrangler line (staging the data dir the
+same way first).
+
+Real-browser regression gate: `mise run web-e2e` (playwright; also a CI
+job) — fails on any page error, asserts the dropdown matches the declared
+functions, then runs every one of them through the actual UI.
+
+**Standalone worker crate (optional, legacy)** — `crates/tltk-worker` keeps
+the R2 `MODELS` binding for edu/w2v:
 
 ```bash
-npx wrangler login
 npx wrangler r2 bucket create tltk-models          # once
 ./scripts/upload_r2.sh tltk-models                 # edu + w2v
 cd crates/tltk-worker && npx wrangler deploy       # builds wasm + uploads
 ```
 
-Local dev (models fetched from R2 live): `npx wrangler dev` inside
-`crates/tltk-worker`. Without the R2 binding, the six embedded models still
-serve 12 of 16 functions; edu/w2v functions return an explicit error.
+Without the binding, the embedded models serve the tier-1 functions; the
+edu/w2v ones (segment, chunk, the w2v family) return an explicit error.
 
 ## toolbox (client-only)
 
