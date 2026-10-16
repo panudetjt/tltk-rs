@@ -103,8 +103,8 @@ impl<'a> Session<'a> {
             "analogy" => self.wire_analogy(text),
             "plotwords" => self.wire_plotwords(text),
             "textana" => textana::textana(self, text),
-            "chunk" => Ok(self.chunk(text)),
-            "tnc_tag" => self.tnc_tag(text),
+            "w2v" => self.wire_w2v(text),
+            "compound" => self.wire_compound(text),
             other => Err(ProcessError(format!("Unknown function: {}", other))),
         }
     }

@@ -678,6 +678,9 @@ impl EduModel {
 pub struct W2v {
     pub words: Vec<String>,
     pub dim: usize,
+    /// row-major f32 [vocab][dim] RAW vectors (gensim `wv[w]`, as converted
+    /// from `wv.vectors`) — needed byte-exact by the `w2v` wire function.
+    pub vectors_raw: Vec<f32>,
     /// row-major f32 [vocab][dim] normalized: each row = row / norm.
     pub vectors_unit: Vec<f32>,
     /// per-row L2 norm (gensim fill_norms)
@@ -701,29 +704,29 @@ impl W2v {
         let cnt = n * dim;
         let raw: &[u8] = r.bytes(cnt * 4);
         let mut norms = Vec::with_capacity(n);
+        let mut vectors_raw = Vec::with_capacity(cnt);
         let mut vectors_unit = Vec::with_capacity(cnt);
         let row_bytes_len = dim * 4;
         for i in 0..n {
             let row_raw = &raw[i * row_bytes_len..(i + 1) * row_bytes_len];
-            let s: f32 = row_raw
-                .as_chunks::<4>()
-                .0
-                .iter()
-                .map(|c| {
-                    let x = f32::from_le_bytes(*c);
-                    x * x
-                })
-                .sum();
-            let norm = s.sqrt();
-            norms.push(norm);
+            let mut s: f32 = 0.0;
+            let mut decoded = Vec::with_capacity(dim);
             for c in row_raw.as_chunks::<4>().0 {
                 let x = f32::from_le_bytes(*c);
+                decoded.push(x);
+                s += x * x;
+            }
+            vectors_raw.extend_from_slice(&decoded);
+            let norm = s.sqrt();
+            norms.push(norm);
+            for x in &decoded {
                 vectors_unit.push(x / norm);
             }
         }
         Ok(W2v {
             words,
             dim,
+            vectors_raw,
             vectors_unit,
             norms,
             idx,
@@ -736,7 +739,7 @@ impl W2v {
         self.idx.get(w).copied()
     }
     pub fn vector(&self, i: usize) -> &[f32] {
-        &self.vectors_unit[i * self.dim..(i + 1) * self.dim]
+        &self.vectors_raw[i * self.dim..(i + 1) * self.dim]
     }
     pub fn vector_unit(&self, i: usize) -> &[f32] {
         &self.vectors_unit[i * self.dim..(i + 1) * self.dim]
