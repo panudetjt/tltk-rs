@@ -1,0 +1,25 @@
+{"function": "wrd_len", "text": "แมว"}
+{"function": "wrd_len", "text": "12345678901"}
+{"function": "wrd_len", "text": "123456789012345678901"}
+{"function": "match_engtext", "text": "hello 123"}
+{"function": "match_engtext", "text": "hello world!"}
+{"function": "match_engtext", "text": "สวัสดี hello"}
+{"function": "edits2", "text": "ก"}
+{"function": "edits2", "text": "กก"}
+{"function": "check_thaidict", "text": "แมว"}
+{"function": "check_thaidict", "text": "คำพิเศษไม่มีในดิก"}
+{"function": "known", "text": "แมว หมา คำพิเศษไม่มีในดิก"}
+{"function": "known", "text": ""}
+{"function": "reset_thaidict", "text": ""}
+{"function": "check_thaidict", "text": "แมว"}
+{"function": "check_thaidict", "text": "คำพิเศษไม่มีในดิก"}
+{"function": "known", "text": "แมว หมา"}
+{"function": "read_thaidict", "text": "คำพิเศษไม่มีในดิก\nคำที่สอง\nword.with.dots\n"}
+{"function": "check_thaidict", "text": "คำพิเศษไม่มีในดิก"}
+{"function": "check_thaidict", "text": "word.with.dots"}
+{"function": "check_thaidict", "text": "word\\.with\\.dots"}
+{"function": "known", "text": "คำพิเศษไม่มีในดิก word\\.with\\.dots แมว"}
+{"function": "read_thaidict", "text": "เพิ่มคำอีกคำ\n"}
+{"function": "check_thaidict", "text": "เพิ่มคำอีกคำ"}
+{"function": "reset_thaidict", "text": ""}
+{"function": "check_thaidict", "text": "เพิ่มคำอีกคำ"}
