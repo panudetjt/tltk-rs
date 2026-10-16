@@ -1,7 +1,8 @@
 # Toolchain pins for tltk-rs. Rust has no LTS channel — every 6-week stable
-# rolls; pin the exact latest stable for reproducible builds. Python/Node are
-# used by scripts/ and tools/ (see tools/requirements.txt).
+# rolls; pin the exact latest stable for reproducible builds. Python/Node/uv
+# serve scripts/ and tools/ (script deps are PEP 723 inline, no global site).
 [tools]
 rust = "1.99.1"
 python = "3.12"
 node = "22"
+uv = "0.13.1"

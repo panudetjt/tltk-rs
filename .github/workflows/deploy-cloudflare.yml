@@ -25,6 +25,11 @@ jobs:
         uses: jdx/mise-action@v2
 
       - uses: Swatinem/rust-cache@v2
+      - name: Cache uv (PEP 723 script envs)
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/uv
+          key: uv-${{ runner.os }}-${{ hashFiles('tools/**') }}
 
       - name: Add wasm targets
         run: rustup target add wasm32-unknown-unknown

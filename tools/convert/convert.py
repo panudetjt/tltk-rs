@@ -1,4 +1,16 @@
 #!/usr/bin/env python3
+# /// script
+# requires-python = ">=3.10,<3.13"  # scipy<1.13 has no cp313 wheels
+# dependencies = [
+#   "numpy",
+#   "scikit-learn",
+#   "nltk",
+#   "gensim>=4.3.3",
+#   "scipy<1.13",        # gensim 4.3.x imports scipy.linalg.triu (removed in 1.13)
+#   "python-crfsuite",
+# ]
+# ///
+# Self-contained: `uv run tools/convert/convert.py <tltk-dir> <out-dir>`.
 """Convert tltk (Python) model files into compact binary formats for tltk-core.
 
 Binary format conventions (all little-endian):

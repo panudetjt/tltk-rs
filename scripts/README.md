@@ -40,5 +40,5 @@ bash scripts/setup_segment_oracle.sh --force
 
 ### Running with the oracle
 ```bash
-PYTHONPATH=~/work/my-project/tltk-ref/tltk-110 $HOME/.local/share/tltk-rs/venv-segment-oracle/bin/python your_script.py
+PYTHONPATH=~/.cache/tltk-rs/tltk-1.10-pkg ~/.local/share/tltk-rs/venv-segment-oracle/bin/python your_script.py
 ```

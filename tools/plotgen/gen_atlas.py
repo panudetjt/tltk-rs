@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+# /// script
+# requires-python = ">=3.10"
+# dependencies = ["Pillow"]
+# ///
+# Self-contained: `uv run tools/plotgen/gen_atlas.py` (or any PEP 723 runner).
 """Generate pre-rasterized Thai glyph atlas and metrics JSON from THSarabunNew-Bold.
 
 Covers:
@@ -18,7 +23,7 @@ import sys
 from PIL import Image, ImageFont, ImageDraw
 
 FONT_CANDIDATES = [
-    "~/.local/share/fonts/THSarabunNew-Bold-NoPUA.ttf",
+    os.environ.get("TLTK_THAI_FONT", ""),
     os.path.expanduser("~/.local/share/fonts/THSarabunNew-Bold-NoPUA.ttf"),
     os.path.expanduser("~/.fonts/THSarabunNew Bold.ttf"),
     "/usr/share/fonts/truetype/thai/THSarabunNew-Bold.ttf",

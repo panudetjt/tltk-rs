@@ -1,44 +1,41 @@
 #!/usr/bin/env bash
 # Fetch the two gitignored model blobs (edu.bin.gz, w2v.bin.gz) by downloading
-# the tltk==1.10 wheel from PyPI and converting it with tools/convert/convert.py.
-# Re-runnable; the conversion venv is cached under ~/.local/share/tltk-rs/.
+# the tltk==1.10 wheel from PyPI and converting it with tools/convert/convert.py
+# (deps are PEP 723 inline — uv resolves and caches them; no manual venv).
+# Re-runnable on any machine with mise (rust/python/node/uv) installed.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 cd "$REPO_ROOT"
 
-VENV_DIR="${TLTK_VENV_HOME:-$HOME/.local/share/tltk-rs/venv-convert}"
 DATA_DIR="crates/tltk-core/data"
 WORK_DIR="$(mktemp -d)"
 trap 'rm -rf "$WORK_DIR"' EXIT
 
 need() { command -v "$1" >/dev/null 2>&1 || { echo "ERROR: $1 not on PATH (run via mise: https://mise.jdx.dev)" >&2; exit 1; }; }
-PY="python3"
-need "$PY"
+need uv
+need curl
+need python3
 
-# 1. Persistent conversion venv (reused across runs)
-if [ ! -x "$VENV_DIR/bin/python" ]; then
-    echo "==> Creating conversion venv at $VENV_DIR"
-    "$PY" -m venv "$VENV_DIR"
-fi
-echo "==> Installing conversion deps (cached after first run)"
-"$VENV_DIR/bin/pip" install -q -r tools/requirements.txt
-
-# 2. Download the tltk 1.10 wheel (no deps — we only want its data files)
+# 1. Resolve the tltk==1.10 wheel URL from the PyPI JSON API and download it
 echo "==> Downloading tltk==1.10 wheel from PyPI"
-"$VENV_DIR/bin/pip" download -q tltk==1.10 --no-deps -d "$WORK_DIR/wheel"
-WHEEL="$(ls "$WORK_DIR"/wheel/tltk-1.10*.whl | head -1)"
-[ -n "$WHEEL" ] || { echo "ERROR: tltk wheel not found after download" >&2; exit 1; }
+WHEEL_URL="$(curl -fsSL https://pypi.org/pypi/tltk/1.10/json | python3 -c '
+import json, sys
+for f in json.load(sys.stdin)["urls"]:
+    if f["filename"].endswith("py3-none-any.whl"):
+        print(f["url"]); break
+')"
+[ -n "$WHEEL_URL" ] || { echo "ERROR: no universal wheel found for tltk==1.10" >&2; exit 1; }
+curl -fsSL "$WHEEL_URL" -o "$WORK_DIR/tltk-1.10.whl"
 
-# 3. Unzip the wheel to get the package dir (models live inside tltk/)
+# 2. Extract: edu source lives in the wheel; the w2v model does NOT ship in
+#    the wheel — the tltk package itself downloads TNCc5model3.bin from
+#    Chula's server on first use (tltk/corpus.py W2V_load). Same official URL.
 echo "==> Extracting wheel"
-"$PY" -m zipfile -e "$WHEEL" "$WORK_DIR/pkg"
+python3 -m zipfile -e "$WORK_DIR/tltk-1.10.whl" "$WORK_DIR/pkg"
 TLTK_DIR="$WORK_DIR/pkg/tltk"
 
-# The w2v model is NOT in the PyPI wheel — the tltk package itself downloads it
-# from Chula's server on first use (tltk/corpus.py W2V_load). Fetch from the
-# same official URL.
 W2V_SRC="$TLTK_DIR/TNCc5model3.bin"
 W2V_ARG=()
 if [ ! -f "$W2V_SRC" ]; then
@@ -49,10 +46,10 @@ if [ ! -f "$W2V_SRC" ]; then
     W2V_ARG=(--w2v "$W2V_SRC")
 fi
 
-# 4. Convert into a temp dir, copy ONLY the two gitignored blobs
-#    (the six committed blobs are not touched — regenerated gzip would churn)
-echo "==> Converting (this needs the heavy deps; first run takes a few minutes)"
-"$VENV_DIR/bin/python" tools/convert/convert.py "$TLTK_DIR" "$WORK_DIR/out" "${W2V_ARG[@]}"
+# 3. Convert into a temp dir (uv caches the PEP 723 env after the first run),
+#    copy ONLY the two gitignored blobs — the six committed blobs stay untouched
+echo "==> Converting (first run resolves deps; cached afterwards)"
+uv run --quiet tools/convert/convert.py "$TLTK_DIR" "$WORK_DIR/out" "${W2V_ARG[@]}"
 
 for blob in edu.bin.gz w2v.bin.gz; do
     [ -f "$WORK_DIR/out/$blob" ] || { echo "ERROR: converter produced no $blob" >&2; exit 1; }
