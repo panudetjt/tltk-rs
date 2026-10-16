@@ -62,4 +62,4 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: web
           wranglerVersion: "4"
-          command: deploy --config wrangler-toolbox.toml
+          command: deploy --config wrangler.jsonc

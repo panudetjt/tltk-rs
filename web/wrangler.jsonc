@@ -1,0 +1,14 @@
+{
+  // Cloudflare static-only deployment for the toolbox (no worker script).
+  // Validate/edit with schema awareness in supported editors via $schema.
+  "$schema": "https://unpkg.com/wrangler/config-schema.json",
+  "name": "tltk-toolbox",
+  "compatibility_date": "2026-10-16",
+  "assets": {
+    // "." is relative to this config file: web/ (index.html, css/, js/, wasm/, data/)
+    "directory": ".",
+    "binding": "ASSETS",
+    "html_handling": "auto-trailing-slash",
+    "not_found_handling": "single-page-application"
+  }
+}

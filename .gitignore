@@ -8,3 +8,5 @@ golden/raw/
 crates/tltk-core/data/edu.bin.gz
 crates/tltk-core/data/w2v.bin.gz
 web/data/
+static/wasm/
+web/wasm/

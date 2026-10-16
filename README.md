@@ -150,7 +150,7 @@ The script checks for required model files (including gitignored `edu.bin.gz` an
 
 Deploy to any static web host (Cloudflare Pages / Workers Static Assets, Netlify, Vercel, GitHub Pages, or S3/R2). No server-side worker script or container is required.
 
-Example Cloudflare Workers static assets configuration (`web/wrangler-toolbox.toml`):
+Example Cloudflare Workers static assets configuration (`web/wrangler.jsonc`):
 
 ```toml
 name = "tltk-toolbox"
@@ -164,7 +164,7 @@ binding = "ASSETS"
 Deploy with:
 
 ```bash
-npx wrangler deploy --config static/wrangler-toolbox.toml
+npx wrangler deploy --config static/wrangler.jsonc
 # Or via Cloudflare Pages:
 npx wrangler pages deploy static
 ```
@@ -224,3 +224,12 @@ sets), `mise run node-parity` (shipped browser wasm, both flavors),
   the static toolbox via wrangler (needs `CLOUDFLARE_API_TOKEN` +
   `CLOUDFLARE_ACCOUNT_ID` secrets). Static-asset serving on Cloudflare is
   free and unmetered.
+
+## Staying current with upstream
+
+The port targets **tltk 1.10** — the version the stichula validator runs. When
+upstream moves, `mise run upstream-check` fetches the latest wheel from PyPI,
+diffs `nlp.py`/`corpus.py` against 1.10 (file level + function level), and
+prints the re-port checklist (bump pins, re-convert models, regenerate oracle
+goldens, run all parity lanes). Every parity diff after a bump is a real
+signal, not noise.

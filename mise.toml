@@ -62,3 +62,7 @@ run = "uv run tools/plotgen/gen_atlas.py"
 [tasks.oracle-setup]
 description = "era-correct py3.9 segment-oracle env (uv-managed)"
 run = "bash scripts/setup_segment_oracle.sh"
+
+[tasks.upstream-check]
+description = "PyPI newer tltk? diff vs ported 1.10 + re-port checklist"
+run = "bash scripts/upstream_check.sh"
