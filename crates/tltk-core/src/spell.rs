@@ -1,13 +1,75 @@
-//! Spelling: edits1/candidates (Norvig), spell_variants, spoonerism.
+//! Spelling, text utilities, and thaidict management.
+//!
+//! # Oracle Probes (tltk 1.10)
+//!
+//! Probed on Python 3.9 oracle (`~/.cache/tltk-rs/tltk-1.10-pkg/tltk/nlp.py`):
+//!
+//! 1. `wrd_len`:
+//!    - `nlp.wrd_len('')` -> `'s'`
+//!    - `nlp.wrd_len('แมว')` -> `'s'`
+//!    - `nlp.wrd_len('1234567890')` -> `'s'`
+//!    - `nlp.wrd_len('12345678901')` -> `'m'`
+//!    - `nlp.wrd_len('12345678901234567890')` -> `'m'`
+//!    - `nlp.wrd_len('123456789012345678901')` -> `'l'`
+//!    Thresholds: `>20` -> `'l'`, `>10` -> `'m'`, else `'s'`.
+//!
+//! 2. `match_Engtext` (wire name `match_engtext`):
+//!    - `nlp.match_Engtext('hello 123')` -> `True`
+//!    - `nlp.match_Engtext('hello world!')` -> `False` (ASCII 33 '!' excluded)
+//!    - `nlp.match_Engtext('แมว')` -> `False`
+//!    - `nlp.match_Engtext('helloแมว')` -> `False`
+//!    - `nlp.match_Engtext('')` -> `False`
+//!    - `nlp.match_Engtext('   ')` -> `True`
+//!    - `nlp.match_Engtext('a-b_c')` -> `True`
+//!    - `nlp.match_Engtext('user@test.com')` -> `True`
+//!    - `nlp.match_Engtext('100%')` -> `True`
+//!    - `nlp.match_Engtext('$10.50')` -> `True`
+//!    Matches ASCII printable characters (32..=126) except '!' (ASCII 33).
+//!
+//! 3. `known`:
+//!    - `nlp.known(['แมว', 'หมา', 'โน๊ตบุ๊ค123'])` -> `['แมว', 'หมา']`
+//!    - `nlp.known([])` -> `[]`
+//!    Input tokenization: whitespace-separated words (`text.split_whitespace()`).
+//!    Returns Python list representation matching `str(list)`.
+//!
+//! 4. `edits2` (size probe):
+//!    - `len(nlp.edits2('กก'))` -> `181493`
+//!    - `len(nlp.edits2('ก'))` -> `75696`
+//!    - `len(nlp.edits2(''))` -> `17404`
+//!    - `nlp.edits2('ก')[:5]` -> `['ก', 'ข', 'ฃ', 'ค', 'ฅ']`
+//!    Input tokenization: first whitespace token (`text.split_whitespace().next().unwrap_or("")`).
+//!    Alphabet range: 76 letters from `0x0E01` ('ก') to `0x0E4C` ('์').
+//!
+//! 5. `thaidict` lifecycle and state sequence:
+//!    - Initial: stock dictionary contains 65,431 words (`len(TDICT) == 65431`).
+//!    - `check_thaidict('แมว')` -> `1`, `check_thaidict('custom_word')` -> `0`.
+//!    - `reset_thaidict()` -> `1`; clears TDICT (`len(TDICT) == 0`).
+//!    - After reset: `check_thaidict('แมว')` -> `0`, `known(['แมว'])` -> `[]`.
+//!    - `read_thaidict` with content `"แมว\ncustom_word\ndot.word\n"` -> `1`.
+//!      Words are stripped with `rstrip()`, `.` is escaped to `\.`, inserted into TDICT.
+//!    - After read: `len(TDICT) == 3`.
+//!      `check_thaidict('แมว')` -> `1`
+//!      `check_thaidict('custom_word')` -> `1`
+//!      `check_thaidict('dot.word')` -> `0`
+//!      `check_thaidict('dot\\.word')` -> `1`
+//!      `known(['แมว', 'dot\\.word', 'หมา'])` -> `['แมว', 'dot\\.word']`.
+//!
+//! Wire return values:
+//! - `wrd_len`: `"s"`, `"m"`, or `"l"`
+//! - `match_engtext`: `"True"` or `"False"`
+//! - `check_thaidict`: `"1"` or `"0"`
+//! - `reset_thaidict`: `"1"`
+//! - `read_thaidict`: `"1"`
+//! - `known`, `edits2`: Python list repr format (`['...']`)
 
 use crate::g2p::pcompose;
 use crate::prelude::*;
 use crate::translit::phone_to_thai;
 use crate::Session;
 
-/// Thai alphabet used by edits1: chr(0x0E01)..=chr(0x0E4E).
+/// Thai alphabet used by edits1: chr(0x0E01)..=chr(0x0E4C) ('ก'..='์').
 fn letters() -> impl Iterator<Item = char> {
-    (0x0E01u32..=0x0E4E).filter_map(char::from_u32)
+    (0x0E01u32..=0x0E4C).filter_map(char::from_u32)
 }
 
 /// Port of edits1 — order: deletes, transposes, replaces, inserts.
