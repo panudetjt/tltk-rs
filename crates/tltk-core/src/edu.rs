@@ -170,8 +170,8 @@ impl<'a> Session<'a> {
         let re3 = RE3.get_or_init(|| regex::Regex::new(r"([0-9])<s/>").unwrap());
         let re4 = RE4.get_or_init(|| regex::Regex::new(r"<s/>([0-9])").unwrap());
         let output = re3.replace_all(&output, "${1}|<s/>").into_owned();
-        let output = re4.replace_all(&output, "<s/>|${1}").into_owned();
-        output
+        
+        re4.replace_all(&output, "<s/>|${1}").into_owned()
     }
 }
 

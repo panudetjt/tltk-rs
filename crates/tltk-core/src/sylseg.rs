@@ -46,11 +46,10 @@ impl<'a> Session<'a> {
     }
 
     fn bi_count_with_ids(&self, w1: &str, w2: &str, id1: Option<u32>, id2: Option<u32>) -> f64 {
-        if !self.bicount_ov.is_empty() {
-            if let Some(v) = self.bicount_ov.get(&(w1.to_string(), w2.to_string())) {
+        if !self.bicount_ov.is_empty()
+            && let Some(v) = self.bicount_ov.get(&(w1.to_string(), w2.to_string())) {
                 return *v as f64;
             }
-        }
         match (id1, id2) {
             (Some(a), Some(b)) => self.m.sylseg.bi_count_get(a, b) as f64,
             _ => 0.0,
@@ -58,11 +57,10 @@ impl<'a> Session<'a> {
     }
 
     fn count_with_id(&self, w: &str, id: Option<u32>) -> f64 {
-        if !self.count_ov.is_empty() {
-            if let Some(v) = self.count_ov.get(w) {
+        if !self.count_ov.is_empty()
+            && let Some(v) = self.count_ov.get(w) {
                 return *v as f64;
             }
-        }
         match id {
             Some(a) => self.m.sylseg.count_get(a) as f64,
             None => 0.0,

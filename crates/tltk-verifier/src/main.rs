@@ -46,11 +46,10 @@ fn parse_proc_status<R: BufRead>(reader: R) -> Option<ProcMemory> {
             if let Some(num_str) = rest.split_whitespace().next() {
                 rss = num_str.parse::<u64>().ok();
             }
-        } else if let Some(rest) = line.strip_prefix("VmHWM:") {
-            if let Some(num_str) = rest.split_whitespace().next() {
+        } else if let Some(rest) = line.strip_prefix("VmHWM:")
+            && let Some(num_str) = rest.split_whitespace().next() {
                 hwm = num_str.parse::<u64>().ok();
             }
-        }
     }
     match (rss, hwm) {
         (Some(vm_rss_kb), Some(vm_hwm_kb)) => Some(ProcMemory {
@@ -503,14 +502,13 @@ fn cmd_bench(args: &[String]) {
                 "  {:<16}rss={:<8} KB  vmhwm={:<8} KB",
                 "after_pass:", after_pass.vm_rss_kb, after_pass.vm_hwm_kb
             ));
-            if long {
-                if let Some(after_long) = mem_after_long {
+            if long
+                && let Some(after_long) = mem_after_long {
                     emit_human(&format!(
                         "  {:<16}rss={:<8} KB  vmhwm={:<8} KB",
                         "after_long:", after_long.vm_rss_kb, after_long.vm_hwm_kb
                     ));
                 }
-            }
         } else {
             emit_human("memory: unavailable (no /proc)");
         }

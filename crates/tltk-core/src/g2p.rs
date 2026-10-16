@@ -106,11 +106,10 @@ pub fn replace_snd(phone: &str, codematch: &str, charmatch: &str) -> String {
             break;
         }
         let t = chars[i];
-        if let Some(tbl) = table_of(&x.to_string()) {
-            if let Some(s) = tbl(t) {
+        if let Some(tbl) = table_of(&x.to_string())
+            && let Some(s) = tbl(t) {
                 snd = snd.replace(&x.to_string(), s);
             }
-        }
     }
     snd.push('8');
     snd

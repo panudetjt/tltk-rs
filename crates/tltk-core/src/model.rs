@@ -357,11 +357,10 @@ impl Sylseg {
         Ok(Sylseg { syls, syl_hash, tri, bi_count, bi_type, count, type_, total_word, total_lex })
     }
     pub fn syl_id(&self, s: &str) -> Option<u32> {
-        if let Some(idx) = self.syl_hash.get(s) {
-            if self.syls.get(idx as usize).map(|p| p.as_str()) == Some(s) {
+        if let Some(idx) = self.syl_hash.get(s)
+            && self.syls.get(idx as usize).map(|p| p.as_str()) == Some(s) {
                 return Some(idx);
             }
-        }
         None
     }
     pub fn tri_get(&self, x: u32, y: u32, z: u32) -> u32 {
@@ -465,7 +464,7 @@ pub struct Phs {
 }
 
 macro_rules! table_methods {
-    ($get:ident, $rows:ident, $vals:ident, $arity:expr) => {
+    ($get:ident, $rows:ident, $vals:ident, $arity:expr_2021) => {
         pub fn $get(&self, k: &[u32; $arity]) -> f64 {
             match self.$rows.binary_search_by(|p| {
                 let mut a = [0u32; $arity];
@@ -503,7 +502,7 @@ impl Phs {
             syls.push(s);
         }
         macro_rules! table {
-            ($arity:expr) => {{
+            ($arity:expr_2021) => {{
                 let n = r.uvarint();
                 let mut rows = Vec::with_capacity(n);
                 let mut vals = Vec::with_capacity(n);

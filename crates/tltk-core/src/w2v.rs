@@ -31,7 +31,7 @@ fn has_avx2() -> bool {
 #[cfg(target_arch = "x86_64")]
 #[target_feature(enable = "avx2")]
 #[inline]
-unsafe fn dot_avx2(a: &[f32], b: &[f32]) -> f32 {
+unsafe fn dot_avx2(a: &[f32], b: &[f32]) -> f32 { unsafe {
     use std::arch::x86_64::*;
 
     let mut sum0 = _mm256_setzero_ps();
@@ -88,7 +88,7 @@ unsafe fn dot_avx2(a: &[f32], b: &[f32]) -> f32 {
     let mut arr = [0.0f32; 8];
     _mm256_storeu_ps(arr.as_mut_ptr(), sum);
     arr[0] + arr[1] + arr[2] + arr[3] + arr[4] + arr[5] + arr[6] + arr[7] + rem_sum
-}
+}}
 #[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
 #[target_feature(enable = "simd128")]
 #[inline]
@@ -185,7 +185,7 @@ unsafe fn scan_avx2_dim100(
     vectors_unit: &[f32],
     mean: &[f32],
     dists: &mut Vec<(usize, f32)>,
-) {
+) { unsafe {
     use std::arch::x86_64::*;
 
     let m_ptr = mean.as_ptr();
@@ -238,11 +238,11 @@ unsafe fn scan_avx2_dim100(
         let score = arr[0] + arr[1] + arr[2] + arr[3] + arr[4] + arr[5] + arr[6] + arr[7] + rem_sum;
         dists.push((i, score));
     }
-}
+}}
 
 #[cfg(target_arch = "x86_64")]
 #[target_feature(enable = "avx2")]
-unsafe fn scan_avx2(vectors_unit: &[f32], dim: usize, mean: &[f32], dists: &mut Vec<(usize, f32)>) {
+unsafe fn scan_avx2(vectors_unit: &[f32], dim: usize, mean: &[f32], dists: &mut Vec<(usize, f32)>) { unsafe {
     if dim == 100 && mean.len() == 100 {
         scan_avx2_dim100(vectors_unit, mean, dists);
         return;
@@ -250,7 +250,7 @@ unsafe fn scan_avx2(vectors_unit: &[f32], dim: usize, mean: &[f32], dists: &mut 
     for (i, unit) in vectors_unit.chunks_exact(dim).enumerate() {
         dists.push((i, dot_avx2(unit, mean)));
     }
-}
+}}
 
 #[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
 #[target_feature(enable = "simd128")]
