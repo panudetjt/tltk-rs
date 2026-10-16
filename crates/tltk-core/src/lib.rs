@@ -122,6 +122,9 @@ impl<'a> Session<'a> {
             "reset_thaidict" => Ok(spell::reset_thaidict().to_string()),
             "read_thaidict" => Ok(spell::read_thaidict(text).to_string()),
             "w2v" => self.wire_w2v(text),
+            "w2v_diffplot" => self.wire_w2v_diffplot(text),
+            "w2v_dimplot" => self.wire_w2v_dimplot(text),
+            "w2v_compare_color" => self.wire_w2v_compare_color(text),
             "compound" => self.wire_compound(text),
             other => Err(ProcessError(format!("Unknown function: {}", other))),
         }
