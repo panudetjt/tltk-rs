@@ -161,10 +161,16 @@ export class TltkManager {
 
     let mod;
     try {
-      mod = await import(jsPath);
+      if (typeof document !== 'undefined') {
+        // Browser: a bare/relative specifier resolves against THIS module's URL
+        // (/js/), not the page root — resolve against the document base instead.
+        mod = await import(new URL(jsPath, document.baseURI).href);
+      } else {
+        mod = await import(jsPath);
+      }
     } catch (err) {
-      // In some environments, dynamic import of relative path needs explicit ./ prefix
-      if (!jsPath.startsWith('.') && !jsPath.startsWith('/') && !jsPath.startsWith('http')) {
+      // In node, a dynamic import of a relative path may need an explicit ./ prefix
+      if (typeof document === 'undefined' && !jsPath.startsWith('.') && !jsPath.startsWith('/') && !jsPath.startsWith('http')) {
         mod = await import(`./${jsPath}`);
       } else {
         throw err;
