@@ -7,6 +7,7 @@
 //! `tools/convert/convert.py`. Behaviour parity is defined by the validator API
 //! and checked by `tltk-verifier`.
 
+pub mod chunk;
 pub mod edu;
 pub mod g2p;
 pub mod model;
@@ -102,6 +103,8 @@ impl<'a> Session<'a> {
             "analogy" => self.wire_analogy(text),
             "plotwords" => self.wire_plotwords(text),
             "textana" => textana::textana(self, text),
+            "chunk" => Ok(self.chunk(text)),
+            "tnc_tag" => self.tnc_tag(text),
             other => Err(ProcessError(format!("Unknown function: {}", other))),
         }
     }

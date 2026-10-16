@@ -63,8 +63,8 @@ Data status: the word-tier lexicon TextAna reads (`word.pklz` → WT01) is
 
 | upstream | notes |
 |---|---|
-| `chunk(txt)` | one-shot sylseg → EDU → wordseg → POS → NER. **Every primitive already exists in Rust** (`edu.rs`, `wordseg.rs`, `pos.rs`, `ner.rs`); this is pure composition — cheapest meaningful win. |
-| `TNC_tag` | XML tagging (transcription + POS) for corpus prep. Composition too. |
+| ~~`chunk(txt)`~~ | ✅ wire (one-shot sylseg → EDU → wordseg → POS → NER). |
+| ~~`TNC_tag`~~ | ✅ wire (XML tagging transcription + POS for corpus prep). |
 | `MaltParser`, `MaltParser_wordlist` | UD dependency parsing, model `thamalt.mco`. Hardest single item: transition-based parser + model conversion. `TextAna(UDParse="Malt")` depends on it. |
 | `print_dtree`, `dg_print`, `dg_save`, `scan_dtree`, `get_tree_depth`, `tree_max_depth` | tree helpers around MaltParser output. |
 
@@ -174,7 +174,7 @@ single session) — and extend its dispatch when the corpus gains a function.
 `textana.rs`'s module doc is the worked example of the whole dance.
 
 1. `th2ipa_all`, `sylparse_all` — variants of already-ported logic.
-2. `chunk`, `TNC_tag` — pure composition of existing primitives.
+2. ~~`chunk`, `TNC_tag`~~ — ✅ wire 2026-10-16 (pure composition of existing primitives).
 3. ~~`SylAna`, `WordAna`~~ — ✅ done 2026-10-16 (inside `textana.rs`).
 4. corpus.py word n-grams (`unigram`/`bigram`/`trigram`/`collocates`) — needs TNC3g download + converter + new goldens.
 5. ~~`TextAna`~~ — ✅ done 2026-10-16 (defaults surface, 1.11 semantics); `TextAna2json` remains trivial.

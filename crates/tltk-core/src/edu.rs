@@ -63,7 +63,7 @@ fn distance(sentence: &[&str], index: usize) -> usize {
 }
 
 /// sklearn DictVectorizer.transform — column index per feature, value.
-fn vectorize(sess: &Session, features: &[(String, f64)]) -> Vec<(u32, f64)> {
+pub(crate) fn vectorize(sess: &Session, features: &[(String, f64)]) -> Vec<(u32, f64)> {
     let mut out = Vec::new();
     for (k, v) in features {
         if let Some(&idx) = sess.m.edu.as_ref().unwrap().feat_index.get(k) {
@@ -76,7 +76,7 @@ fn vectorize(sess: &Session, features: &[(String, f64)]) -> Vec<(u32, f64)> {
 
 /// RandomForestClassifier.predict_proba — average tree probabilities, then
 /// sklearn's predict = argmax (first max wins: index 0 = "").
-fn rf_predict(sess: &Session, row: &[(u32, f64)]) -> (usize, [f64; 2]) {
+pub(crate) fn rf_predict(sess: &Session, row: &[(u32, f64)]) -> (usize, [f64; 2]) {
     let edu = sess.m.edu.as_ref().unwrap();
     let n_classes = edu.classes.len().max(2);
     let mut proba = vec![0.0f64; n_classes];
