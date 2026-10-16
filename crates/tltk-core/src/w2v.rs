@@ -1,5 +1,23 @@
 //! Word2Vec — port of tltk.corpus similarity/most_similar/outofgroup semantics
 //! over gensim KeyedVectors (TNCc5model3.bin), plus the server's wire wrappers.
+//!
+//! `w2v` + `compound` (corpus.py oracle probes, 2026-10-16, gensim 4.3.2 +
+//! scipy blas in the era venv):
+//! - `corpus.w2v('แมว')` → np.float32[100]; `str(list(v))` renders each element
+//!   with numpy's float32 shortest-repr: first elements are `-2.160949,
+//!   -1.7455051, 0.011778566, -1.3078011` (trailing zeros stripped). OOV word
+//!   → `()` (empty tuple).
+//! - `corpus.compound('มา','ตรา')` → `[(('ตรา', 'มาตรา'), 0.14556038), (('มา',
+//!   'มาตรา'), 0.034693517), (('มา', 'ตรา'), -0.079629)]` — similarities via
+//!   `KeyedVectors.similarity` = np.float32(np.dot(matutils.unitvec(a),
+//!   matutils.unitvec(b))). unitvec: the L2 norm is dnrm2 (exact-f64 sqrt of
+//!   the f64 sum of squares — NOT the f32 sequential norm), and each unit
+//!   element is `f32(f64(a_i) * (1.0/norm_f64))` (single rounding; differs
+//!   from `x / f32_norm` by 1 ulp on scattered elements). Rust mirrors this in
+//!   `w2v_oracle_similarity` (`oracle_norm_f64` + the existing SIMD `dot`).
+//!   Sorted desc by score with Python's stable sort; any of w1/w2/w1+w2 OOV →
+//!   `[]`. The fn_w2v golden pairs are byte-stable under that dot layout
+//!   (verified against the oracle over 4000 vocab pairs; 277 stable).
 
 use crate::prelude::fmt4;
 use crate::Session;
@@ -296,10 +314,29 @@ impl<'a> Session<'a> {
         if i1 == i2 {
             return Some(1.0);
         }
-        let u1 = wv.vector(i1);
-        let u2 = wv.vector(i2);
+        let u1 = wv.vector_unit(i1);
+        let u2 = wv.vector_unit(i2);
         let s = dot(u1, u2);
         Some(s as f64)
+    }
+
+    /// gensim matutils.unitvec/similarity oracle pipeline (probed 2026-10-16,
+    /// gensim 4.3.2 + scipy blas in the era venv): the L2 norm comes from
+    /// dnrm2 (exact-f64 sqrt of the f64 sum of squares), each unit element is
+    /// `f32(f64(a_i) * (1.0 / norm_f64))` (single rounding), and the cosine is
+    /// an f32 dot of those units. This differs from `vectors_unit` (x / f32
+    /// norm) by 1 ulp on some elements and changes the final bits.
+    fn w2v_oracle_similarity(&self, w1: &str, w2: &str) -> Option<f32> {
+        let wv = self.m.w2v.as_ref()?;
+        let (i1, i2) = (wv.index(w1)?, wv.index(w2)?);
+        let (a, b) = (wv.vector(i1), wv.vector(i2));
+        let na = oracle_norm_f64(a);
+        let nb = oracle_norm_f64(b);
+        let inv_a = 1.0 / na;
+        let inv_b = 1.0 / nb;
+        let ua: Vec<f32> = a.iter().map(|&x| (x as f64 * inv_a) as f32).collect();
+        let ub: Vec<f32> = b.iter().map(|&x| (x as f64 * inv_b) as f32).collect();
+        Some(dot(&ua, &ub))
     }
 
     /// gensim most_similar over unit vectors; returns (word, score) top-N
@@ -656,6 +693,139 @@ impl<'a> Session<'a> {
         let png = encode_png(&img, w as u32, h as u32);
         Ok(format!("IMAGE:{}", base64_encode(&png)))
     }
+
+    /// corpus.w2v — raw vector fetch; `str(list(vec))` for an in-vocab word,
+    /// `()` (Python empty tuple repr) when OOV or the model is absent.
+    pub fn wire_w2v(&mut self, text: &str) -> Result<String, crate::ProcessError> {
+        let w = text.split_whitespace().next().unwrap_or("");
+        let wv = match self.m.w2v.as_ref() {
+            Some(wv) => wv,
+            None => return Ok("()".to_string()),
+        };
+        let vec = match wv.index(w) {
+            Some(i) => wv.vector(i),
+            None => return Ok("()".to_string()),
+        };
+        let mut out = String::from("[");
+        for (j, &v) in vec.iter().enumerate() {
+            if j > 0 {
+                out.push_str(", ");
+            }
+            out.push_str(&py_repr_f32(v));
+        }
+        out.push(']');
+        Ok(out)
+    }
+
+    /// corpus.compound — similarity trio ((w1,w12),(w2,w12),(w1,w2)) over the
+    /// w2v model, sorted desc by score (Python stable sort). OOV input → `[]`.
+    pub fn wire_compound(&mut self, text: &str) -> Result<String, crate::ProcessError> {
+        let parts: Vec<&str> = text.split_whitespace().collect();
+        if parts.len() < 2 {
+            return Ok("[]".to_string());
+        }
+        let (w1, w2) = (parts[0], parts[1]);
+        let w12 = format!("{}{}", w1, w2);
+        if self.m.w2v.is_none() {
+            return Ok("[]".to_string());
+        }
+        if [w1, w2, w12.as_str()]
+            .iter()
+            .any(|w| !self.m.w2v.as_ref().unwrap().contains(w))
+        {
+            return Ok("[]".to_string());
+        }
+        let d1 = self.w2v_oracle_similarity(w1, &w12).unwrap_or(0.0) as f64;
+        let d2 = self.w2v_oracle_similarity(w2, &w12).unwrap_or(0.0) as f64;
+        let d3 = self.w2v_oracle_similarity(w1, w2).unwrap_or(0.0) as f64;
+        let mut lst = [(w1, w12.as_str(), d1), (w2, w12.as_str(), d2), (w1, w2, d3)];
+        lst.sort_by(|a, b| {
+            b.2.partial_cmp(&a.2)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
+        let mut out = String::from("[");
+        for (j, (a, b, d)) in lst.iter().enumerate() {
+            if j > 0 {
+                out.push_str(", ");
+            }
+            out.push_str(&format!(
+                "({}, {})",
+                py_tuple2(a, b),
+                py_repr_f32(*d as f32)
+            ));
+        }
+        out.push(']');
+        Ok(out)
+    }
+}
+
+/// dnrm2-equivalent: exact-f64 sqrt of the f64 sum of squares.
+fn oracle_norm_f64(v: &[f32]) -> f64 {
+    let s: f64 = v.iter().map(|&x| (x as f64) * (x as f64)).sum();
+    s.sqrt()
+}
+
+
+/// numpy float32 shortest repr (Dragon4 shortest for f32 — the same unique
+/// round-trip digits Rust's `{:e}` produces for f32), in Python repr notation:
+/// fixed while -4 < decpt <= 16, integral floats carry ".0".
+fn py_repr_f32(v: f32) -> String {
+    if v == 0.0 {
+        return if v.is_sign_negative() { "-0.0".into() } else { "0.0".into() };
+    }
+    let e = format!("{:e}", v);
+    let (mant, exp) = e.split_once('e').unwrap();
+    let exp: i32 = exp.parse().unwrap();
+    let neg = mant.starts_with('-');
+    let digits: String = mant.trim_start_matches('-').chars().filter(|c| *c != '.').collect();
+    let decpt = exp + 1;
+    let nd = digits.len() as i32;
+    let mut out = String::new();
+    if neg {
+        out.push('-');
+    }
+    if decpt > -4 && decpt <= 16 {
+        if decpt <= 0 {
+            out.push_str("0.");
+            for _ in 0..-decpt {
+                out.push('0');
+            }
+            out.push_str(&digits);
+        } else if decpt >= nd {
+            out.push_str(&digits);
+            for _ in 0..(decpt - nd) {
+                out.push('0');
+            }
+            out.push_str(".0");
+        } else {
+            out.push_str(&digits[..decpt as usize]);
+            out.push('.');
+            out.push_str(&digits[decpt as usize..]);
+        }
+    } else {
+        out.push_str(&digits[..1]);
+        if nd > 1 {
+            out.push('.');
+            out.push_str(&digits[1..]);
+        }
+        out.push('e');
+        let e2 = decpt - 1;
+        if e2 < 0 {
+            out.push_str(&format!("-{:02}", -e2));
+        } else {
+            out.push_str(&format!("+{:02}", e2));
+        }
+    }
+    out
+}
+
+/// Python repr of a 2-tuple of strs: `('a', 'b')`.
+fn py_tuple2(a: &str, b: &str) -> String {
+    format!(
+        "({}, {})",
+        crate::prelude::py_str_repr(a),
+        crate::prelude::py_str_repr(b)
+    )
 }
 
 /// Minimal PNG encoder: 8-bit RGB, filter 0, zlib via flate2.

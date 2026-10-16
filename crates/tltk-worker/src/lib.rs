@@ -36,7 +36,8 @@ async fn router(req: Request, env: Env) -> Result<Response> {
                 "chunk","tnc_tag",
                 "dg_print","dg_save","print_dtree","scan_dtree","get_tree_depth","tree_max_depth",
                 "th2ipa_all","sylparse_all",
-                "wrd_len","match_engtext","known","edits2","check_thaidict","reset_thaidict","read_thaidict"
+                "wrd_len","match_engtext","known","edits2","check_thaidict","reset_thaidict","read_thaidict",
+                "w2v","compound"
             ],
         })),
         _ => Response::error("Not Found", 404),

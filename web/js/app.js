@@ -280,6 +280,23 @@ export const FUNCTIONS = [
     placeholder: '{"sentence":"...","words":[{"id":0,"form":"root","pos":"TOP","head":null,"deprel":null},{"id":1,"form":"กิน","pos":"VERB","head":0,"deprel":"root"}]}',
     tier: 1
   }
+  },
+  {
+    id: 'w2v',
+    name: 'w2v',
+    thaiName: 'ดึงเวกเตอร์คำจากโมเดล Word2Vec (Raw Vector)',
+    desc: 'แสดงเวกเตอร์ดิบขนาด 100 มิติของคำจากโมเดล Word2Vec (TNC)',
+    placeholder: 'แมว',
+    tier: 2
+  },
+  {
+    id: 'compound',
+    name: 'compound',
+    thaiName: 'ตรวจสอบคำประสม (Compound Word)',
+    desc: 'ตรวจสอบว่าคำสองคำ (คั่นด้วยเว้นวรรค) รวมกันเป็นคำประสมในโมเดล Word2Vec หรือไม่ พร้อมค่าความคล้าย 3 คู่',
+    placeholder: 'ราช การ',
+    tier: 2
+  },
 ];
 
 // Map for quick lookup by ID
