@@ -1,0 +1,45 @@
+{"function": "malt_parser", "text": "ฉัน กิน ข้าว"}
+{"function": "malt_parser", "text": "เขานั่งดูหนังอยู่ที่บ้าน"}
+{"function": "malt_parser", "text": "แมวกินปลา"}
+{"function": "malt_parser", "text": "นายสมชายเดินทางไปกรุงเทพมหานครเมื่อวานนี้"}
+{"function": "malt_parser", "text": "การ์ดใบนั้นมีคำอวยพรเขียนไว้สวยงาม"}
+{"function": "malt_parser", "text": "เด็ก ๆ ชอบอ่านหนังสือมาก"}
+{"function": "malt_parser", "text": "วันนี้เป็นวันดี"}
+{"function": "malt_parser", "text": "อาหารไทยมีรสชาติอร่อยและเป็นที่นิยมทั่วโลก"}
+{"function": "malt_parser", "text": "การท่องเที่ยวแห่งประเทศไทยจัดกิจกรรมส่งเสริมการท่องเที่ยว"}
+{"function": "malt_parser", "text": "นักเรียนกำลังอ่านหนังสือในห้องสมุด"}
+{"function": "malt_parser", "text": "แม่ไปตลาดซื้อผักและผลไม้สด"}
+{"function": "malt_parser", "text": "พ่อขับรถไปทำงานทุกเช้า"}
+{"function": "malt_parser", "text": "อากาศวันนี้ค่อนข้างร้อนอบอ้าว"}
+{"function": "malt_parser", "text": "เขาชอบฟังเพลงและเล่นดนตรีไทย"}
+{"function": "malt_parser", "text": "ดอกไม้ในสวนกำลังเบ่งบานสวยงาม"}
+{"function": "malt_parser", "text": "คุณครูสอนวิชาคณิตศาสตร์ให้นักเรียนชั้นประถม"}
+{"function": "malt_parser", "text": "พวกเราเดินทางไปเที่ยวทะเลในวันหยุดสุดสัปดาห์"}
+{"function": "malt_parser", "text": "หนังสือเล่มนี้มีเนื้อหาน่าสนใจและอ่านเข้าใจง่าย"}
+{"function": "malt_parser", "text": "แพทย์แนะนำให้ออกกำลังกายอย่างสม่ำเสมอ"}
+{"function": "malt_parser", "text": "เขาซื้อโทรศัพท์มือถือเครื่องใหม่เมื่อสัปดาห์ที่แล้ว"}
+{"function": "malt_parser", "text": "ชาวนาเริ่มเกี่ยวข้าวในฤดูเก็บเกี่ยว"}
+{"function": "malt_parser", "text": "ตำรวจจราจรกำลังอำนวยความสะดวกบนท้องถนน"}
+{"function": "malt_parser", "text": "น้องสาวทำการบ้านเสร็จเรียบร้อยแล้ว"}
+{"function": "malt_parser", "text": "เราควรช่วยกันดูแลรักษาสิ่งแวดล้อม"}
+{"function": "malt_parser", "text": "ฉันดื่มกาแฟร้อนในตอนเช้า"}
+{"function": "malt_parser", "text": "คุณกินข้าวหรือยัง"}
+{"function": "malt_parser", "text": "เขาไม่ไปโรงเรียนวันนี้เพราะไม่สบาย"}
+{"function": "malt_parser", "text": "พรุ่งนี้เวลาเก้าโมงเช้าจะมีการประชุมที่ห้องประชุมใหญ่"}
+{"function": "malt_parser", "text": "วันนี้มีฝนตกหนักในหลายพื้นที่ ประชาชนควรระมัดระวังน้ำท่วมฉับพลัน"}
+{"function": "malt_parser", "text": "กระทรวงการคลังเตรียมเสนอมาตรการกระตุ้นเศรษฐกิจต่อที่ประชุมคณะรัฐมนตรีในสัปดาห์หน้า"}
+{"function": "malt_parser", "text": "Hello world"}
+{"function": "malt_parser", "text": "The quick brown fox jumps over the lazy dog."}
+{"function": "malt_parser", "text": "ฉันรัก AI"}
+{"function": "malt_parser", "text": "กิน"}
+{"function": "malt_parser", "text": "เขานั่งดูหนังอยู่ที่บ้าน."}
+{"function": "malt_parser", "text": "เขามีเงิน 100 บาท"}
+{"function": "malt_parser", "text": "ประเทศไทยมีประชากรประมาณ 70 ล้านคน"}
+{"function": "malt_parser_wordlist", "text": "เขา\nนั่ง\nดู\nหนัง"}
+{"function": "malt_parser_wordlist", "text": "ฉัน\nกิน\nข้าว"}
+{"function": "malt_parser_wordlist", "text": "นาย\nสมชาย\nเดินทาง\nไป\nกรุงเทพ"}
+{"function": "malt_parser_wordlist", "text": "กิน"}
+{"function": "malt_parser_wordlist", "text": "ฉัน\nรัก\nAI"}
+{"function": "malt_parser_wordlist", "text": "เขียน\nโค้ด\nRust"}
+{"function": "malt_parser_wordlist", "text": "Hello\nworld"}
+{"function": "malt_parser_wordlist", "text": "Python\nJava"}
