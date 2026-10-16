@@ -28,12 +28,11 @@ description = "clippy zero + workspace tests"
 run = "cargo clippy --workspace --all-targets -- -D warnings && cargo test --workspace"
 
 [tasks.parity]
-description = "the three parity checks (stichula / local / extra)"
+description = "the three parity checks (stichula / local / extra) — exact baselines asserted"
 run = """
-cargo run -q -p tltk-verifier -- check corpus/corpus.jsonl golden/stichula.jsonl crates/tltk-core/data && \
-cargo run -q -p tltk-verifier -- check corpus/corpus.jsonl golden/local_python.jsonl crates/tltk-core/data; \
-out=$(cargo run -q -p tltk-verifier -- check corpus/corpus_extra.jsonl golden/local_python_extra.jsonl crates/tltk-core/data); \
-echo "$out"; echo "$out" | grep -q "fail=0 missing_golden=0"
+out=$(cargo run -q -p tltk-verifier -- check corpus/corpus.jsonl golden/stichula.jsonl crates/tltk-core/data || true); echo "$out"; echo "$out" | grep -q "pass=241 fail=3 missing_golden=0" || exit 1
+out=$(cargo run -q -p tltk-verifier -- check corpus/corpus.jsonl golden/local_python.jsonl crates/tltk-core/data || true); echo "$out"; echo "$out" | grep -q "pass=228 fail=7 missing_golden=9" || exit 1
+out=$(cargo run -q -p tltk-verifier -- check corpus/corpus_extra.jsonl golden/local_python_extra.jsonl crates/tltk-core/data || true); echo "$out"; echo "$out" | grep -q "fail=0 missing_golden=0" || exit 1
 """
 
 [tasks.wasm-parity]
