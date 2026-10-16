@@ -187,3 +187,10 @@ TLTK by Wirote Aroonmanakun, Chulalongkorn University (PyPI `tltk` 1.10).
 This project reimplements the inference pipelines in Rust for the
 [stichula.org](https://app.stichula.org/py/tltk/) API surface; model artifacts
 remain © their original authors.
+
+## License
+
+Code: MIT (see [LICENSE](LICENSE)). This project derives from and redistributes
+converted artifacts of TLTK 1.10 (BSD-3-Clause) and a Thai font atlas — see
+[THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md) for the notices that travel
+with distributions.
