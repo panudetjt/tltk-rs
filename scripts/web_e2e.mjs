@@ -217,6 +217,7 @@ async function main() {
       const stats = page.locator('#execStats');
       await page.waitForFunction(
         () => /ประมวลผลสำเร็จ|เกิดข้อผิดพลาด/.test(document.getElementById('execStats').textContent),
+        undefined,
         { timeout: args.timeout },
       );
       const statText = await stats.textContent();
