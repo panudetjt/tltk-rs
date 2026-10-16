@@ -98,8 +98,17 @@ jobs:
           rustup target add wasm32-unknown-unknown
           cargo install wasm-bindgen-cli --locked --version 0.2.129
 
+      - name: Fetch gitignored model blobs (edu/w2v) from the tltk wheel
+        run: mise run fetch-models
+
       - name: Build web engine (wasm, both flavors)
         run: mise run build-web
+
+      - name: Stage model data for static serving (web/data is a local-only symlink)
+        run: |
+          mkdir -p web/data
+          cp crates/tltk-core/data/*.bin.gz web/data/
+          cp crates/tltk-core/data/sylrule.txt crates/tltk-core/data/thaisyl.txt web/data/
 
       - name: Module-syntax gate (the "no options" incident — browser parses these as ES modules)
         run: |
