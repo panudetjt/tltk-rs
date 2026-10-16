@@ -20,7 +20,7 @@ corpus.jsonl ──▶ scripts/capture_stichula.py ──▶ golden/stichula.jso
 
 | path | what |
 |---|---|
-| `crates/tltk-core/` | the library: all 16 functions, no network, no async |
+| `crates/tltk-core/` | the library: all 17 functions, no network, no async |
 | `crates/tltk-worker/` | Cloudflare Worker (workers-rs) — thin HTTP shell over the core |
 | `crates/tltk-verifier/` | parity harness (`run` / `check` / `selftest`) |
 | `tools/convert/` | Python scripts: pickle → portable binary models, local oracle |
@@ -38,7 +38,11 @@ which never touches HTTP so it can also be used as a plain library.
 `success: false` + `error`). Functions: `th2ipa`, `th2roman`, `word_segment`,
 `syl_segment`, `segment`, `g2p`, `th2read`, `spell_variants`, `spoonerism`,
 `pos_tag`, `ner_tag`, `similar_words`, `similarity`, `outofgroup`, `analogy`,
-`plotwords`.
+`plotwords`, `textana`. The 16 stichula functions are byte-identical to
+tltk 1.10; `textana` carries tltk 1.11 semantics (1.11's only functional
+change is inside TextAna: LdvTTR ×100) with python-oracle goldens instead of
+validator goldens — see [PORTING-GAPS.md](PORTING-GAPS.md) for the full
+inventory of what is (and isn't) ported.
 
 ## Model pipeline
 
@@ -54,6 +58,7 @@ with binary search at load:
 | sylvar | 0.06 MB | sylform_var.pklz | embedded |
 | phs | 1.2 MB | PhSTrigram.sts (8 derived tables) | embedded |
 | pos | 1.1 MB | pos_tagger.pklz (PerceptronTagger) | embedded |
+| wordtier | 0.4 MB | word.pklz (TextAna tier lexicon) | embedded |
 | ner | 0.09 MB | crfsuite model (see NER note) | embedded |
 | edu | 6.2 MB | sent_segment.pklz (DictVectorizer+RF) | **R2** (`MODELS` binding) |
 | w2v | 11.6 MB | TNCc5model3.bin (gensim KeyedVectors) | **R2** |

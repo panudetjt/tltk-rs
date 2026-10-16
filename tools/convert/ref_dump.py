@@ -82,16 +82,51 @@ elif mode == "corpus":
                 r = nlp.ner_tag(text)
             elif fn == "segment":
                 r = nlp.segment(text)
+            elif fn == "textana":
+                # tltk 1.11 TextAna (LdvTTR x100); JSON in the Rust wire format:
+                # sorted keys, compact separators — see crates/tltk-core/src/textana.rs
+                r = json.dumps(nlp.TextAna(text), ensure_ascii=False, sort_keys=True,
+                               separators=(",", ":"))
             elif fn == "similar_words":
                 c = {"low": 0.3, "medium": 0.5, "high": 0.7}[cutoff]
                 from tltk import corpus
                 corpus.w2v_load()
                 r = ", ".join(corpus.similar_words(text.split()[0], cutoff=c))
+            elif fn == "outofgroup":
+                from tltk import corpus
+                corpus.w2v_load()
+                words = text.split()
+                vocabs = list(corpus.w2v_model.wv.index_to_key)
+                if sum(w in vocabs for w in words) < 3:
+                    r = "กรุณาใส่คำอย่างน้อย 3 คำ (คำที่มีใน word2vec model)"
+                else:
+                    r = f"คำที่ไม่เข้าพวก: {corpus.outofgroup(words)}"
+            elif fn == "analogy":
+                from tltk import corpus
+                corpus.w2v_load()
+                parts = text.split()
+                vocabs = list(corpus.w2v_model.wv.index_to_key)
+                if any(w not in vocabs for w in parts):
+                    r = "ไม่พบคำ '{}' ใน word2vec model".format(
+                        next(w for w in parts if w not in vocabs))
+                else:
+                    ans = corpus.analogy(parts[0], parts[1], parts[2])
+                    if not ans:
+                        r = "ไม่พบคำตอบ"
+                    else:
+                        (word, score), = ans
+                        r = f"{parts[0]} : {parts[1]} :: {parts[2]} : {word} (score: {score:.4f})"
             elif fn == "similarity":
                 from tltk import corpus
                 corpus.w2v_load()
-                w1, w2 = text.split()[:2]
-                r = "ความคล้ายระหว่าง '%s' กับ '%s' = %.4f" % (w1, w2, corpus.similarity(w1, w2))
+                parts = text.split()[:2]
+                vocabs = list(corpus.w2v_model.wv.index_to_key)
+                oov = next((w for w in parts if w not in vocabs), None)
+                if oov is not None:
+                    r = "ไม่พบคำ '{}' ใน word2vec model".format(oov)
+                else:
+                    r = "ความคล้ายระหว่าง '%s' กับ '%s' = %.4f" % (
+                        parts[0], parts[1], corpus.similarity(parts[0], parts[1]))
             else:
                 continue
             ok = True

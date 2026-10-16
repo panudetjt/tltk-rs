@@ -1,7 +1,9 @@
 //! tltk-core — Rust rewrite of TLTK (Thai Language Toolkit) inference primitives.
 //!
 //! Faithful port of tltk 1.10 (PyPI), the version the stichula.org validator
-//! runs. Model artifacts are converted from the Python pickles by
+//! runs — with one deliberate exception: `textana` carries tltk 1.11
+//! semantics (1.11's only functional change is inside TextAna: LdvTTR ×100).
+//! Model artifacts are converted from the Python pickles by
 //! `tools/convert/convert.py`. Behaviour parity is defined by the validator API
 //! and checked by `tltk-verifier`.
 
@@ -13,6 +15,7 @@ pub mod pos;
 pub mod prelude;
 pub mod spell;
 pub mod sylseg;
+pub mod textana;
 pub mod translit;
 pub mod w2v;
 pub mod wordseg;
@@ -98,6 +101,7 @@ impl<'a> Session<'a> {
             "outofgroup" => self.wire_outofgroup(text),
             "analogy" => self.wire_analogy(text),
             "plotwords" => self.wire_plotwords(text),
+            "textana" => textana::textana(self, text),
             other => Err(ProcessError(format!("Unknown function: {}", other))),
         }
     }

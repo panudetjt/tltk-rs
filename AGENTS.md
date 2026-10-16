@@ -1,7 +1,9 @@
 # AGENTS.md — tltk-rs
 
-Rust rewrite of TLTK 1.10 (Thai NLP toolkit) — 16 functions, **byte-identical
-to tltk 1.10**. The verifier corpus decides parity, not opinions.
+Rust rewrite of TLTK (Thai NLP toolkit) — 17 functions: the 16 validator
+functions **byte-identical to tltk 1.10**, plus `textana` at **tltk 1.11
+semantics** (1.11's only functional change is inside TextAna: LdvTTR ×100).
+The verifier corpus decides parity, not opinions.
 
 ## Environment: mise.toml is the single source of truth
 
@@ -15,12 +17,23 @@ hand-type the commands they wrap.
   **241/3/0**) and `golden/local_python.jsonl` (**228/7/9**) — the 3+7 are
   disclosed upstream diffs (1 ner_tag CRF float flip, 2 plotwords renderer);
   and `corpus/corpus_extra.jsonl` × `golden/local_python_extra.jsonl`
-  (**87/0/0**, must stay zero — these are python-oracle goldens).
+  (**100/0/0**, must stay zero — these are python-oracle goldens; the 13
+  `textana` rows are captured from the tltk **1.11** oracle, the rest from
+  1.10 — legitimate because 1.11 changes nothing outside TextAna).
 - Goldens are captured from the Python oracle or the stichula validator —
-  **never from the Rust binary** (circular evidence).
+  **never from the Rust binary** (circular evidence). Porting a new function:
+  **probe the oracle first** — Python hides wire traps (dict insertion-order
+  keys, `statistics.mean` int/float flips, repr floats, conditional key
+  presence); `textana.rs`'s module doc is the worked example, and
+  PORTING-GAPS.md §4 carries the checklist.
 - Algorithm changes are allowed only when outputs stay byte-identical;
   verify with `mise run parity`, `mise run node-parity`, `mise run wasm-parity`.
-- Perf work: `mise run bench` / `mise run mem`. A number without a
+- Perf work: `mise run bench-report` (4 lanes — python oracle, native rust,
+  shipped wasm simd128 + scalar under Node — plus memory; artifacts with
+  recorded environments under `target/bench/<stamp>/`); sides: `mise run bench`
+  / `mise run bench-python` / `mise run bench-wasm` / `mise run mem`. Every
+  bench artifact carries its system environment block (wasm lanes add the
+  sha256 of the measured tltk_web.wasm) — keep it that way. A number without a
   same-box interleaved A/B is a measurement of the box, not the change.
 
 ## Gotchas

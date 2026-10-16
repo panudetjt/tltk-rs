@@ -782,6 +782,72 @@ impl NerModel {
     }
 }
 
+/// WT01 — TextAna word-tier lexicon (from word.pklz; identical in tltk 1.10/1.11).
+#[derive(Default)]
+pub struct WordInfo {
+    pub tier: Option<String>,
+    pub level: Option<String>,
+    pub cont: Option<String>,
+    pub seman: Option<String>,
+    pub form: Option<String>,
+    pub lvocab: Option<String>,
+    pub bvocab: Option<String>,
+    pub tnc_tfidf: Option<f64>,
+    pub tnc_disp: Option<f64>,
+    pub ttc_disp: Option<f64>,
+}
+
+pub struct WordTier {
+    entries: Vec<(String, WordInfo)>,
+    idx: HashMap<String, usize>,
+}
+
+impl WordTier {
+    fn decode(data: &[u8]) -> Result<Self, String> {
+        let mut r = Reader::new(data);
+        check_magic(&mut r, b"WT01")?;
+        let n = r.uvarint();
+        let mut entries = Vec::with_capacity(n);
+        let mut idx = HashMap::with_capacity(n);
+        for _ in 0..n {
+            let word = r.str_().to_string();
+            let flags = r.uvarint();
+            // value stream order matches the converter: 7 strings then 3 f64s,
+            // bit i set = field i present
+            let mut info = WordInfo::default();
+            let str_fields: [&mut Option<String>; 7] = [
+                &mut info.tier,
+                &mut info.level,
+                &mut info.cont,
+                &mut info.seman,
+                &mut info.form,
+                &mut info.lvocab,
+                &mut info.bvocab,
+            ];
+            for (bit, slot) in str_fields.into_iter().enumerate() {
+                if flags & (1 << bit) != 0 {
+                    *slot = Some(r.str_().to_string());
+                }
+            }
+            if flags & (1 << 7) != 0 {
+                info.tnc_tfidf = Some(r.f64_());
+            }
+            if flags & (1 << 8) != 0 {
+                info.tnc_disp = Some(r.f64_());
+            }
+            if flags & (1 << 9) != 0 {
+                info.ttc_disp = Some(r.f64_());
+            }
+            idx.insert(word.clone(), entries.len());
+            entries.push((word, info));
+        }
+        Ok(WordTier { entries, idx })
+    }
+    pub fn get(&self, word: &str) -> Option<&WordInfo> {
+        self.idx.get(word).map(|&i| &self.entries[i].1)
+    }
+}
+
 /// All models. Blob keys are file names without .gz, e.g. "thdict.bin".
 pub struct Models {
     pub thdict: Thdict,
@@ -789,6 +855,7 @@ pub struct Models {
     pub sylvar: Sylvar,
     pub phs: Phs,
     pub pos: PosModel,
+    pub wordtier: Option<WordTier>,
     pub edu: Option<EduModel>,
     pub w2v: Option<W2v>,
     pub ner: Option<NerModel>,
@@ -801,6 +868,9 @@ pub struct PronPattern {
     pub codes: Vec<String>,
     pub re: regex::Regex,
     pub n_groups: usize,
+    /// `^(?:pat)$` variant for SylAna's full-string match (Python `re.match("^"+f+"$")`).
+    /// Only built for patterns with capture groups — the only ones SylAna iterates.
+    pub re_full: Option<regex::Regex>,
 }
 
 fn blob<'a>(blobs: &'a HashMap<String, Vec<u8>>, name: &str) -> Option<&'a [u8]> {
@@ -826,6 +896,7 @@ impl Models {
         let sylvar = Sylvar::decode(g("sylvar.bin").ok_or_else(|| "sylvar.bin missing".to_string())?)?;
         let phs = Phs::decode(g("phs.bin").ok_or_else(|| "phs.bin missing".to_string())?)?;
         let pos = PosModel::decode(g("pos.bin").ok_or_else(|| "pos.bin missing".to_string())?)?;
+        let wordtier = g("wordtier.bin").map(|d| WordTier::decode(d)).transpose()?;
         let edu = g("edu.bin").map(|d| EduModel::decode(d)).transpose()?;
         let w2v = g("w2v.bin").map(|d| W2v::decode(d)).transpose()?;
         let ner = g("ner.bin").map(|d| NerModel::decode(d)).transpose()?;
@@ -840,9 +911,18 @@ impl Models {
             let re = regex::Regex::new(&anchored)
                 .map_err(|e| format!("bad PRON pattern {:?}: {}", pattern, e))?;
             let n_groups = re.captures_len().saturating_sub(1);
-            pron.push(PronPattern { pattern, codes, re, n_groups });
+            let re_full = if pattern.contains('(') {
+                let full = format!("^(?:{})$", pattern);
+                Some(
+                    regex::Regex::new(&full)
+                        .map_err(|e| format!("bad PRON pattern {:?}: {}", pattern, e))?,
+                )
+            } else {
+                None
+            };
+            pron.push(PronPattern { pattern, codes, re, n_groups, re_full });
         }
-        Ok(Models { thdict, sylseg, sylvar, phs, pos, edu, w2v, ner, pron })
+        Ok(Models { thdict, sylseg, sylvar, phs, pos, wordtier, edu, w2v, ner, pron })
     }
 
     /// `blobs`: gunzipped model payloads keyed by file name ("thdict.bin", ...).

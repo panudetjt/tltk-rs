@@ -24,6 +24,7 @@ Files produced (into crates/tltk-core/data/):
   sylvar.bin.gz   SV01  - phone -> spelling variants
   phs.bin.gz      PH01  - phone/form n-gram tables derived from PhSTrigram.sts
   pos.bin.gz      PT01  - nltk PerceptronTagger weights/tagdict/classes
+  wordtier.bin.gz WT01  - word.pklz lexicon fields read by TextAna (10 fields/word)
   edu.bin.gz      ED01  - DictVectorizer vocab + RandomForest trees (sent_segment.pklz)
   w2v.bin.gz      WV01  - gensim KeyedVectors words + f32 matrix (TNCc5model3.bin)
 
@@ -408,6 +409,39 @@ def conv_ner(model_path: str, out_dir: str) -> None:
     print(f"  ner labels={labels} transitions={len(transitions)} attributes={len(attributes)}")
 
 
+# ---------------------------------------------------------------- wordtier (word.pklz -> TextAna lexicon)
+# The 10 WRD fields TextAna reads. Same file in tltk 1.10 and 1.11.
+# Unpickling needs numpy: run via `uv run` (reads the PEP 723 block) or the
+# era venv — plain python3 dies with ModuleNotFoundError mid-unpickle.
+WORDTIER_STR_FIELDS = ("tier", "level", "cont", "seman", "form", "lvocab", "bvocab")
+WORDTIER_F64_FIELDS = ("tnc-tfidf", "tnc-disp", "ttc-disp")
+
+
+def conv_wordtier(tltk_dir: str, out_dir: str) -> None:
+    wrd = pickle.load(bz2.open(os.path.join(tltk_dir, "word.pklz"), "rb"))
+    out = bytearray(b"WT01")
+    words = sorted(wrd)
+    out += uvarint(len(words))
+    for word in words:
+        info = wrd[word]
+        vals = [(k, info[k]) for k in WORDTIER_STR_FIELDS if k in info]
+        vals += [(k, float(info[k])) for k in WORDTIER_F64_FIELDS if k in info]
+        flags = 0
+        for k, _ in vals:
+            name, _kind = _WORDTIER_INDEX[k]
+            flags |= 1 << name
+        out += wstr(word) + uvarint(flags)
+        for _k, v in vals:
+            out += wstr(v) if isinstance(v, str) else f64(v)
+    gz(os.path.join(out_dir, "wordtier.bin.gz"), bytes(out))
+    print(f"  wordtier.bin.gz    {len(words)} words")
+
+
+# field name -> (bit index, kind); order matters in the value stream: strings then f64s
+_WORDTIER_INDEX = {k: (i, "s") for i, k in enumerate(WORDTIER_STR_FIELDS)}
+_WORDTIER_INDEX.update({k: (len(WORDTIER_STR_FIELDS) + i, "f") for i, k in enumerate(WORDTIER_F64_FIELDS)})
+
+
 def main():
     if len(sys.argv) < 3:
         print(__doc__)
@@ -442,6 +476,7 @@ def main():
     conv_sylvar(tltk_dir, out_dir)
     conv_phs(tltk_dir, out_dir)
     conv_pos(tltk_dir, out_dir)
+    conv_wordtier(tltk_dir, out_dir)
     conv_edu(tltk_dir, out_dir)
     conv_w2v(w2v_path, out_dir)
     if ner_model:

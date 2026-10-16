@@ -5,7 +5,7 @@
 import { selectFlavor, probeSimd } from './probe.js';
 import { TltkManager, TIER2_FUNCTIONS, TIER1_FILES, TIER2_FILES, assetUrl } from './loader.js';
 
-// Metadata and Thai descriptions for all 16 TLTK functions
+// Metadata and Thai descriptions for all 17 TLTK functions
 export const FUNCTIONS = [
   {
     id: 'word_segment',
@@ -135,6 +135,14 @@ export const FUNCTIONS = [
     desc: 'แสดงภาพกราฟการกระจายตัวของคำในระนาบ 2 มิติ PCA จากโมเดล Word2Vec',
     placeholder: 'แมว สุนัข เสือ ปลานิล ช้าง ม้า',
     tier: 2
+  },
+  {
+    id: 'textana',
+    name: 'textana',
+    thaiName: 'วิเคราะห์คุณลักษณะข้อความ (Text Analysis)',
+    desc: 'คำนวณคุณลักษณะระดับข้อความ เช่น จำนวนคำ/พยางค์ ความหลากหลายของคำ (LdvTTR) ระดับคำศัพท์ TNC/TTC และความถูกต้องการอ่านออกเสียง (ใส่หลายย่อหน้าคั่นด้วยบรรทัดใหม่) ผลลัพธ์เป็น JSON',
+    placeholder: 'แมวกินปลาอยู่ในครัว\nหมูกินข้าวในถัง',
+    tier: 1
   }
 ];
 
@@ -272,7 +280,14 @@ async function runProcess() {
       imageOutputWrapper.classList.remove('hidden');
       textOutputWrapper.classList.add('hidden');
     } else {
-      outputText.textContent = result || '(ผลลัพธ์ว่างเปล่า)';
+      // textana returns compact JSON — pretty-print for display only
+      let shown = result;
+      if (fnId === 'textana' && result) {
+        try {
+          shown = JSON.stringify(JSON.parse(result), null, 2);
+        } catch (_) { /* fall through to raw */ }
+      }
+      outputText.textContent = shown || '(ผลลัพธ์ว่างเปล่า)';
       textOutputWrapper.classList.remove('hidden');
       imageOutputWrapper.classList.add('hidden');
     }
