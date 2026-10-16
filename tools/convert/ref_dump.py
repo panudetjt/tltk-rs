@@ -93,6 +93,17 @@ elif mode == "corpus":
                 # sorted keys, compact separators — see crates/tltk-core/src/textana.rs
                 r = json.dumps(nlp.TextAna(text), ensure_ascii=False, sort_keys=True,
                                separators=(",", ":"))
+            elif fn == "text_class":
+                c = cutoff if cutoff in ("level", "genre", "all") else "level"
+                res = nlp.TextClass(text, UDParse="none", Classifier=c)
+                r = json.dumps(res, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+            elif fn == "txt2feat":
+                if cutoff == "name":
+                    r = json.dumps(nlp.txt2feat("", Option="name"), ensure_ascii=False, separators=(",", ":"))
+                else:
+                    txtfeatures = nlp.TextAna(text, UDParse="none")
+                    input_df = nlp.TranformData([txtfeatures])
+                    r = json.dumps(input_df.iloc[0].tolist(), ensure_ascii=False, separators=(",", ":"))
             elif fn == "wrd_len":
                 r = nlp.wrd_len(text)
             elif fn == "match_engtext":

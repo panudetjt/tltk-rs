@@ -1,0 +1,22 @@
+{"function": "text_class", "text": "แมวกินปลา\nหมูกินข้าว", "cutoff": "level"}
+{"function": "text_class", "text": "แมวกินปลา\nหมูกินข้าว", "cutoff": "genre"}
+{"function": "text_class", "text": "แมวกินปลา\nหมูกินข้าว", "cutoff": "all"}
+{"function": "text_class", "text": "นายสมชายเดินทางไปกรุงเทพมหานคร\nเมื่อวานนี้", "cutoff": "level"}
+{"function": "text_class", "text": "นายสมชายเดินทางไปกรุงเทพมหานคร\nเมื่อวานนี้", "cutoff": "genre"}
+{"function": "text_class", "text": "นายสมชายเดินทางไปกรุงเทพมหานคร\nเมื่อวานนี้", "cutoff": "all"}
+{"function": "text_class", "text": "การ์ดใบนั้นมีคำอวยพรเขียนไว้สวยงาม\nเด็ก ๆ ชอบอ่านมาก\nไม่มีใครโต้แย้ง", "cutoff": "level"}
+{"function": "text_class", "text": "การ์ดใบนั้นมีคำอวยพรเขียนไว้สวยงาม\nเด็ก ๆ ชอบอ่านมาก\nไม่มีใครโต้แย้ง", "cutoff": "genre"}
+{"function": "text_class", "text": "การ์ดใบนั้นมีคำอวยพรเขียนไว้สวยงาม\nเด็ก ๆ ชอบอ่านมาก\nไม่มีใครโต้แย้ง", "cutoff": "all"}
+{"function": "text_class", "text": "ฉันกินข้าวแล้ว\nเธอกินข้าวหรือยัง", "cutoff": "all"}
+{"function": "text_class", "text": "ความสะดวกสบายของประชาชนในเขตเมือง\nความสะดวกสบายของประชาชนในเขตชนบท\nการพัฒนาคุณภาพชีวิตที่ดีกว่าเดิมเป็นเป้าหมายสำคัญของประเทศ", "cutoff": "all"}
+{"function": "text_class", "text": "สวัสดีครับ ผมชื่อไทย ยินดีที่ได้รู้จัก\nHello world ทดสอบ", "cutoff": "all"}
+{"function": "text_class", "text": "เขาไม่ไป และเธอก็ไม่ไป\nแต่เราสองคนไป", "cutoff": "level"}
+{"function": "text_class", "text": "เขาไม่ไป และเธอก็ไม่ไป\nแต่เราสองคนไป", "cutoff": "genre"}
+{"function": "text_class", "text": "เขาไม่ไป และเธอก็ไม่ไป\nแต่เราสองคนไป", "cutoff": "all"}
+{"function": "text_class", "text": "วันนี้เป็นวันดี\nท้องฟ้าแจ่มใสมาก", "cutoff": "all"}
+{"function": "txt2feat", "text": "", "cutoff": "name"}
+{"function": "txt2feat", "text": "แมวกินปลา\nหมูกินข้าว", "cutoff": "value"}
+{"function": "txt2feat", "text": "นายสมชายเดินทางไปกรุงเทพมหานคร\nเมื่อวานนี้", "cutoff": "value"}
+{"function": "text_class", "text": "ประเทศไทยมีประชากรประมาณ 70 ล้านคน", "cutoff": "level"}
+{"function": "text_class", "text": "123 456", "cutoff": "all"}
+{"function": "txt2feat", "text": "คำเดียวไม่มีบรรทัดใหม่", "cutoff": "value"}

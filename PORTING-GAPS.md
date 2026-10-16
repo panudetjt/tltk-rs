@@ -31,9 +31,9 @@ Status legend:
 
 | status | names |
 |---|---|
-| wire (14) | `word_segment`, `syl_segment`, `spell_variants`, `pos_tag`, `segment`, `ner_tag`, `g2p`, `th2ipa`, `th2roman`, `th2read`, `spoonerism`, `textana`, `th2ipa_all`, `sylparse_all` |
-| internal (6) | `initial` (→ `Models::load`), `spell_candidates` (`spell.rs:53`), `pos_tag_wordlist` (folded into `pos.rs::pos_tag`), `ner` (`ner.rs:133`), `SylAna` + `WordAna` (`textana.rs`, with non-export helpers `ARF`/`Duplicate_word`/`pack_ner`) |
-| MISSING (11) | see below |
+| wire (16) | `word_segment`, `syl_segment`, `spell_variants`, `pos_tag`, `segment`, `ner_tag`, `g2p`, `th2ipa`, `th2roman`, `th2read`, `spoonerism`, `textana`, `text_class`, `txt2feat`, `th2ipa_all`, `sylparse_all` |
+| internal (7) | `initial` (→ `Models::load`), `spell_candidates` (`spell.rs:53`), `pos_tag_wordlist` (folded into `pos.rs::pos_tag`), `ner` (`ner.rs:133`), `SylAna` + `WordAna` (`textana.rs`), `TranformData*` (`textclass.rs`) |
+| MISSING (8) | see below |
 
 ### 1a. Segmentation variants — MISSING
 
@@ -51,13 +51,13 @@ Status legend:
 | ~~`WordAna(w)`~~ | ✅ `textana.rs::wordana` — g2p + per-syllable SylAna + tone/final-correction counters. |
 | ~~`TextAna(alltext, ...)`~~ | ✅ `textana.rs::textana` — default options only (`TextOption="par"`, `WordOption="colloc"`, `UDParse="none"`); **tltk 1.11 semantics** (LdvTTR ×100). Goldens: `local_python_extra.jsonl` (1.11 oracle). |
 | `TextAna2json` | TextAna → file/JSON wrapper — trivially derivable from the wire JSON; not exposed. |
-| `TextClass`, `txt2feat` | level/genre classification; needs `chklevel_rf.pklz` + `chkgenre_rf.pklz` (sklearn random forests — **not converted yet**, would need an RF decoder in convert.py/model.rs). |
-| `TranformData*` | TextClass helper — MISSING. |
+| ~~`TextClass`, `txt2feat`~~ | ✅ wire `textclass.rs` — level/genre classification via `chklevel_rf.pklz` + `chkgenre_rf.pklz` converted to `textclass.bin.gz` (TC01); `UDParse="none"` pinned deviation; `txt2feat` value-path Malt hardcoding stays upstream-only. |
+| ~~`TranformData*`~~ | ✅ internal — folded into `textclass.rs` / `textana.rs` feature extraction and RF input alignment. |
 | `SylProp`, `WordProp`, `TextProp` | folded into `textana.rs` counters / JSON emit. |
 
-Data status: the word-tier lexicon TextAna reads (`word.pklz` → WT01) is
-**converted, decoded and in use** (`Models::wordtier`, consumed by
-`textana.rs`). The two RF classifiers and `thamalt.mco` are not converted.
+Data status: the word-tier lexicon (`word.pklz` → WT01) and the two RF classifiers
+(`chklevel_rf.pklz` + `chkgenre_rf.pklz` → `textclass.bin.gz` TC01) are
+**converted, decoded and in use** (`Models::wordtier`, `Models::textclass`). `thamalt.mco` is not converted.
 
 ### 1c. Pipelines & parsing — tree helpers ported, MaltParser MISSING
 
@@ -142,7 +142,7 @@ runtime inference; they stay in Python even under an expanded scope.
 |---|---|---|
 | `thdict`, `sylseg.3g`, `sylform_var.pklz`, `sylrule.lts`+`thaisyl.txt`, `PhSTrigram.sts`, `pos_tagger.pklz`, `ner_tagger.pklz`, `sent_segment.pklz`, `word.pklz`→WT01, `TNCc5model3.bin` | current 17 | ✅ converted |
 | `wordtier.bin.gz` (WT01) | TextAna/WordAna tier features | ✅ in use (`textana`) |
-| `chklevel_rf.pklz`, `chkgenre_rf.pklz` | `TextClass` | ❌ needs sklearn-RF converter |
+| `chklevel_rf.pklz`, `chkgenre_rf.pklz` | `TextClass`, `txt2feat` | ✅ converted into `textclass.bin.gz` (TC01) |
 | `thamalt.mco` | `MaltParser` | ❌ needs parser port + converter |
 | TNC3g n-grams | corpus.py word n-grams | ❌ separate upstream download, no converter |
 
@@ -184,7 +184,7 @@ single session) — and extend its dispatch when the corpus gains a function.
 4. corpus.py word n-grams (`unigram`/`bigram`/`trigram`/`collocates`) — needs TNC3g download + converter + new goldens.
 5. ~~`TextAna`~~ — ✅ done 2026-10-16 (defaults surface, 1.11 semantics); `TextAna2json` remains trivial.
 6. `word_segment_mm` / `word_segment_nbest` — new charts; note the wire currently has no way to select the method.
-7. `TextClass` — RF model conversion is a new converter capability.
+7. ~~`TextClass`~~ — ✅ done 2026-10-16 (sklearn-RF converter + `textclass.rs`).
 8. `MaltParser` — biggest lift; candidate to keep out of scope.
 
 Expanding the wire surface touches, per function:

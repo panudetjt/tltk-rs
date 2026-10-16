@@ -19,6 +19,7 @@ pub fn blobs() -> HashMap<String, Vec<u8>> {
     blobs.insert("pos.bin".into(), blob!("pos.bin.gz").to_vec());
     blobs.insert("ner.bin".into(), blob!("ner.bin.gz").to_vec());
     blobs.insert("wordtier.bin".into(), blob!("wordtier.bin.gz").to_vec());
+    blobs.insert("textclass.bin".into(), blob!("textclass.bin.gz").to_vec());
     blobs.insert("sylrule.txt".into(), blob!("sylrule.txt").to_vec());
     blobs.insert("thaisyl.txt".into(), blob!("thaisyl.txt").to_vec());
     blobs
@@ -57,6 +58,7 @@ pub fn base_raw(name: &str) -> Result<&'static [u8], String> {
         "pos.bin.gz" => Ok(blob!("pos.bin.gz")),
         "ner.bin.gz" => Ok(blob!("ner.bin.gz")),
         "wordtier.bin.gz" => Ok(blob!("wordtier.bin.gz")),
+        "textclass.bin.gz" => Ok(blob!("textclass.bin.gz")),
         "sylrule.txt" => Ok(blob!("sylrule.txt")),
         "thaisyl.txt" => Ok(blob!("thaisyl.txt")),
         _ => Err(format!("unknown embedded blob {}", name)),

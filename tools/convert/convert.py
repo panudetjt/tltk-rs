@@ -27,6 +27,7 @@ Files produced (into crates/tltk-core/data/):
   wordtier.bin.gz WT01  - word.pklz lexicon fields read by TextAna (10 fields/word)
   edu.bin.gz      ED01  - DictVectorizer vocab + RandomForest trees (sent_segment.pklz)
   w2v.bin.gz      WV01  - gensim KeyedVectors words + f32 matrix (TNCc5model3.bin)
+  textclass.bin.gz TC01 - level and genre RandomForest models (chklevel_rf.pklz, chkgenre_rf.pklz)
 
 Requires: venv with numpy, scikit-learn, nltk, gensim, python-crfsuite.
 Usage: convert.py <tltk-package-dir> <out-dir> [--w2v <path>] [--ner-model <crfsuite-file>]
@@ -87,7 +88,7 @@ def f32(x) -> bytes:
 
 def gz(path: str, data: bytes) -> None:
     with open(path, "wb") as f:
-        f.write(gzip.compress(data, 6))
+        f.write(gzip.compress(data, compresslevel=6, mtime=0))
     print(f"  {os.path.basename(path):18s} raw={len(data)/1e6:8.3f}MB  gz={os.path.getsize(path)/1e6:8.3f}MB")
 
 
@@ -318,6 +319,65 @@ def conv_edu(tltk_dir: str, out_dir: str) -> None:
     gz(os.path.join(out_dir, "edu.bin.gz"), bytes(out))
 
 
+# ---------------------------------------------------------------- textclass (level + genre RF)
+def conv_textclass(tltk_dir: str, out_dir: str) -> None:
+    class StubTree:
+        def __init__(self, *a, **k):
+            pass
+
+        def __setstate__(self, state):
+            self.state = state
+
+    class Unp(pickle.Unpickler):
+        def find_class(self, module, name):
+            if module == "sklearn.tree._tree" and name in ("Tree", "DenseMatrix"):
+                return StubTree
+            return super().find_class(module, name)
+
+    def serialize_rf(rf):
+        feats = list(rf.feature_names_in_)
+        out = bytearray(uvarint(len(feats)))
+        for f in feats:
+            out += wstr(f)
+        classes = list(rf.classes_)
+        out += uvarint(len(classes))
+        for c in classes:
+            out += wstr(str(c))
+        trees = rf.estimators_
+        out += uvarint(len(trees))
+        for est in trees:
+            st = est.tree_.state
+            nodes = st["nodes"]
+            values = st["values"]  # shape (n_nodes, 1, n_classes)
+            n = nodes.shape[0]
+            out += uvarint(n)
+            for i in range(n):
+                nd = nodes[i]
+                left = int(nd["left_child"])
+                right = int(nd["right_child"])
+                feat = int(nd["feature"])
+                thresh = float(nd["threshold"])
+                out += struct.pack("<iii", left, right, feat)
+                out += f64(thresh)
+                if left == -1:
+                    for v in values[i][0]:
+                        out += f64(float(v))
+        return bytes(out)
+
+    lvl_p = os.path.join(tltk_dir, "chklevel_rf.pklz")
+    gnr_p = os.path.join(tltk_dir, "chkgenre_rf.pklz")
+    if not (os.path.exists(lvl_p) and os.path.exists(gnr_p)):
+        print("  (chklevel_rf.pklz or chkgenre_rf.pklz missing: skipping textclass)")
+        return
+
+    level_rf = Unp(bz2.open(lvl_p, "rb")).load()
+    genre_rf = Unp(bz2.open(gnr_p, "rb")).load()
+
+    out = bytearray(b"TC01")
+    out += serialize_rf(level_rf)
+    out += serialize_rf(genre_rf)
+    gz(os.path.join(out_dir, "textclass.bin.gz"), bytes(out))
+
 # ---------------------------------------------------------------- w2v (gensim KeyedVectors)
 def conv_w2v(model_path: str, out_dir: str) -> None:
     import numpy as np
@@ -477,6 +537,7 @@ def main():
     conv_phs(tltk_dir, out_dir)
     conv_pos(tltk_dir, out_dir)
     conv_wordtier(tltk_dir, out_dir)
+    conv_textclass(tltk_dir, out_dir)
     conv_edu(tltk_dir, out_dir)
     conv_w2v(w2v_path, out_dir)
     if ner_model:

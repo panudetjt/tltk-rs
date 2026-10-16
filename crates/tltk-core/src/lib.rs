@@ -18,6 +18,7 @@ pub mod prelude;
 pub mod spell;
 pub mod sylseg;
 pub mod textana;
+pub mod textclass;
 pub mod translit;
 pub mod w2v;
 pub mod wordseg;
@@ -110,6 +111,8 @@ impl<'a> Session<'a> {
             "scan_dtree" => dtree::scan_dtree(self, text),
             "get_tree_depth" => dtree::get_tree_depth(self, text, cutoff),
             "tree_max_depth" => dtree::tree_max_depth(self, text),
+            "text_class" => textclass::text_class(self, text, cutoff),
+            "txt2feat" => textclass::txt2feat(self, text, cutoff),
             "chunk" => Ok(self.chunk(text)),
             "tnc_tag" => self.tnc_tag(text),
             "th2ipa_all" => Ok(self.th2ipa_all(text)),

@@ -851,6 +851,143 @@ impl WordTier {
     }
 }
 
+/// TC01 — level and genre RandomForest models
+pub struct TextClassModel {
+    pub level: RandomForestModel,
+    pub genre: RandomForestModel,
+}
+
+pub struct RandomForestModel {
+    pub feature_names: Vec<String>,
+    pub feat_index: HashMap<String, usize>,
+    pub classes: Vec<String>,
+    pub trees: Vec<RfTree>,
+}
+
+pub struct RfTree {
+    pub left: Vec<i32>,
+    pub right: Vec<i32>,
+    pub feature: Vec<i32>,
+    pub threshold: Vec<f64>,
+    /// Leaf values indexed by leaf_offset[node]
+    pub leaf_values: Vec<f64>,
+    pub leaf_offset: Vec<i32>,
+}
+
+impl TextClassModel {
+    pub fn decode(data: &[u8]) -> Result<Self, String> {
+        let mut r = Reader::new(data);
+        check_magic(&mut r, b"TC01")?;
+        let level = RandomForestModel::decode(&mut r)?;
+        let genre = RandomForestModel::decode(&mut r)?;
+        Ok(TextClassModel { level, genre })
+    }
+}
+
+impl RandomForestModel {
+    fn decode(r: &mut Reader) -> Result<Self, String> {
+        let n_feats = r.uvarint();
+        let mut feature_names = Vec::with_capacity(n_feats);
+        let mut feat_index = HashMap::with_capacity(n_feats);
+        for i in 0..n_feats {
+            let name = r.str_().to_string();
+            feat_index.insert(name.clone(), i);
+            feature_names.push(name);
+        }
+
+        let n_classes = r.uvarint();
+        let mut classes = Vec::with_capacity(n_classes);
+        for _ in 0..n_classes {
+            classes.push(r.str_().to_string());
+        }
+
+        let n_trees = r.uvarint();
+        let mut trees = Vec::with_capacity(n_trees);
+        for _ in 0..n_trees {
+            let n_nodes = r.uvarint();
+            let mut left = Vec::with_capacity(n_nodes);
+            let mut right = Vec::with_capacity(n_nodes);
+            let mut feature = Vec::with_capacity(n_nodes);
+            let mut threshold = Vec::with_capacity(n_nodes);
+            let mut leaf_values = Vec::new();
+            let mut leaf_offset = Vec::with_capacity(n_nodes);
+
+            for _ in 0..n_nodes {
+                let l = r.i32_();
+                let ri = r.i32_();
+                let f = r.i32_();
+                let t = r.f64_();
+                left.push(l);
+                right.push(ri);
+                feature.push(f);
+                threshold.push(t);
+                if l == -1 {
+                    leaf_offset.push(leaf_values.len() as i32);
+                    for _ in 0..n_classes {
+                        leaf_values.push(r.f64_());
+                    }
+                } else {
+                    leaf_offset.push(-1);
+                }
+            }
+            trees.push(RfTree {
+                left,
+                right,
+                feature,
+                threshold,
+                leaf_values,
+                leaf_offset,
+            });
+        }
+        Ok(RandomForestModel {
+            feature_names,
+            feat_index,
+            classes,
+            trees,
+        })
+    }
+
+    /// Predict class label for a feature vector x.
+    /// In case of a tie, the lowest class index wins (matching numpy argmax).
+    pub fn predict<'a>(&'a self, x: &[f64]) -> &'a str {
+        let n_classes = self.classes.len();
+        assert!(n_classes <= 16);
+        let mut total_prob = [0.0f64; 16];
+        for tree in &self.trees {
+            let mut node = 0usize;
+            while tree.left[node] != -1 {
+                let feat = tree.feature[node] as usize;
+                if x[feat] <= tree.threshold[node] {
+                    node = tree.left[node] as usize;
+                } else {
+                    node = tree.right[node] as usize;
+                }
+            }
+            let offset = tree.leaf_offset[node] as usize;
+            let leaf = &tree.leaf_values[offset..offset + n_classes];
+            let mut sum = 0.0f64;
+            for &v in leaf {
+                sum += v;
+            }
+            if sum > 0.0 {
+                let inv = 1.0 / sum;
+                for c in 0..n_classes {
+                    total_prob[c] += leaf[c] * inv;
+                }
+            }
+        }
+        let mut best_idx = 0;
+        let mut best_val = total_prob[0];
+        for (i, &v) in total_prob[..n_classes].iter().enumerate().skip(1) {
+            if v > best_val {
+                best_val = v;
+                best_idx = i;
+            }
+        }
+        &self.classes[best_idx]
+    }
+}
+
 /// All models. Blob keys are file names without .gz, e.g. "thdict.bin".
 pub struct Models {
     pub thdict: Thdict,
@@ -862,6 +999,7 @@ pub struct Models {
     pub edu: Option<EduModel>,
     pub w2v: Option<W2v>,
     pub ner: Option<NerModel>,
+    pub textclass: Option<TextClassModel>,
     /// PRON patterns from sylrule.txt + thaisyl.txt (order preserved), compiled.
     pub pron: Vec<PronPattern>,
 }
@@ -903,6 +1041,7 @@ impl Models {
         let edu = g("edu.bin").map(|d| EduModel::decode(d)).transpose()?;
         let w2v = g("w2v.bin").map(|d| W2v::decode(d)).transpose()?;
         let ner = g("ner.bin").map(|d| NerModel::decode(d)).transpose()?;
+        let textclass = g("textclass.bin").map(|d| TextClassModel::decode(d)).transpose()?;
         let sylrule = blob(blobs, "sylrule.txt").ok_or_else(|| "sylrule.txt missing".to_string())?;
         let thaisyl = blob(blobs, "thaisyl.txt").ok_or_else(|| "thaisyl.txt missing".to_string())?;
         let sylrule_str = std::str::from_utf8(sylrule).map_err(|e| format!("sylrule.txt invalid utf-8: {}", e))?;
@@ -925,7 +1064,7 @@ impl Models {
             };
             pron.push(PronPattern { pattern, codes, re, n_groups, re_full });
         }
-        Ok(Models { thdict, sylseg, sylvar, phs, pos, wordtier, edu, w2v, ner, pron })
+        Ok(Models { thdict, sylseg, sylvar, phs, pos, wordtier, edu, w2v, ner, textclass, pron })
     }
 
     /// `blobs`: gunzipped model payloads keyed by file name ("thdict.bin", ...).
@@ -956,7 +1095,7 @@ impl Models {
                 k.trim_end_matches(".gz").to_string()
             } else if k.ends_with(".bin") {
                 k.clone()
-            } else if k == "edu" || k == "w2v" || k == "ner" {
+            } else if k == "edu" || k == "w2v" || k == "ner" || k == "textclass" {
                 format!("{}.bin", k)
             } else {
                 continue;
@@ -976,6 +1115,9 @@ impl Models {
         }
         if let Some(d) = gz.get("ner.bin") {
             self.ner = Some(NerModel::decode(d)?);
+        }
+        if let Some(d) = gz.get("textclass.bin") {
+            self.textclass = Some(TextClassModel::decode(d)?);
         }
         Ok(())
     }
