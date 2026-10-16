@@ -6,8 +6,10 @@
 //!       compare core output vs golden responses (from stichula capture or the
 //!       local python oracle); exit 1 on any mismatch, printing diffs
 //!   valifier selftest <models-dir>               a few known sanity checks
-//!   valifier bench <corpus.jsonl> <models-dir> [--warmup W] [--repeat N] [--json] [--long]
-//!       measure per-function and optional long-input pass latency
+//!   valifier bench <corpus.jsonl> <models-dir> [--warmup W] [--repeat N] [--json] [--long] [--mem]
+//!       measure per-function and optional long-input pass latency and memory
+//!   valifier mem <corpus.jsonl> <models-dir>
+//!       measure memory usage (after load, after run, peak)
 //!
 //! corpus.jsonl rows: {"function": "...", "text": "...", "cutoff": "medium"(opt)}
 //! golden.jsonl rows: {...same..., "expected": "...", "ok": true|false}
@@ -27,6 +29,49 @@ struct Case {
     expected: Option<String>,
     #[serde(default)]
     ok: Option<bool>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
+struct ProcMemory {
+    vm_rss_kb: u64,
+    vm_hwm_kb: u64,
+}
+
+fn parse_proc_status<R: BufRead>(reader: R) -> Option<ProcMemory> {
+    let mut rss = None;
+    let mut hwm = None;
+    for line in reader.lines() {
+        let line = line.ok()?;
+        if let Some(rest) = line.strip_prefix("VmRSS:") {
+            if let Some(num_str) = rest.split_whitespace().next() {
+                rss = num_str.parse::<u64>().ok();
+            }
+        } else if let Some(rest) = line.strip_prefix("VmHWM:") {
+            if let Some(num_str) = rest.split_whitespace().next() {
+                hwm = num_str.parse::<u64>().ok();
+            }
+        }
+    }
+    match (rss, hwm) {
+        (Some(vm_rss_kb), Some(vm_hwm_kb)) => Some(ProcMemory {
+            vm_rss_kb,
+            vm_hwm_kb,
+        }),
+        _ => None,
+    }
+}
+
+fn read_proc_status_path(path: &str) -> Option<ProcMemory> {
+    let file = std::fs::File::open(path).ok()?;
+    let reader = std::io::BufReader::new(file);
+    parse_proc_status(reader)
+}
+
+fn read_proc_status() -> Option<ProcMemory> {
+    let path = std::env::var("TLTK_PROC_STATUS")
+        .or_else(|_| std::env::var("PROC_STATUS_PATH"))
+        .unwrap_or_else(|_| "/proc/self/status".to_string());
+    read_proc_status_path(&path)
 }
 
 fn load_cases(path: &str) -> Vec<Case> {
@@ -92,12 +137,14 @@ fn print_help() {
     println!("  valifier run <corpus.jsonl> <models-dir>");
     println!("  valifier check <corpus.jsonl> <golden.jsonl> <models-dir>");
     println!("  valifier selftest <models-dir>");
-    println!("  valifier bench <corpus.jsonl> <models-dir> [--warmup W] [--repeat N] [--json] [--long]\n");
+    println!("  valifier bench <corpus.jsonl> <models-dir> [--warmup W] [--repeat N] [--json] [--long] [--mem]");
+    println!("  valifier mem <corpus.jsonl> <models-dir>\n");
     println!("Bench options:");
     println!("  --warmup W    Number of warmup passes before timing (default: 3)");
     println!("  --repeat N    Number of timed passes (default: 10)");
     println!("  --json        Output benchmark results as JSON to stdout; human table to stderr");
-    println!("  --long        Include synthetic long input benchmarks (~200, ~500, ~800 chars)\n");
+    println!("  --long        Include synthetic long input benchmarks (~200, ~500, ~800 chars)");
+    println!("  --mem         Measure memory usage via /proc/self/status at each phase\n");
     println!("Note on fresh Session per pass:");
     println!("  TLTK sessions accumulate colloc-bump state; fresh-per-pass keeps runs comparable.");
 }
@@ -254,6 +301,7 @@ fn cmd_bench(args: &[String]) {
     let mut repeat = 10usize;
     let mut json = false;
     let mut long = false;
+    let mut mem = false;
 
     let mut i = 0;
     while i < rest.len() {
@@ -265,6 +313,8 @@ fn cmd_bench(args: &[String]) {
             json = true;
         } else if arg == "--long" {
             long = true;
+        } else if arg == "--mem" {
+            mem = true;
         } else if arg == "--warmup" {
             i += 1;
             if i < rest.len() {
@@ -290,7 +340,7 @@ fn cmd_bench(args: &[String]) {
 
     if positional.len() < 2 {
         eprintln!(
-            "usage: valifier bench <corpus.jsonl> <models-dir> [--warmup W] [--repeat N] [--json] [--long]"
+            "usage: valifier bench <corpus.jsonl> <models-dir> [--warmup W] [--repeat N] [--json] [--long] [--mem]"
         );
         std::process::exit(2);
     }
@@ -299,7 +349,7 @@ fn cmd_bench(args: &[String]) {
 
     let cases = load_cases(corpus_path);
     let tltk = load_models(models_dir);
-
+    let mem_after_load = if mem { read_proc_status() } else { None };
     let mut fn_order: Vec<String> = Vec::new();
     let mut fn_groups: HashMap<String, Vec<&Case>> = HashMap::new();
     for c in &cases {
@@ -311,16 +361,22 @@ fn cmd_bench(args: &[String]) {
 
     let mut fn_results: Vec<(String, usize, u64)> = Vec::new();
 
-    for func_name in &fn_order {
-        let cases_for_fn = &fn_groups[func_name];
-
-        for _ in 0..warmup {
-            let mut sess = tltk.session();
-            for c in cases_for_fn {
-                let res = run_case(&mut sess, c);
-                let _ = std::hint::black_box(res);
+    if warmup > 0 {
+        for func_name in &fn_order {
+            let cases_for_fn = &fn_groups[func_name];
+            for _ in 0..warmup {
+                let mut sess = tltk.session();
+                for c in cases_for_fn {
+                    let res = run_case(&mut sess, c);
+                    let _ = std::hint::black_box(res);
+                }
             }
         }
+    }
+    let mem_after_warmup = if mem { read_proc_status() } else { None };
+
+    for func_name in &fn_order {
+        let cases_for_fn = &fn_groups[func_name];
 
         let mut pass_times = Vec::with_capacity(repeat);
         for _ in 0..repeat {
@@ -337,6 +393,7 @@ fn cmd_bench(args: &[String]) {
         let median_us = compute_median(pass_times);
         fn_results.push((func_name.clone(), cases_for_fn.len(), median_us));
     }
+    let mem_after_pass = if mem { read_proc_status() } else { None };
 
     let total_cases: usize = fn_results.iter().map(|(_, c, _)| *c).sum();
     let total_median: u64 = fn_results.iter().map(|(_, _, m)| *m).sum();
@@ -397,6 +454,7 @@ fn cmd_bench(args: &[String]) {
             }
         }
     }
+    let mem_after_long = if mem && long { read_proc_status() } else { None };
 
     let emit_human = |line: &str| {
         if json {
@@ -427,6 +485,36 @@ fn cmd_bench(args: &[String]) {
             ));
         }
     }
+    if mem {
+        emit_human("");
+        if let (Some(after_load), Some(after_warmup), Some(after_pass)) =
+            (mem_after_load, mem_after_warmup, mem_after_pass)
+        {
+            emit_human("memory:");
+            emit_human(&format!(
+                "  {:<16}rss={:<8} KB  vmhwm={:<8} KB",
+                "after_load:", after_load.vm_rss_kb, after_load.vm_hwm_kb
+            ));
+            emit_human(&format!(
+                "  {:<16}rss={:<8} KB  vmhwm={:<8} KB",
+                "after_warmup:", after_warmup.vm_rss_kb, after_warmup.vm_hwm_kb
+            ));
+            emit_human(&format!(
+                "  {:<16}rss={:<8} KB  vmhwm={:<8} KB",
+                "after_pass:", after_pass.vm_rss_kb, after_pass.vm_hwm_kb
+            ));
+            if long {
+                if let Some(after_long) = mem_after_long {
+                    emit_human(&format!(
+                        "  {:<16}rss={:<8} KB  vmhwm={:<8} KB",
+                        "after_long:", after_long.vm_rss_kb, after_long.vm_hwm_kb
+                    ));
+                }
+            }
+        } else {
+            emit_human("memory: unavailable (no /proc)");
+        }
+    }
 
     if json {
         let mut per_func_json = serde_json::Map::new();
@@ -453,7 +541,7 @@ fn cmd_bench(args: &[String]) {
             }
         }
 
-        let report = serde_json::json!({
+        let mut report = serde_json::json!({
             "per_function": per_func_json,
             "long_inputs": long_inputs_json,
             "total_median_us_per_pass": total_median,
@@ -461,7 +549,66 @@ fn cmd_bench(args: &[String]) {
             "warmup": warmup,
         });
 
+        if mem {
+            let peak_hwm = mem_after_long
+                .or(mem_after_pass)
+                .or(mem_after_load)
+                .map(|m| m.vm_hwm_kb);
+            let mem_val = match (mem_after_load, mem_after_pass) {
+                (Some(load), Some(pass)) => {
+                    serde_json::json!({
+                        "after_load_kb": load.vm_rss_kb,
+                        "after_pass_kb": pass.vm_rss_kb,
+                        "vmhwm_kb": peak_hwm.unwrap_or(pass.vm_hwm_kb),
+                    })
+                }
+                _ => {
+                    serde_json::json!({
+                        "after_load_kb": serde_json::Value::Null,
+                        "after_pass_kb": serde_json::Value::Null,
+                        "vmhwm_kb": serde_json::Value::Null,
+                    })
+                }
+            };
+            report.as_object_mut().unwrap().insert("memory".to_string(), mem_val);
+        }
+
         println!("{}", serde_json::to_string_pretty(&report).unwrap());
+    }
+}
+
+fn cmd_mem(args: &[String]) {
+    if args.len() >= 3 && (args[2] == "--help" || args[2] == "-h") {
+        println!("usage: valifier mem <corpus.jsonl> <models-dir>");
+        return;
+    }
+    if args.len() < 4 {
+        eprintln!("usage: valifier mem <corpus.jsonl> <models-dir>");
+        std::process::exit(2);
+    }
+    let cases = load_cases(&args[2]);
+    let tltk = load_models(&args[3]);
+    let mem_after_load = read_proc_status();
+
+    let mut sess = tltk.session();
+    for c in &cases {
+        let res = run_case(&mut sess, c);
+        let _ = std::hint::black_box(res);
+    }
+    let mem_after_run = read_proc_status();
+
+    match (mem_after_load, mem_after_run) {
+        (Some(load), Some(run)) => {
+            println!(
+                "mem: after_load_kb={} after_run_kb={} vmhwm_kb={}",
+                load.vm_rss_kb,
+                run.vm_rss_kb,
+                run.vm_hwm_kb.max(load.vm_hwm_kb),
+            );
+        }
+        _ => {
+            println!("memory: unavailable (no /proc)");
+        }
     }
 }
 
@@ -472,10 +619,35 @@ fn main() {
         Some("check") => cmd_check(&args),
         Some("selftest") => cmd_selftest(&args),
         Some("bench") => cmd_bench(&args),
+        Some("mem") => cmd_mem(&args),
         Some("--help") | Some("-h") => print_help(),
         _ => {
-            eprintln!("usage: valifier run|check|selftest|bench ...");
+            eprintln!("usage: valifier run|check|selftest|bench|mem ...");
             std::process::exit(2);
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_proc_status_fallback_nonexistent() {
+        assert_eq!(read_proc_status_path("/nonexistent/proc/path"), None);
+    }
+
+    #[test]
+    fn test_proc_status_parsing() {
+        let fake_proc = "Name:\tvalifier\nVmHWM:\t  270140 kB\nVmRSS:\t  258304 kB\nThreads:\t1\n";
+        let parsed = parse_proc_status(fake_proc.as_bytes()).unwrap();
+        assert_eq!(parsed.vm_rss_kb, 258304);
+        assert_eq!(parsed.vm_hwm_kb, 270140);
+    }
+
+    #[test]
+    fn test_proc_status_missing_fields() {
+        let fake_proc = "Name:\tvalifier\nVmRSS:\t  258304 kB\n";
+        assert_eq!(parse_proc_status(fake_proc.as_bytes()), None);
     }
 }
