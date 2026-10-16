@@ -161,7 +161,8 @@ await init({ module_or_path: wasmBytes });
 
 const tier1Names = [
   'thdict.bin.gz', 'sylseg.bin.gz', 'sylvar.bin.gz', 'phs.bin.gz',
-  'pos.bin.gz', 'ner.bin.gz', 'sylrule.txt', 'thaisyl.txt',
+  'pos.bin.gz', 'ner.bin.gz', 'wordtier.bin.gz', 'textclass.bin.gz',
+  'sylrule.txt', 'thaisyl.txt',
 ];
 const tier1Datas = tier1Names.map((name) => {
   const p = path.resolve(modelsDir, name);

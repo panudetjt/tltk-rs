@@ -62,7 +62,14 @@ jobs:
             g="golden/local_python_fn_${c##*corpus_fn_}"
             out=$(cargo run -q -p tltk-verifier -- check "$c" "$g" crates/tltk-core/data)
             echo "$out"
-            echo "$out" | grep -q "fail=0 missing_golden=0"
+            # corpus_fn_plots is disclosed-diff by design (hand-rolled renderer
+            # ≠ matplotlib bytes): every row must fail on PNG bytes, none missing.
+            n=$(wc -l < "$c")
+            if [ "${c##*/}" = "corpus_fn_plots.jsonl" ]; then
+              echo "$out" | grep -q "pass=0 fail=$n missing_golden=0"
+            else
+              echo "$out" | grep -q "fail=0 missing_golden=0"
+            fi
           done
 
       - name: wasm arms compile (simd128 on/off)

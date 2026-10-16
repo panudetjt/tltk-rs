@@ -83,6 +83,8 @@ const tier1Names = [
   'phs.bin.gz',
   'pos.bin.gz',
   'ner.bin.gz',
+  'wordtier.bin.gz',
+  'textclass.bin.gz',
   'sylrule.txt',
   'thaisyl.txt',
 ];

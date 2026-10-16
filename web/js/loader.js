@@ -11,7 +11,8 @@
 
 import { selectFlavor } from './probe.js';
 
-// Tier-1: 8 small model and rule files needed for base inference
+// Tier-1: 10 small model and rule files needed for base inference
+// (wordtier = textana lexicon, textclass = TextClass/txt2feat RF models)
 export const TIER1_FILES = [
   'thdict.bin.gz',
   'sylseg.bin.gz',
@@ -19,6 +20,8 @@ export const TIER1_FILES = [
   'phs.bin.gz',
   'pos.bin.gz',
   'ner.bin.gz',
+  'wordtier.bin.gz',
+  'textclass.bin.gz',
   'sylrule.txt',
   'thaisyl.txt'
 ];
