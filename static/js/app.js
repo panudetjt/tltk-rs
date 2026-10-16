@@ -1,0 +1,394 @@
+/**
+ * app.js - Main UI controller for TLTK Web Toolbox
+ */
+
+import { selectFlavor, probeSimd } from './probe.js';
+import { TltkManager, TIER2_FUNCTIONS } from './loader.js';
+
+// Metadata and Thai descriptions for all 16 TLTK functions
+export const FUNCTIONS = [
+  {
+    id: 'word_segment',
+    name: 'word_segment',
+    thaiName: 'ตัดคำ (Word Segmentation)',
+    desc: 'ตัดข้อความภาษาไทยออกเป็นคำ คั่นด้วยสัญลักษณ์ | และ <s/> ที่ท้ายประโยค',
+    placeholder: 'แมวกินปลา',
+    tier: 1
+  },
+  {
+    id: 'syl_segment',
+    name: 'syl_segment',
+    thaiName: 'ตัดพยางค์ (Syllable Segmentation)',
+    desc: 'ตัดคำหรือข้อความออกเป็นพยางค์ย่อย คั่นด้วยสัญลักษณ์ ~',
+    placeholder: 'มหาวิทยาลัย',
+    tier: 1
+  },
+  {
+    id: 'segment',
+    name: 'segment',
+    thaiName: 'ตัดคำและพยางค์พร้อมระบุโครงสร้าง (Segment with Tags)',
+    desc: 'ตัดข้อความระดับคำและพยางค์ พร้อมระบุประเภทคำผสมและแท็กโครงสร้างส่วนย่อย',
+    placeholder: 'อาหารอร่อย',
+    tier: 2
+  },
+  {
+    id: 'th2ipa',
+    name: 'th2ipa',
+    thaiName: 'แปลงตัวเขียนเป็นสัทอักษรสากล (Thai to IPA)',
+    desc: 'แปลงข้อความภาษาไทยเป็นสัทอักษรสากล (International Phonetic Alphabet) พร้อมระดับวรรณยุกต์',
+    placeholder: 'กรุงเทพมหานคร',
+    tier: 1
+  },
+  {
+    id: 'th2roman',
+    name: 'th2roman',
+    thaiName: 'ถอดอักษรไทยเป็นอักษรโรมัน (Romanization)',
+    desc: 'ถอดอักษรไทยเป็นอักษรโรมันตามหลักเกณฑ์การถอดเสียง',
+    placeholder: 'สุราษฎร์ธานี',
+    tier: 1
+  },
+  {
+    id: 'g2p',
+    name: 'g2p',
+    thaiName: 'แปลงตัวเขียนเป็นเสียงอ่านสัทศาสตร์ (Grapheme-to-Phoneme)',
+    desc: 'แปลงตัวเขียนอักษรไทยเป็นรหัสหน่วยเสียงภาษาไทย',
+    placeholder: 'สวัสดีครับ',
+    tier: 1
+  },
+  {
+    id: 'th2read',
+    name: 'th2read',
+    thaiName: 'แปลงตัวเขียนเป็นคำอ่านภาษาไทย (Thai Reading)',
+    desc: 'แปลงคำเขียนภาษาไทยเป็นคำอ่านภาษาไทยตามเสียงพยางค์',
+    placeholder: 'สุราษฎร์ธานี',
+    tier: 1
+  },
+  {
+    id: 'spell_variants',
+    name: 'spell_variants',
+    thaiName: 'ค้นหาคำสะกดใกล้เคียง (Spelling Variants)',
+    desc: 'ค้นหารูปสะกดที่เป็นไปได้หรือคำพ้องเสียงในคลังคำ',
+    placeholder: 'แมวกินปลา',
+    tier: 1
+  },
+  {
+    id: 'spoonerism',
+    name: 'spoonerism',
+    thaiName: 'คำผวน (Spoonerism)',
+    desc: 'สลับเสียงสระและพยัญชนะท้ายระหว่างพยางค์เพื่อสร้างคำผวน',
+    placeholder: 'ควายตาม',
+    tier: 1
+  },
+  {
+    id: 'pos_tag',
+    name: 'pos_tag',
+    thaiName: 'ระบุชนิดของคำ (Part-of-Speech Tagging)',
+    desc: 'กำกับหน้าที่และประเภทของคำในประโยค (POS) เช่น นาม กริยา คุณศัพท์',
+    placeholder: 'แมวกินปลา',
+    tier: 1
+  },
+  {
+    id: 'ner_tag',
+    name: 'ner_tag',
+    thaiName: 'ระบุชื่อเฉพาะ (Named Entity Recognition)',
+    desc: 'ระบุชื่อเฉพาะ เช่น บุคคล (Person) องค์กร (Organization) สถานที่ (Location)',
+    placeholder: 'นายสมชายเดินทางไปกรุงเทพมหานคร',
+    tier: 1
+  },
+  {
+    id: 'similar_words',
+    name: 'similar_words',
+    thaiName: 'ค้นหาคำที่มีความหมายใกล้เคียง (Similar Words)',
+    desc: 'ค้นหาคำที่มีเวกเตอร์ความหมายใกล้เคียงจากโมเดล Word2Vec ตามเกณฑ์ cutoff ที่ระบุ',
+    placeholder: 'แมว',
+    tier: 2,
+    hasCutoff: true
+  },
+  {
+    id: 'similarity',
+    name: 'similarity',
+    thaiName: 'วัดความคล้ายระหว่างสองคำ (Word Similarity)',
+    desc: 'คำนวณค่าความคล้ายคลึงของเวกเตอร์ความหมายระหว่าง 2 คำ (คั่นด้วยเว้นวรรค)',
+    placeholder: 'แมว สุนัข',
+    tier: 2
+  },
+  {
+    id: 'outofgroup',
+    name: 'outofgroup',
+    thaiName: 'หาคำที่ไม่เข้าพวก (Out of Group)',
+    desc: 'ระบุคำที่มีความหมายไม่เข้าพวกจากกลุ่มคำ (ใส่คำตั้งแต่ 3 คำขึ้นไป คั่นด้วยเว้นวรรค)',
+    placeholder: 'แมว สุนัข ปลา วัว โต๊ะ',
+    tier: 2
+  },
+  {
+    id: 'analogy',
+    name: 'analogy',
+    thaiName: 'เปรียบเทียบความสัมพันธ์ของคำ (Word Analogy)',
+    desc: 'คำนวณความสัมพันธ์ของคู่คำ A:B :: C:? (ใส่คำ 3 คำ คั่นด้วยเว้นวรรค เช่น: พ่อ แม่ ลูกชาย)',
+    placeholder: 'พ่อ แม่ ลูกชาย',
+    tier: 2
+  },
+  {
+    id: 'plotwords',
+    name: 'plotwords',
+    thaiName: 'พล็อตแผนภาพเวกเตอร์คำ 2 มิติ (Plot Words PCA)',
+    desc: 'แสดงภาพกราฟการกระจายตัวของคำในระนาบ 2 มิติ PCA จากโมเดล Word2Vec',
+    placeholder: 'แมว สุนัข เสือ ปลานิล ช้าง ม้า',
+    tier: 2
+  }
+];
+
+// Map for quick lookup by ID
+const FUNCTION_MAP = new Map(FUNCTIONS.map(f => [f.id, f]));
+
+// Single shared TltkManager instance
+const manager = new TltkManager();
+
+// DOM Elements
+const flavorBadge = document.getElementById('flavorBadge');
+const modelTierBadge = document.getElementById('modelTierBadge');
+const functionSelect = document.getElementById('functionSelect');
+const functionDesc = document.getElementById('functionDesc');
+const tierTag = document.getElementById('tierTag');
+const cutoffGroup = document.getElementById('cutoffGroup');
+const cutoffSelect = document.getElementById('cutoffSelect');
+const inputText = document.getElementById('inputText');
+const exampleBtn = document.getElementById('exampleBtn');
+const clearBtn = document.getElementById('clearBtn');
+const runBtn = document.getElementById('runBtn');
+const runSpinner = document.getElementById('runSpinner');
+const execStats = document.getElementById('execStats');
+const progressSection = document.getElementById('progressSection');
+const progressMessage = document.getElementById('progressMessage');
+const progressPercent = document.getElementById('progressPercent');
+const progressBar = document.getElementById('progressBar');
+const progressDetail = document.getElementById('progressDetail');
+const tier2Warning = document.getElementById('tier2Warning');
+const errorPane = document.getElementById('errorPane');
+const errorMessage = document.getElementById('errorMessage');
+const textOutputWrapper = document.getElementById('textOutputWrapper');
+const outputText = document.getElementById('outputText');
+const copyBtn = document.getElementById('copyBtn');
+const imageOutputWrapper = document.getElementById('imageOutputWrapper');
+const outputImage = document.getElementById('outputImage');
+const downloadImgLink = document.getElementById('downloadImgLink');
+
+/**
+ * Updates UI to reflect current SIMD probe resolution.
+ */
+function updateFlavorBadge() {
+  const flavor = selectFlavor();
+  if (flavor === 'simd') {
+    flavorBadge.textContent = 'WASM SIMD128';
+    flavorBadge.className = 'badge badge-success';
+    flavorBadge.title = 'ระบบรองรับ WebAssembly 128-bit SIMD (โหมดประสิทธิภาพสูง)';
+  } else {
+    flavorBadge.textContent = 'WASM Scalar';
+    flavorBadge.className = 'badge badge-neutral';
+    flavorBadge.title = 'ทำงานในโหมด Scalar มาตรฐาน';
+  }
+}
+
+/**
+ * Updates the Model Tier Badge in header.
+ */
+function updateModelBadge() {
+  if (manager.tier2Loaded) {
+    modelTierBadge.textContent = 'โมเดล: Tier 1 + 2 พร้อม';
+    modelTierBadge.className = 'badge badge-success';
+  } else if (manager.tier1Loaded) {
+    modelTierBadge.textContent = 'โมเดล: Tier 1 พร้อม';
+    modelTierBadge.className = 'badge badge-info';
+  } else {
+    modelTierBadge.textContent = 'โมเดล: รอเรียกใช้งาน';
+    modelTierBadge.className = 'badge badge-neutral';
+  }
+}
+
+/**
+ * Initializes the function dropdown.
+ */
+function initFunctionSelect() {
+  functionSelect.innerHTML = '';
+
+  for (const fn of FUNCTIONS) {
+    const opt = document.createElement('option');
+    opt.value = fn.id;
+    opt.textContent = `${fn.name} — ${fn.thaiName}`;
+    functionSelect.appendChild(opt);
+  }
+
+  functionSelect.value = 'word_segment';
+  onFunctionChange();
+}
+
+/**
+ * Handles function dropdown change.
+ */
+function onFunctionChange() {
+  const fnId = functionSelect.value;
+  const fn = FUNCTION_MAP.get(fnId);
+  if (!fn) return;
+
+  functionDesc.textContent = fn.desc;
+
+  if (fn.hasCutoff) {
+    cutoffGroup.classList.remove('hidden');
+  } else {
+    cutoffGroup.classList.add('hidden');
+  }
+
+  if (fn.tier === 2) {
+    tierTag.textContent = 'Tier 2 (+17.8MB)';
+    tierTag.className = 'tier-tag tier-2';
+  } else {
+    tierTag.textContent = 'Tier 1 (5.4MB)';
+    tierTag.className = 'tier-tag';
+  }
+
+  // Update placeholder
+  inputText.placeholder = fn.placeholder;
+}
+
+/**
+ * Handles model download progress.
+ */
+function handleProgress({ phase, fileIndex, totalFiles, fileName, percent }) {
+  progressSection.classList.remove('hidden');
+  const phaseLabel = phase === 'tier2' ? 'โมเดลขั้นสูง Tier 2' : 'โมเดลพื้นฐาน Tier 1';
+  progressMessage.textContent = `กำลังดาวน์โหลด ${phaseLabel} (${fileIndex}/${totalFiles})...`;
+  progressPercent.textContent = `${percent}%`;
+  progressBar.style.width = `${percent}%`;
+
+  if (fileName && fileName !== 'complete') {
+    progressDetail.textContent = `กำลังโหลด: ${fileName}`;
+  } else if (fileName === 'complete') {
+    progressDetail.textContent = 'ดาวน์โหลดเสร็จสมบูรณ์ กำลังประมวลผล...';
+  }
+}
+
+/**
+ * Runs the selected function with input text.
+ */
+async function runProcess() {
+  const fnId = functionSelect.value;
+  const text = inputText.value.trim();
+  const cutoff = cutoffSelect ? cutoffSelect.value : 'medium';
+
+  if (!text) {
+    showError('กรุณาใส่ข้อความนำเข้าก่อนกดประมวลผล');
+    return;
+  }
+
+  // Clear previous errors
+  errorPane.classList.add('hidden');
+  errorMessage.textContent = '';
+  runBtn.disabled = true;
+  runSpinner.classList.remove('hidden');
+  execStats.textContent = 'กำลังประมวลผล...';
+
+  const startTime = performance.now();
+
+  try {
+    const result = await manager.process(fnId, text, cutoff, handleProgress);
+    const elapsed = Math.round(performance.now() - startTime);
+
+    // Hide progress bar on successful complete
+    progressSection.classList.add('hidden');
+    updateModelBadge();
+
+    execStats.textContent = `ประมวลผลสำเร็จใน ${elapsed} ms`;
+
+    // Render result based on return shape
+    if (typeof result === 'string' && result.startsWith('IMAGE:')) {
+      const b64 = result.slice(6);
+      outputImage.src = `data:image/png;base64,${b64}`;
+      downloadImgLink.href = `data:image/png;base64,${b64}`;
+      imageOutputWrapper.classList.remove('hidden');
+      textOutputWrapper.classList.add('hidden');
+    } else {
+      outputText.textContent = result || '(ผลลัพธ์ว่างเปล่า)';
+      textOutputWrapper.classList.remove('hidden');
+      imageOutputWrapper.classList.add('hidden');
+    }
+  } catch (err) {
+    progressSection.classList.add('hidden');
+    updateModelBadge();
+
+    // Check if failure was caused by Tier 2
+    if (TIER2_FUNCTIONS.has(fnId) && manager.tier2Error) {
+      tier2Warning.classList.remove('hidden');
+    }
+
+    showError(err.message || String(err));
+    execStats.textContent = 'เกิดข้อผิดพลาด';
+  } finally {
+    runBtn.disabled = false;
+    runSpinner.classList.add('hidden');
+  }
+}
+
+/**
+ * Displays an error message in the error panel.
+ */
+function showError(msg) {
+  errorMessage.textContent = msg;
+  errorPane.classList.remove('hidden');
+}
+
+/**
+ * Copies output text to clipboard.
+ */
+async function copyOutput() {
+  const text = outputText.textContent;
+  if (!text) return;
+
+  try {
+    await navigator.clipboard.writeText(text);
+    const originalText = copyBtn.textContent;
+    copyBtn.textContent = 'คัดลอกแล้ว!';
+    setTimeout(() => {
+      copyBtn.textContent = originalText;
+    }, 1500);
+  } catch {
+    // Fallback selection copy
+    const range = document.createRange();
+    range.selectNodeContents(outputText);
+    const selection = window.getSelection();
+    selection.removeAllRanges();
+    selection.addRange(range);
+  }
+}
+
+// Event Listeners
+functionSelect.addEventListener('change', onFunctionChange);
+
+exampleBtn.addEventListener('click', () => {
+  const fnId = functionSelect.value;
+  const fn = FUNCTION_MAP.get(fnId);
+  if (fn && fn.placeholder) {
+    inputText.value = fn.placeholder;
+  }
+});
+
+clearBtn.addEventListener('click', () => {
+  inputText.value = '';
+  inputText.focus();
+});
+
+runBtn.addEventListener('click', runProcess);
+
+copyBtn.addEventListener('click', copyOutput);
+
+// Ctrl+Enter or Cmd+Enter to run
+inputText.addEventListener('keydown', (e) => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+    e.preventDefault();
+    runProcess();
+  }
+});
+
+// Initial Setup
+updateFlavorBadge();
+initFunctionSelect();
+updateModelBadge();

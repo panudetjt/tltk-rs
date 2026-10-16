@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TLTK Web Toolbox — เครื่องมือประมวลผลภาษาไทยในเบราว์เซอร์</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="container">
+    <header class="app-header">
+      <div class="header-content">
+        <h1>TLTK Web Toolbox</h1>
+        <p class="subtitle">เครื่องมือประมวลผลภาษาไทยทำงานบนเบราว์เซอร์ 100% (Client-Only / Zero Server)</p>
+      </div>
+      <div class="runtime-badges">
+        <span id="flavorBadge" class="badge badge-neutral" title="เอนจินประมวลผล WebAssembly">กำลังตรวจสอบเอนจิน...</span>
+        <span id="modelTierBadge" class="badge badge-info" title="สถานะโมเดล">โมเดล: รอเรียกใช้งาน</span>
+      </div>
+    </header>
+
+    <!-- Progress & Status Notification Bar -->
+    <section id="progressSection" class="progress-section hidden" aria-live="polite">
+      <div class="progress-header">
+        <span id="progressMessage" class="progress-message">กำลังดาวน์โหลดโมเดล...</span>
+        <span id="progressPercent" class="progress-percent">0%</span>
+      </div>
+      <div class="progress-bar-track">
+        <div id="progressBar" class="progress-bar-fill" style="width: 0%;"></div>
+      </div>
+      <div id="progressDetail" class="progress-detail"></div>
+    </section>
+
+    <!-- Tier-2 Non-blocking Warning Banner -->
+    <div id="tier2Warning" class="alert alert-warning hidden" role="alert">
+      <strong>คำเตือน:</strong> ไม่สามารถโหลดโมเดล Tier-2 ได้ (ฟังก์ชันเวกเตอร์/โมเดลขนาดใหญ่) แต่ฟังก์ชันพื้นฐานใน Tier-1 ยังสามารถใช้งานได้ตามปกติ
+    </div>
+
+    <!-- Main Workspace Card -->
+    <main class="card">
+      <div class="form-grid">
+        <!-- Function Selector -->
+        <div class="form-group">
+          <label for="functionSelect" class="form-label">
+            ฟังก์ชันการทำงาน (Function):
+            <span id="tierTag" class="tier-tag">Tier 1</span>
+          </label>
+          <select id="functionSelect" class="form-control">
+            <!-- Populated dynamically via app.js -->
+          </select>
+          <p id="functionDesc" class="form-hint"></p>
+        </div>
+
+        <!-- Cutoff Selector (similar_words only) -->
+        <div id="cutoffGroup" class="form-group hidden">
+          <label for="cutoffSelect" class="form-label">เกณฑ์ความคล้าย (Cutoff):</label>
+          <select id="cutoffSelect" class="form-control">
+            <option value="low">Low (ต่ำ - 0.3)</option>
+            <option value="medium" selected>Medium (ปานกลาง - 0.5)</option>
+            <option value="high">High (สูง - 0.7)</option>
+          </select>
+          <p class="form-hint">กำหนดค่าความคล้ายขั้นต่ำสำหรับคำที่ค้นหา</p>
+        </div>
+      </div>
+
+      <!-- Input Text Area -->
+      <div class="form-group">
+        <div class="label-row">
+          <label for="inputText" class="form-label">ข้อความนำเข้า (Input Text):</label>
+          <div class="action-links">
+            <button type="button" id="exampleBtn" class="link-btn">ใส่ตัวอย่าง</button>
+            <button type="button" id="clearBtn" class="link-btn">ล้างข้อความ</button>
+          </div>
+        </div>
+        <textarea id="inputText" class="form-control text-area" rows="4" placeholder="พิมพ์หรือวางข้อความภาษาไทยที่นี่..."></textarea>
+      </div>
+
+      <!-- Action Row -->
+      <div class="action-bar">
+        <button id="runBtn" class="btn btn-primary" type="button">
+          <span class="btn-text">ประมวลผล (Run)</span>
+        </button>
+        <span id="runSpinner" class="spinner hidden" aria-label="กำลังประมวลผล..."></span>
+        <span id="execStats" class="exec-stats"></span>
+      </div>
+
+      <!-- Output Pane -->
+      <section class="output-section" aria-label="ผลลัพธ์">
+        <!-- Error Message View -->
+        <div id="errorPane" class="alert alert-error hidden" role="alert">
+          <div class="error-title">เกิดข้อผิดพลาดในการประมวลผล</div>
+          <div id="errorMessage" class="error-body"></div>
+        </div>
+
+        <!-- Text Output View -->
+        <div id="textOutputWrapper" class="output-wrapper">
+          <div class="output-header">
+            <span class="output-title">ผลลัพธ์ (Output):</span>
+            <button id="copyBtn" class="btn btn-secondary btn-sm" type="button" title="คัดลอกผลลัพธ์">
+              คัดลอก (Copy)
+            </button>
+          </div>
+          <pre id="outputText" class="output-box" tabindex="0">ผลลัพธ์จะแสดงที่นี่หลังกดประมวลผล</pre>
+        </div>
+
+        <!-- Image Output View (plotwords) -->
+        <div id="imageOutputWrapper" class="output-wrapper hidden">
+          <div class="output-header">
+            <span class="output-title">ผลลัพธ์แผนภาพ PCA (Scatter Plot):</span>
+            <a id="downloadImgLink" class="btn btn-secondary btn-sm" download="tltk-plotwords.png">
+              ดาวน์โหลดรูปภาพ (PNG)
+            </a>
+          </div>
+          <div class="image-box">
+            <img id="outputImage" alt="TLTK Word Vector PCA Plot">
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- About & Attribution Footer -->
+    <footer class="app-footer">
+      <p class="about-line">
+        โมเดลและขั้นตอนวิธีพัฒนาโดย <strong>TLTK / จุฬาลงกรณ์มหาวิทยาลัย (Chulalongkorn University)</strong>
+        — ผลลัพธ์ตรงกันแบบ byte-identical กับ tltk 1.10
+      </p>
+      <p class="arch-line">
+        รันด้วย WebAssembly ฝั่งไคลเอนต์ล้วนโดยไม่มีการส่งข้อมูลกลับเซิร์ฟเวอร์
+        | รองรับ SIMD128 อัตโนมัติพร้อมโหมดสำรอง Scalar
+      </p>
+    </footer>
+  </div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

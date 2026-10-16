@@ -128,6 +128,59 @@ Local dev (models fetched from R2 live): `npx wrangler dev` inside
 `crates/tltk-worker`. Without the R2 binding, the six embedded models still
 serve 12 of 16 functions; edu/w2v functions return an explicit error.
 
+## toolbox (client-only)
+
+A client-only web toolbox page usable identically to the stichula original with **zero server**: static hosting only (free unlimited), with all inference executing directly in the browser via WebAssembly.
+
+### What it is
+
+- **Full 16-function Thai NLP suite**: `th2ipa`, `th2roman`, `word_segment`, `syl_segment`, `segment`, `g2p`, `th2read`, `spell_variants`, `spoonerism`, `pos_tag`, `ner_tag`, `similar_words`, `similarity`, `outofgroup`, `analogy`, and `plotwords` (PCA scatter plot rendered as inline PNG).
+- **Byte-identical results**: strictly follows tltk 1.10 / stichula parity.
+- **Zero external dependencies**: no frameworks, no bundler, no CDN fonts or scripts — works completely offline once cached.
+
+### How to run locally
+
+```bash
+bash scripts/serve_toolbox.sh
+```
+
+The script checks for required model files (including gitignored `edu.bin.gz` and `w2v.bin.gz`), builds the WebAssembly glue via `scripts/build_web.sh` if needed, maps model assets to `/data`, and serves the application at `http://localhost:8080/`.
+
+### How to deploy (static-only)
+
+Deploy to any static web host (Cloudflare Pages / Workers Static Assets, Netlify, Vercel, GitHub Pages, or S3/R2). No server-side worker script or container is required.
+
+Example Cloudflare Workers static assets configuration (`static/wrangler-toolbox.toml`):
+
+```toml
+name = "tltk-toolbox"
+compatibility_date = "2026-10-16"
+
+[assets]
+directory = "./static"
+binding = "ASSETS"
+```
+
+Deploy with:
+
+```bash
+npx wrangler deploy --config static/wrangler-toolbox.toml
+# Or via Cloudflare Pages:
+npx wrangler pages deploy static
+```
+
+### Browser support & runtime SIMD selection
+
+- **Runtime probe**: On first page load, an inlined ~29-byte probe module evaluates `WebAssembly.validate` for 128-bit SIMD (`simd128`) capability.
+- **Dynamic dual-build loading**: SIMD-capable browsers dynamically load `static/wasm/simd/tltk_web.js` for accelerated dot-product vector operations, while other runtimes seamlessly fall back to `static/wasm/scalar/tltk_web.js`.
+- **Cached probing**: The detection result is stored in `localStorage` to avoid redundant validation on future visits.
+
+### First-load sizes & tiered model loading
+
+- **Tier-1 models (~5.4 MB)**: Loaded on first tool execution. Fetches the 8 core models and tables (`thdict.bin.gz`, `sylseg.bin.gz`, `sylvar.bin.gz`, `phs.bin.gz`, `pos.bin.gz`, `ner.bin.gz`, `sylrule.txt`, `thaisyl.txt`).
+- **Tier-2 models (~17.8 MB)**: Loaded on-demand only when calling discourse segmentation or Word2Vec operations (`similar_words`, `similarity`, `outofgroup`, `analogy`, `plotwords`, or `segment`). Fetches `edu.bin.gz` (~6.2 MB) and `w2v.bin.gz` (~11.6 MB).
+- **Cache-first semantics**: All model assets are fetched with `cache: 'force-cache'`, persisting in HTTP/browser cache across sessions.
+- **Asset footprint**: Total UI overhead (HTML + CSS + JS, excluding WASM binaries and model blobs) is under 45 KB.
 ## Credits
 
 TLTK by Wirote Aroonmanakun, Chulalongkorn University (PyPI `tltk` 1.10).
