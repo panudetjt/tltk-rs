@@ -7,6 +7,7 @@
 //! `tools/convert/convert.py`. Behaviour parity is defined by the validator API
 //! and checked by `tltk-verifier`.
 
+pub mod dtree;
 pub mod chunk;
 pub mod edu;
 pub mod g2p;
@@ -103,6 +104,12 @@ impl<'a> Session<'a> {
             "analogy" => self.wire_analogy(text),
             "plotwords" => self.wire_plotwords(text),
             "textana" => textana::textana(self, text),
+            "dg_print" => dtree::dg_print(self, text),
+            "dg_save" => dtree::dg_save(self, text),
+            "print_dtree" => dtree::print_dtree(self, text),
+            "scan_dtree" => dtree::scan_dtree(self, text),
+            "get_tree_depth" => dtree::get_tree_depth(self, text, cutoff),
+            "tree_max_depth" => dtree::tree_max_depth(self, text),
             "chunk" => Ok(self.chunk(text)),
             "tnc_tag" => self.tnc_tag(text),
             "th2ipa_all" => Ok(self.th2ipa_all(text)),
