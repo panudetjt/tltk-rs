@@ -1,0 +1,13 @@
+[package]
+name = "tltk-web"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+wasm-bindgen = "0.2"
+js-sys = "0.3"
+tltk-core = { path = "../tltk-core", default-features = false }

@@ -626,6 +626,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "tltk-web"
+version = "0.1.0"
+dependencies = [
+ "js-sys",
+ "tltk-core",
+ "wasm-bindgen",
+]
+
+[[package]]
 name = "tltk-worker"
 version = "0.1.0"
 dependencies = [

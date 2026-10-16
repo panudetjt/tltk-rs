@@ -4,6 +4,7 @@ members = [
     "crates/tltk-core",
     "crates/tltk-worker",
     "crates/tltk-valifier",
+    "crates/tltk-web",
 ]
 
 [workspace.package]

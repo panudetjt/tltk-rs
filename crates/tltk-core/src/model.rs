@@ -337,6 +337,7 @@ impl Sylseg {
         let type_ = rows2(&mut r);
         let total_word = r.uvarint();
         let total_lex = r.uvarint();
+        #[cfg(not(target_arch = "wasm32"))]
         let t0 = std::time::Instant::now();
         let items: Vec<(&str, u32)> = syls
             .iter()
@@ -344,7 +345,10 @@ impl Sylseg {
             .map(|(i, s)| (s.as_str(), i as u32))
             .collect();
         let syl_hash = PerfHash::build(&items);
+        #[cfg(not(target_arch = "wasm32"))]
         let syl_build_ms = t0.elapsed().as_millis();
+        #[cfg(target_arch = "wasm32")]
+        let syl_build_ms = 0;
         if std::env::var("TLTK_DEBUG").is_ok() {
             eprintln!(
                 "sylseg decoded: syls={} (hash in {}ms) tri={} bicount={} bitype={} count={} type={} TW={} TL={}",
@@ -592,9 +596,13 @@ impl PosModel {
                 unique_feats.push((f.as_str(), idx as u32));
             }
         }
+        #[cfg(not(target_arch = "wasm32"))]
         let t0 = std::time::Instant::now();
         let feat_hash = PerfHash::build(&unique_feats);
+        #[cfg(not(target_arch = "wasm32"))]
         let feat_build_ms = t0.elapsed().as_millis();
+        #[cfg(target_arch = "wasm32")]
+        let feat_build_ms = 0;
         if std::env::var("TLTK_DEBUG").is_ok() {
             eprintln!(
                 "pos decoded: classes={} tagdict={} weights={} unique_feats={} (hash in {}ms)",
@@ -857,6 +865,37 @@ impl Models {
         }
         Ok(Models::from_blobs(&blobs))
     }
+    /// Attach tier-2 model blobs (edu, w2v, and ner if given) without re-decoding tier-1.
+    pub fn attach_blobs(&mut self, blobs: &HashMap<String, Vec<u8>>) -> Result<(), String> {
+        let mut gz = HashMap::new();
+        for (k, v) in blobs {
+            let key = if k.ends_with(".bin.gz") {
+                k.trim_end_matches(".gz").to_string()
+            } else if k.ends_with(".bin") {
+                k.clone()
+            } else if k == "edu" || k == "w2v" || k == "ner" {
+                format!("{}.bin", k)
+            } else {
+                continue;
+            };
+            let decompressed = if v.len() >= 2 && v[0] == 0x1f && v[1] == 0x8b {
+                try_gunzip(v).map_err(|e| format!("gunzip {} failed: {}", k, e))?
+            } else {
+                v.clone()
+            };
+            gz.insert(key, decompressed);
+        }
+        if let Some(d) = gz.get("edu.bin") {
+            self.edu = Some(EduModel::decode(d)?);
+        }
+        if let Some(d) = gz.get("w2v.bin") {
+            self.w2v = Some(W2v::decode(d)?);
+        }
+        if let Some(d) = gz.get("ner.bin") {
+            self.ner = Some(NerModel::decode(d)?);
+        }
+        Ok(())
+    }
 }
 
 /// Build the PRON pattern list exactly like read_sylpattern + read_syldict:
@@ -1023,5 +1062,27 @@ mod tests {
             );
         }
         println!("All {} norms and {} vector_unit elements BIT-EXACT!", norms1.len(), vectors_unit1.len());
+    }
+
+    #[test]
+    fn test_attach_blobs_w2v() {
+        let manifest_dir = env!("CARGO_MANIFEST_DIR");
+        let p_w2v = std::path::Path::new(manifest_dir).join("data/w2v.bin.gz");
+        let gz_bytes = std::fs::read(&p_w2v).expect("w2v.bin.gz");
+
+        let mut models = crate::embedded::models();
+        assert!(models.w2v.is_none());
+
+        let mut blobs = HashMap::new();
+        blobs.insert("w2v.bin.gz".to_string(), gz_bytes);
+        models.attach_blobs(&blobs).expect("attach_blobs should succeed");
+
+        assert!(models.w2v.is_some());
+        let tltk = crate::Tltk::new(models);
+        let mut sess = tltk.session();
+        let res = sess.process("similarity", "หมา แมว", "medium");
+        assert!(res.is_ok(), "similarity should succeed after attach: {:?}", res);
+        let text = res.unwrap();
+        assert!(text.contains("ความคล้ายระหว่าง 'หมา' กับ 'แมว' ="), "got: {}", text);
     }
 }
