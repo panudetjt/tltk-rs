@@ -105,10 +105,184 @@ impl Thdict {
         self.set.contains(w)
     }
 }
+/// Minimal perfect hash over a set of distinct string keys using CHD (compress, hash and displace).
+/// Maps each key -> its assigned u32 value (e.g. sorted index or block start).
+/// A 32-bit guard residue ensures bogus keys are rejected with ~100% probability before
+/// any string comparison.
+#[derive(Clone, Debug, Default)]
+pub struct PerfHash {
+    num_keys: usize,
+    num_buckets: usize,
+    seeds: Vec<u32>,
+    entries: Vec<PerfEntry>,
+}
+
+#[derive(Clone, Copy, Debug, Default)]
+pub struct PerfEntry {
+    pub value: u32,
+    pub guard: u32,
+}
+
+#[inline(always)]
+fn perf_hash_str(s: &str) -> u64 {
+    let bytes = s.as_bytes();
+    let mut hash = 0u64;
+    const K: u64 = 0x517cc1b727220a95;
+    let mut chunks = bytes.chunks_exact(8);
+    for chunk in &mut chunks {
+        let v = u64::from_le_bytes(chunk.try_into().unwrap());
+        hash = hash.rotate_left(5) ^ v;
+        hash = hash.wrapping_mul(K);
+    }
+    let rem = chunks.remainder();
+    if !rem.is_empty() {
+        let mut buf = [0u8; 8];
+        buf[..rem.len()].copy_from_slice(rem);
+        let v = u64::from_le_bytes(buf);
+        hash = hash.rotate_left(5) ^ v;
+        hash = hash.wrapping_mul(K);
+    }
+    hash ^= hash >> 32;
+    hash = hash.wrapping_mul(0xd6e8feb86659fd93);
+    hash ^= hash >> 32;
+    hash = hash.wrapping_mul(0xd6e8feb86659fd93);
+    hash ^= hash >> 32;
+    hash
+}
+
+#[inline(always)]
+fn perf_fast_reduce(x: u64, n: usize) -> usize {
+    ((x as u128 * n as u128) >> 64) as usize
+}
+
+#[inline(always)]
+fn perf_get_slot(h: u64, d: u32, n: usize) -> usize {
+    let x = h.wrapping_add((d as u64).wrapping_mul(0x9e3779b97f4a7c15));
+    let mut z = x;
+    z = (z ^ (z >> 30)).wrapping_mul(0xbf58476d1ce4e5b9);
+    z = (z ^ (z >> 27)).wrapping_mul(0x94d049bb133111eb);
+    z ^= z >> 31;
+    perf_fast_reduce(z, n)
+}
+
+#[inline(always)]
+fn perf_guard(h: u64, s: &str) -> u32 {
+    ((h >> 32) as u32) ^ (h as u32) ^ (s.len() as u32)
+}
+
+impl PerfHash {
+    pub fn build(items: &[(&str, u32)]) -> Self {
+        let n = items.len();
+        if n == 0 {
+            return Self::default();
+        }
+        let m = (n * 13) / 10 + 1;
+
+        let mut key_hashes: Vec<u64> = Vec::with_capacity(n);
+        let mut bucket_sizes = vec![0u32; m];
+        for &(k, _) in items {
+            let h = perf_hash_str(k);
+            key_hashes.push(h);
+            let b = perf_fast_reduce(h, m);
+            bucket_sizes[b] += 1;
+        }
+
+        let mut offsets = vec![0usize; m + 1];
+        let mut cursor = 0;
+        for b in 0..m {
+            offsets[b] = cursor;
+            cursor += bucket_sizes[b] as usize;
+        }
+        offsets[m] = cursor;
+
+        let mut bucket_items = vec![(0u64, 0u32, 0u32); n];
+        let mut write_pos = offsets.clone();
+        for (idx, &(k, val)) in items.iter().enumerate() {
+            let h = key_hashes[idx];
+            let b = perf_fast_reduce(h, m);
+            let pos = write_pos[b];
+            write_pos[b] += 1;
+            bucket_items[pos] = (h, val, k.len() as u32);
+        }
+
+        let mut non_empty: Vec<(usize, u32)> = bucket_sizes
+            .iter()
+            .enumerate()
+            .filter(|&(_, &size)| size > 0)
+            .map(|(b, &size)| (b, size))
+            .collect();
+        non_empty.sort_by(|a, b| b.1.cmp(&a.1).then_with(|| a.0.cmp(&b.0)));
+
+        let mut occupied = vec![false; n];
+        let mut seeds = vec![0u32; m];
+        let mut entries = vec![PerfEntry::default(); n];
+        let mut temp_slots = Vec::with_capacity(32);
+
+        for &(b, _size) in &non_empty {
+            let start = offsets[b];
+            let end = offsets[b + 1];
+            let b_items = &bucket_items[start..end];
+
+            let mut d = 0u32;
+            loop {
+                temp_slots.clear();
+                let mut collision = false;
+                for &(h, _, _) in b_items {
+                    let slot = perf_get_slot(h, d, n);
+                    if occupied[slot] || temp_slots.contains(&slot) {
+                        collision = true;
+                        break;
+                    }
+                    temp_slots.push(slot);
+                }
+
+                if !collision {
+                    seeds[b] = d;
+                    for (idx, &(h, val, len)) in b_items.iter().enumerate() {
+                        let slot = temp_slots[idx];
+                        occupied[slot] = true;
+                        let guard = ((h >> 32) as u32) ^ (h as u32) ^ len;
+                        entries[slot] = PerfEntry { value: val, guard };
+                    }
+                    break;
+                }
+
+                d += 1;
+            }
+        }
+
+        PerfHash {
+            num_keys: n,
+            num_buckets: m,
+            seeds,
+            entries,
+        }
+    }
+
+    #[inline(always)]
+    pub fn get(&self, s: &str) -> Option<u32> {
+        if self.num_keys == 0 {
+            return None;
+        }
+        let h = perf_hash_str(s);
+        let b = perf_fast_reduce(h, self.num_buckets);
+        let d = self.seeds[b];
+        let slot = perf_get_slot(h, d, self.num_keys);
+        let entry = &self.entries[slot];
+        let guard = perf_guard(h, s);
+        if entry.guard == guard {
+            Some(entry.value)
+        } else {
+            None
+        }
+    }
+}
+
 
 /// SG01 — syllable trigram counts + derived maps (from sylseg.3g)
 pub struct Sylseg {
     pub syls: Vec<String>,
+    pub syl_hash: PerfHash,
     /// (x, y, z, count) sorted by (x,y,z) indices
     pub tri: Vec<[u32; 4]>,
     /// (x, y, count) sorted
@@ -163,16 +337,29 @@ impl Sylseg {
         let type_ = rows2(&mut r);
         let total_word = r.uvarint();
         let total_lex = r.uvarint();
+        let t0 = std::time::Instant::now();
+        let items: Vec<(&str, u32)> = syls
+            .iter()
+            .enumerate()
+            .map(|(i, s)| (s.as_str(), i as u32))
+            .collect();
+        let syl_hash = PerfHash::build(&items);
+        let syl_build_ms = t0.elapsed().as_millis();
         if std::env::var("TLTK_DEBUG").is_ok() {
             eprintln!(
-                "sylseg decoded: syls={} tri={} bicount={} bitype={} count={} type={} TW={} TL={}",
-                syls.len(), tri.len(), bi_count.len(), bi_type.len(), count.len(), type_.len(), total_word, total_lex
+                "sylseg decoded: syls={} (hash in {}ms) tri={} bicount={} bitype={} count={} type={} TW={} TL={}",
+                syls.len(), syl_build_ms, tri.len(), bi_count.len(), bi_type.len(), count.len(), type_.len(), total_word, total_lex
             );
         }
-        Ok(Sylseg { syls, tri, bi_count, bi_type, count, type_, total_word, total_lex })
+        Ok(Sylseg { syls, syl_hash, tri, bi_count, bi_type, count, type_, total_word, total_lex })
     }
     pub fn syl_id(&self, s: &str) -> Option<u32> {
-        self.syls.binary_search_by(|p| p.as_str().cmp(s)).ok().map(|i| i as u32)
+        if let Some(idx) = self.syl_hash.get(s) {
+            if self.syls.get(idx as usize).map(|p| p.as_str()) == Some(s) {
+                return Some(idx);
+            }
+        }
+        None
     }
     pub fn tri_get(&self, x: u32, y: u32, z: u32) -> u32 {
         self.tri
@@ -372,6 +559,7 @@ pub struct PosModel {
     pub tagdict: HashMap<String, String>,
     /// (feature, tag) -> weight; sorted by (feat, tag) for binary search
     pub weights: Vec<(String, String, f64)>,
+    pub feat_hash: PerfHash,
 }
 
 impl PosModel {
@@ -398,7 +586,22 @@ impl PosModel {
             let w = r.f64_();
             weights.push((f, t, w));
         }
-        Ok(PosModel { classes, tagdict, weights })
+        let mut unique_feats: Vec<(&str, u32)> = Vec::new();
+        for (idx, (f, _, _)) in weights.iter().enumerate() {
+            if unique_feats.last().map(|(prev, _)| *prev) != Some(f.as_str()) {
+                unique_feats.push((f.as_str(), idx as u32));
+            }
+        }
+        let t0 = std::time::Instant::now();
+        let feat_hash = PerfHash::build(&unique_feats);
+        let feat_build_ms = t0.elapsed().as_millis();
+        if std::env::var("TLTK_DEBUG").is_ok() {
+            eprintln!(
+                "pos decoded: classes={} tagdict={} weights={} unique_feats={} (hash in {}ms)",
+                classes.len(), tagdict.len(), weights.len(), unique_feats.len(), feat_build_ms
+            );
+        }
+        Ok(PosModel { classes, tagdict, weights, feat_hash })
     }
 }
 

@@ -45,40 +45,36 @@ impl<'a> Session<'a> {
         self.m.sylseg.syl_id(s)
     }
 
-    /// BiCount[(w1,w2)] with compute_colloc's bump overlay applied.
-    pub fn bi_count(&self, w1: &str, w2: &str) -> f64 {
+    fn bi_count_with_ids(&self, w1: &str, w2: &str, id1: Option<u32>, id2: Option<u32>) -> f64 {
         if !self.bicount_ov.is_empty() {
             if let Some(v) = self.bicount_ov.get(&(w1.to_string(), w2.to_string())) {
                 return *v as f64;
             }
         }
-        match (self.syl_id(w1), self.syl_id(w2)) {
+        match (id1, id2) {
             (Some(a), Some(b)) => self.m.sylseg.bi_count_get(a, b) as f64,
             _ => 0.0,
         }
     }
-    pub fn count(&self, w: &str) -> f64 {
+
+    fn count_with_id(&self, w: &str, id: Option<u32>) -> f64 {
         if !self.count_ov.is_empty() {
             if let Some(v) = self.count_ov.get(w) {
                 return *v as f64;
             }
         }
-        match self.syl_id(w) {
+        match id {
             Some(a) => self.m.sylseg.count_get(a) as f64,
             None => 0.0,
         }
     }
-    fn bi_type(&self, w1: &str, w2: &str) -> f64 {
-        match (self.syl_id(w1), self.syl_id(w2)) {
-            (Some(a), Some(b)) => self.m.sylseg.bi_type_get(a, b) as f64,
-            _ => 0.0,
-        }
+
+    /// BiCount[(w1,w2)] with compute_colloc's bump overlay applied.
+    pub fn bi_count(&self, w1: &str, w2: &str) -> f64 {
+        self.bi_count_with_ids(w1, w2, self.syl_id(w1), self.syl_id(w2))
     }
-    fn type_(&self, w: &str) -> f64 {
-        match self.syl_id(w) {
-            Some(a) => self.m.sylseg.type_get(a) as f64,
-            None => 0.0,
-        }
+    pub fn count(&self, w: &str) -> f64 {
+        self.count_with_id(w, self.syl_id(w))
     }
 
     /// Port of compute_colloc(stat="mi", w1, w2) — includes the stateful bump:
@@ -119,19 +115,44 @@ impl<'a> Session<'a> {
     /// Port of prob_wb — Witten-Bell smoothed trigram probability (log space),
     /// tltk 1.10 coefficients (0.8 / 0.15 / 0.1 / 1/N).
     pub fn prob_wb(&self, w: &str, pw1: &str, pw2: &str) -> f64 {
+        self.prob_wb_with_ids(w, pw1, pw2, self.syl_id(w), self.syl_id(pw1), self.syl_id(pw2))
+    }
+
+    fn prob_wb_with_ids(
+        &self,
+        w: &str,
+        pw1: &str,
+        pw2: &str,
+        id_w: Option<u32>,
+        id_pw1: Option<u32>,
+        id_pw2: Option<u32>,
+    ) -> f64 {
         let dbg = debug_enabled();
         let mut p3 = 0.0;
         let mut p2 = 0.0;
         let mut p1 = 0.0;
-        let tri = self.tri_count(pw2, pw1, w);
+        let tri = match (id_pw2, id_pw1, id_w) {
+            (Some(a), Some(b), Some(c)) => self.m.sylseg.tri_get(a, b, c) as f64,
+            _ => 0.0,
+        };
         if tri > 0.0 {
-            p3 = tri / (self.bi_count(pw2, pw1) + self.bi_type(pw2, pw1));
+            let bi_denom = self.bi_count_with_ids(pw2, pw1, id_pw2, id_pw1);
+            let bi_type = match (id_pw2, id_pw1) {
+                (Some(a), Some(b)) => self.m.sylseg.bi_type_get(a, b) as f64,
+                _ => 0.0,
+            };
+            p3 = tri / (bi_denom + bi_type);
         }
-        let bi = self.bi_count(pw1, w);
+        let bi = self.bi_count_with_ids(pw1, w, id_pw1, id_w);
         if bi > 0.0 {
-            p2 = bi / (self.count(pw1) + self.type_(pw1));
+            let c_denom = self.count_with_id(pw1, id_pw1);
+            let type_denom = match id_pw1 {
+                Some(a) => self.m.sylseg.type_get(a) as f64,
+                None => 0.0,
+            };
+            p2 = bi / (c_denom + type_denom);
         }
-        let c = self.count(w);
+        let c = self.count_with_id(w, id_w);
         if c > 0.0 {
             p1 = c / (self.total_word as f64 + self.total_lex as f64);
         }
@@ -149,23 +170,20 @@ impl<'a> Session<'a> {
         p.ln()
     }
 
-    fn tri_count(&self, x: &str, y: &str, z: &str) -> f64 {
-        match (self.syl_id(x), self.syl_id(y), self.syl_id(z)) {
-            (Some(a), Some(b), Some(c)) => self.m.sylseg.tri_get(a, b, c) as f64,
-            _ => 0.0,
-        }
-    }
-
     /// Port of prob_trisyl — sum of prob_wb over the syllable list with SegSep BOS.
     pub fn prob_trisyl(&self, syls: &[String]) -> f64 {
         let mut probx = 1.0f64;
-        let seg = SEG_SEP_STR.to_string();
-        let mut pw1 = seg.clone();
-        let mut pw2 = seg;
+        let mut pw1 = SEG_SEP_STR;
+        let mut pw2 = SEG_SEP_STR;
+        let mut id_pw1 = self.syl_id(SEG_SEP_STR);
+        let mut id_pw2 = id_pw1;
         for w in syls {
-            probx += self.prob_wb(w, &pw1, &pw2);
+            let id_w = self.syl_id(w);
+            probx += self.prob_wb_with_ids(w, pw1, pw2, id_w, id_pw1, id_pw2);
             pw2 = pw1;
-            pw1 = w.clone();
+            pw1 = w.as_str();
+            id_pw2 = id_pw1;
+            id_pw1 = id_w;
         }
         probx
     }

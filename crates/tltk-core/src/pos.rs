@@ -44,21 +44,15 @@ fn predict(sess: &Session, features: &[(&str, f64)]) -> String {
         if *value == 0.0 {
             continue;
         }
-        // weights sorted by (feat, tag): find ANY row of the feat block, then
-        // walk back to the block start and scan forward.
-        if let Ok(mut i) = sess
-            .m
-            .pos
-            .weights
-            .binary_search_by(|(f, _t, _w)| f.as_str().cmp(feat))
-        {
-            while i > 0 && sess.m.pos.weights[i - 1].0 == *feat {
-                i -= 1;
-            }
-            while i < sess.m.pos.weights.len() && sess.m.pos.weights[i].0 == *feat {
-                let (_f, t, w) = &sess.m.pos.weights[i];
-                *scores.entry(t.as_str()).or_insert(0.0) += value * w;
-                i += 1;
+        // feature block start precomputed in perfect hash; verify hit then scan block
+        if let Some(start_idx) = sess.m.pos.feat_hash.get(feat) {
+            let mut i = start_idx as usize;
+            if i < sess.m.pos.weights.len() && sess.m.pos.weights[i].0 == *feat {
+                while i < sess.m.pos.weights.len() && sess.m.pos.weights[i].0 == *feat {
+                    let (_f, t, w) = &sess.m.pos.weights[i];
+                    *scores.entry(t.as_str()).or_insert(0.0) += value * w;
+                    i += 1;
+                }
             }
         }
     }
