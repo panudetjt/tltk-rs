@@ -144,6 +144,63 @@ export const FUNCTIONS = [
     placeholder: 'แมวกินปลาอยู่ในครัว\nหมูกินข้าวในถัง',
     tier: 1
   }
+,
+  {
+    id: 'wrd_len',
+    name: 'wrd_len',
+    thaiName: 'วัดขนาดความยาวคำ (Word Length Class)',
+    desc: 'จำแนกขนาดความยาวของคำเป็น s (<=10), m (>10 และ <=20), หรือ l (>20)',
+    placeholder: 'มหาวิทยาลัย',
+    tier: 1
+  },
+  {
+    id: 'match_engtext',
+    name: 'match_engtext',
+    thaiName: 'ตรวจสอบข้อความภาษาอังกฤษ/สัญลักษณ์ (Match English Text)',
+    desc: 'ตรวจสอบว่าข้อความประกอบด้วยตัวอักษรภาษาอังกฤษ ตัวเลข และสัญลักษณ์ ASCII ทั้งหมดหรือไม่',
+    placeholder: 'hello 123',
+    tier: 1
+  },
+  {
+    id: 'known',
+    name: 'known',
+    thaiName: 'ค้นหาคำที่มีในพจนานุกรม (Known Words)',
+    desc: 'กรองคำที่พบในพจนานุกรมภาษาไทย (ใส่คำคั่นด้วยเว้นวรรค)',
+    placeholder: 'แมว หมา คำไม่มีในดิก',
+    tier: 1
+  },
+  {
+    id: 'edits2',
+    name: 'edits2',
+    thaiName: 'สร้างคำแปรผันระยะห่าง 2 (Edits Distance 2)',
+    desc: 'สร้างรายการคำแปรผันจากการลบ สลับ แทนที่ และแทรกตัวอักษร 2 ครั้ง (Norvig edits2)',
+    placeholder: 'กก',
+    tier: 1
+  },
+  {
+    id: 'check_thaidict',
+    name: 'check_thaidict',
+    thaiName: 'ตรวจสอบคำในพจนานุกรม (Check Thaidict)',
+    desc: 'ตรวจสอบว่าคำที่ระบุมีอยู่ในพจนานุกรมไทยหรือไม่ คืนค่า 1 (พบ) หรือ 0 (ไม่พบ)',
+    placeholder: 'แมว',
+    tier: 1
+  },
+  {
+    id: 'reset_thaidict',
+    name: 'reset_thaidict',
+    thaiName: 'ล้างพจนานุกรม (Reset Thaidict)',
+    desc: 'ล้างข้อมูลคำศัพท์ทั้งหมดในพจนานุกรมที่โหลดอยู่',
+    placeholder: '',
+    tier: 1
+  },
+  {
+    id: 'read_thaidict',
+    name: 'read_thaidict',
+    thaiName: 'เพิ่มคำลงในพจนานุกรม (Read Thaidict)',
+    desc: 'อ่านและเพิ่มคำศัพท์เข้าสู่พจนานุกรม (ใส่คำบรรทัดละ 1 คำ)',
+    placeholder: 'คำใหม่1\nคำใหม่2',
+    tier: 1
+  }
 ];
 
 // Map for quick lookup by ID

@@ -11,6 +11,7 @@
 //!    - `nlp.wrd_len('12345678901')` -> `'m'`
 //!    - `nlp.wrd_len('12345678901234567890')` -> `'m'`
 //!    - `nlp.wrd_len('123456789012345678901')` -> `'l'`
+//!
 //!    Thresholds: `>20` -> `'l'`, `>10` -> `'m'`, else `'s'`.
 //!
 //! 2. `match_Engtext` (wire name `match_engtext`):
@@ -24,11 +25,13 @@
 //!    - `nlp.match_Engtext('user@test.com')` -> `True`
 //!    - `nlp.match_Engtext('100%')` -> `True`
 //!    - `nlp.match_Engtext('$10.50')` -> `True`
+//!
 //!    Matches ASCII printable characters (32..=126) except '!' (ASCII 33).
 //!
 //! 3. `known`:
 //!    - `nlp.known(['แมว', 'หมา', 'โน๊ตบุ๊ค123'])` -> `['แมว', 'หมา']`
 //!    - `nlp.known([])` -> `[]`
+//!
 //!    Input tokenization: whitespace-separated words (`text.split_whitespace()`).
 //!    Returns Python list representation matching `str(list)`.
 //!
@@ -37,9 +40,9 @@
 //!    - `len(nlp.edits2('ก'))` -> `75696`
 //!    - `len(nlp.edits2(''))` -> `17404`
 //!    - `nlp.edits2('ก')[:5]` -> `['ก', 'ข', 'ฃ', 'ค', 'ฅ']`
+//!
 //!    Input tokenization: first whitespace token (`text.split_whitespace().next().unwrap_or("")`).
 //!    Alphabet range: 76 letters from `0x0E01` ('ก') to `0x0E4C` ('์').
-//!
 //! 5. `thaidict` lifecycle and state sequence:
 //!    - Initial: stock dictionary contains 65,431 words (`len(TDICT) == 65431`).
 //!    - `check_thaidict('แมว')` -> `1`, `check_thaidict('custom_word')` -> `0`.

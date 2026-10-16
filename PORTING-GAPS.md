@@ -75,15 +75,18 @@ Data status: the word-tier lexicon TextAna reads (`word.pklz` → WT01) is
 | `th2ipa_all(inp)` | all-candidate IPA (vs the single best path `th2ipa` returns). |
 | `sylparse_all` | all-candidate variant of `sylparse` (which is ported, `g2p.rs:459`). |
 
-### 1e. thaidict management — MISSING
+### 1e. thaidict management + utils — ✅ wire (7) / N/A (1)
 
-| upstream | notes |
-|---|---|
-| `read_thaidict`, `read_thdict` | Rust loads `thdict.bin.gz` fixed at init; no API to (re)load from a file. |
-| `reset_thaidict`, `check_thaidict` | runtime add/remove/probe of the custom dictionary (spell path uses it). |
-| `known`, `edits2` | spell helpers (`edits1` is ported, `spell.rs:14`). |
-| `match_Engtext`, `wrd_len` | small utilities; Rust approximates with `starts_non_thai` / `is_eng_abbr`. |
-
+| upstream | status | notes |
+|---|---|---|
+| `read_thaidict` | ✅ wire | reads newline-separated words into TDICT custom set (`spell.rs:323`). |
+| `reset_thaidict` | ✅ wire | clears TDICT custom and stock entries (`spell.rs:318`). |
+| `check_thaidict` | ✅ wire | probes presence in TDICT, returns 1 or 0 (`spell.rs:328`). |
+| `known` | ✅ wire | filters words present in TDICT (`spell.rs:336`). |
+| `edits2` | ✅ wire | Norvig edits2 spelling candidates (edits1∘edits1, `spell.rs:260`). |
+| `match_Engtext` | ✅ wire | matches English/symbols ASCII 32..=126 except '!' (`spell.rs:247`). |
+| `wrd_len` | ✅ wire | classifies word length: >20 -> 'l', >10 -> 'm', else 's' (`spell.rs:235`). |
+| `read_thdict` | N/A | model-loader path for stock pickled dict; replaced by `thdict.bin.gz` in `Models::load`. |
 ### 1f. Model loaders — N/A
 
 `pos_load`, `ner_load`, `useg_model_load`, `useg_model_compress`,
