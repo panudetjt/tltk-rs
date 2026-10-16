@@ -199,11 +199,11 @@
 {"function": "ner_tag", "text": "การประชุมวิชาการจัดขึ้นเมื่อวันที่ 18 มิถุนายน 2566", "cutoff": "medium", "expected": "การประชุมวิชาการจัดขึ้นเมื่อวันที่ 18 มิถุนายน 2566 ", "ok": true}
 {"function": "ner_tag", "text": "นายสมชายซื้อของที่จังหวัดเชียงใหม่", "cutoff": "medium", "expected": "<NEp>นายสมชาย</NEp>ซื้อของที่<NEl>จังหวัดเชียงใหม่</NEl> ", "ok": true}
 {"function": "ner_tag", "text": "บริษัทไทยพาณิชย์จำกัด (มหาชน) เปิดสำนักงานใหม่", "cutoff": "medium", "expected": "<NEo>บริษัทไทยพาณิชย์จำกัด (มหาชน)</NEo> เปิดสำนักงานใหม่ ", "ok": true}
-{"function": "segment", "text": "แมวกินปลาทะเล", "cutoff": "medium", "expected": "node array from the pickle has an incompatible dtype:\n- expected: {'names': ['left_child', 'right_child', 'feature', 'threshold', 'impurity', 'n_node_samples', 'weighted_n_node_samples', 'missing_go_to_left'], 'formats': ['<i8', '<i8', '<i8', '<f8', '<f8', '<i8', '<f8', 'u1'], 'offsets': [0, 8, 16, 24, 32, 40, 48, 56], 'itemsize': 64}\n- got     : [('left_child', '<i8'), ('right_child', '<i8'), ('feature', '<i8'), ('threshold', '<f8'), ('impurity', '<f8'), ('n_node_samples', '<i8'), ('weighted_n_node_samples', '<f8')]", "ok": false}
-{"function": "segment", "text": "ผมชอบกินข้าวผัดกะเพราหมูสับ", "cutoff": "medium", "expected": "This Pipeline instance is not fitted yet. Call 'fit' with appropriate arguments before using this estimator.", "ok": false}
-{"function": "segment", "text": "กรุงเทพมหานครเป็นเมืองหลวงของประเทศไทย", "cutoff": "medium", "expected": "This Pipeline instance is not fitted yet. Call 'fit' with appropriate arguments before using this estimator.", "ok": false}
-{"function": "segment", "text": "วันนี้อากาศดีมาก ๆ", "cutoff": "medium", "expected": "This Pipeline instance is not fitted yet. Call 'fit' with appropriate arguments before using this estimator.", "ok": false}
-{"function": "segment", "text": "เขาไปตลาดซื้อผัก ผลไม้ และของชำ", "cutoff": "medium", "expected": "This Pipeline instance is not fitted yet. Call 'fit' with appropriate arguments before using this estimator.", "ok": false}
+{"function": "segment", "text": "แมวกินปลาทะเล", "cutoff": "medium", "expected": "แมว|กิน|ปลาทะเล|<s/><u/>", "ok": true}
+{"function": "segment", "text": "ผมชอบกินข้าวผัดกะเพราหมูสับ", "cutoff": "medium", "expected": "ผม|ชอบ|กิน|ข้าวผัดกะเพราหมู|สับ|<s/><u/>", "ok": true}
+{"function": "segment", "text": "กรุงเทพมหานครเป็นเมืองหลวงของประเทศไทย", "cutoff": "medium", "expected": "กรุงเทพมหานคร|เป็น|เมืองหลวง|ของ|ประเทศ|ไทย|<s/><u/>", "ok": true}
+{"function": "segment", "text": "วันนี้อากาศดีมาก ๆ", "cutoff": "medium", "expected": "วันนี้|อากาศ|ดี|มาก|ๆ|<s/><s/><u/>", "ok": true}
+{"function": "segment", "text": "เขาไปตลาดซื้อผัก ผลไม้ และของชำ", "cutoff": "medium", "expected": "เขา|ไป|ตลาด|ซื้อ|ผัก|<s/>|ผลไม้|<s/>|และ|ของชำ|<s/><u/>", "ok": true}
 {"function": "similar_words", "text": "กิน", "cutoff": "low", "expected": "รับประทาน, ทาน, เคี้ยว, รองท้อง, ดื่ม, กินน้ำ, คลุก, กินที่, หิว, ข้าวต้ม", "ok": true}
 {"function": "similar_words", "text": "กิน", "cutoff": "medium", "expected": "รับประทาน, ทาน, เคี้ยว, รองท้อง, ดื่ม, กินน้ำ, คลุก, กินที่, หิว, ข้าวต้ม", "ok": true}
 {"function": "similar_words", "text": "กิน", "cutoff": "high", "expected": "รับประทาน, ทาน, เคี้ยว", "ok": true}
@@ -215,9 +215,15 @@
 {"function": "similar_words", "text": "กรุงเทพ", "cutoff": "high", "expected": "คอนโด, เวตาล, พณ", "ok": true}
 {"function": "similarity", "text": "แมว หมา", "cutoff": "medium", "expected": "ความคล้ายระหว่าง 'แมว' กับ 'หมา' = 0.7433", "ok": true}
 {"function": "similarity", "text": "กิน ข้าว", "cutoff": "medium", "expected": "ความคล้ายระหว่าง 'กิน' กับ 'ข้าว' = 0.4130", "ok": true}
-{"function": "similarity", "text": "กรุงเทพ เชียงใหม่", "cutoff": "medium", "expected": "ความคล้ายระหว่าง 'กรุงเทพ' กับ 'เชียงใหม่' = 0.0000", "ok": true}
+{"function": "similarity", "text": "กรุงเทพ เชียงใหม่", "cutoff": "medium", "expected": "ไม่พบคำ 'เชียงใหม่' ใน word2vec model", "ok": true}
 {"function": "similarity", "text": "กิน กิน", "cutoff": "medium", "expected": "ความคล้ายระหว่าง 'กิน' กับ 'กิน' = 1.0000", "ok": true}
 {"function": "similarity", "text": "แมว แมว", "cutoff": "medium", "expected": "ความคล้ายระหว่าง 'แมว' กับ 'แมว' = 1.0000", "ok": true}
+{"function": "outofgroup", "text": "แมว หมา นก รถยนต์", "cutoff": "medium", "expected": "คำที่ไม่เข้าพวก: รถยนต์", "ok": true}
+{"function": "outofgroup", "text": "กิน ดื่ม นอน เดิน", "cutoff": "medium", "expected": "คำที่ไม่เข้าพวก: เดิน", "ok": true}
+{"function": "outofgroup", "text": "ข้าว น้ำ ผัก คอมพิวเตอร์", "cutoff": "medium", "expected": "คำที่ไม่เข้าพวก: คอมพิวเตอร์", "ok": true}
+{"function": "analogy", "text": "พ่อ แม่ ลูกชาย", "cutoff": "medium", "expected": "พ่อ : แม่ :: ลูกชาย : ลูกสาว (score: 0.8406)", "ok": true}
+{"function": "analogy", "text": "กิน ดื่ม นอน", "cutoff": "medium", "expected": "กิน : ดื่ม :: นอน : งีบ (score: 0.5476)", "ok": true}
+{"function": "analogy", "text": "กรุงเทพ เชียงใหม่ ขอนแก่น", "cutoff": "medium", "expected": "ไม่พบคำ 'เชียงใหม่' ใน word2vec model", "ok": true}
 {"function": "ner_tag", "text": "นายประยุทธ์ จันทร์โอชา เดินทางไปหารือ นางโอบาก ที่กรุงเทพฯ", "cutoff": "medium", "expected": "<NEp>นายประยุทธ์ จันทร์โอชา</NEp> เดินทางไปหารือ <NEp>นางโอบาก </NEp>ที่<NEl>กรุงเทพฯ</NEl> ", "ok": true}
 {"function": "ner_tag", "text": "บมจ. ปตท. เปิดเผยกำไรไตรมาสสาม", "cutoff": "medium", "expected": "<NEo>บมจ. ปตท.</NEo> เปิดเผยกำไรไตรมาสสาม ", "ok": true}
 {"function": "ner_tag", "text": "กทม. ประกาศเตือนประชาชนในพื้นที่ริมแม่น้ำเจ้าพระยา", "cutoff": "medium", "expected": "<NEo>กทม.</NEo> ประกาศเตือนประชาชนในพื้นที่ริมแม่น้ำเจ้าพระยา ", "ok": true}

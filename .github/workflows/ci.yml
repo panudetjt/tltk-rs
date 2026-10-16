@@ -45,10 +45,10 @@ jobs:
           out=$(cargo run -q -p tltk-verifier -- check corpus/corpus.jsonl golden/stichula.jsonl crates/tltk-core/data || true)
           echo "$out"; echo "$out" | grep -q "pass=241 fail=3 missing_golden=0"
 
-      - name: Parity — local python goldens (baseline 228/7/9)
+      - name: Parity — local python goldens (baseline 240/1/3)
         run: |
           out=$(cargo run -q -p tltk-verifier -- check corpus/corpus.jsonl golden/local_python.jsonl crates/tltk-core/data || true)
-          echo "$out"; echo "$out" | grep -q "pass=228 fail=7 missing_golden=9" 
+          echo "$out"; echo "$out" | grep -q "pass=240 fail=1 missing_golden=3"
 
       - name: Parity — extra oracle goldens (fail=0 required; grows as new functions gain oracle goldens)
         run: |

@@ -12,7 +12,7 @@ uv = "0.13.1"
 
 # ---- tasks: every generated/runnable artifact goes through here ------------
 [tasks.fetch-models]
-description = "download tltk==1.10 + TNCc5 w2v, convert edu/w2v blobs"
+description = "download tltk==1.11 + TNCc5 w2v, convert edu/w2v blobs"
 run = "bash scripts/fetch_models.sh"
 
 [tasks.build-web]
@@ -31,7 +31,7 @@ run = "cargo clippy --workspace --all-targets -- -D warnings && cargo test --wor
 description = "the three parity checks (stichula / local / extra) — exact baselines asserted"
 run = """
 out=$(cargo run -q -p tltk-verifier -- check corpus/corpus.jsonl golden/stichula.jsonl crates/tltk-core/data || true); echo "$out"; echo "$out" | grep -q "pass=241 fail=3 missing_golden=0" || exit 1
-out=$(cargo run -q -p tltk-verifier -- check corpus/corpus.jsonl golden/local_python.jsonl crates/tltk-core/data || true); echo "$out"; echo "$out" | grep -q "pass=228 fail=7 missing_golden=9" || exit 1
+out=$(cargo run -q -p tltk-verifier -- check corpus/corpus.jsonl golden/local_python.jsonl crates/tltk-core/data || true); echo "$out"; echo "$out" | grep -q "pass=240 fail=1 missing_golden=3" || exit 1
 out=$(cargo run -q -p tltk-verifier -- check corpus/corpus_extra.jsonl golden/local_python_extra.jsonl crates/tltk-core/data || true); echo "$out"; echo "$out" | grep -q "fail=0 missing_golden=0" || exit 1
 for c in corpus/corpus_fn_*.jsonl; do
   # corpus_fn_plots is disclosed-diff by design (hand-rolled renderer ≠
@@ -66,7 +66,7 @@ description = "release bench of tltk-core over the corpus (JSON to stdout)"
 run = "cargo run --release -q -p tltk-verifier -- bench corpus/corpus.jsonl crates/tltk-core/data --json"
 
 [tasks.bench-python]
-description = "bench the python oracle (tltk 1.10, era-correct venv) over the corpus"
+description = "bench the python oracle (tltk 1.11, era-correct venv) over the corpus"
 run = """
 bash scripts/setup_segment_oracle.sh --check >/dev/null 2>&1 || bash scripts/setup_segment_oracle.sh; \
 "$HOME/.local/share/tltk-rs/venv-segment-oracle/bin/python" scripts/bench_python.py corpus/corpus.jsonl --json
@@ -96,7 +96,7 @@ description = "era-correct py3.9 segment-oracle env (uv-managed)"
 run = "bash scripts/setup_segment_oracle.sh"
 
 [tasks.upstream-check]
-description = "PyPI newer tltk? diff vs ported 1.10 + re-port checklist"
+description = "PyPI newer tltk? diff vs ported 1.11 + re-port checklist"
 run = "bash scripts/upstream_check.sh"
 
 [tasks.release]

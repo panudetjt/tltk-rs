@@ -1,11 +1,13 @@
 //! TextAna — port of nlp.TextAna / WordAna / SylAna / ARF.
 //!
-//! The ONLY function where tltk 1.11 differs from 1.10 (LdvTTR uses ×100, not
-//! ×1000), so this module is 1.11-semantics while the rest of the crate stays
-//! 1.10. Only the default surface is ported: TextOption="par",
-//! WordOption="colloc", UDParse="none" — the validator/toolbox call shape
-//! (MaltParser UD depth is out of scope, SynDepth stays 0.0 like upstream's
-//! default path).
+//! Carries tltk 1.11 semantics: 1.11's only functional change vs 1.10 is
+//! LdvTTR ×1000 → ×100 inside TextAna, and the TextClass/txt2feat feature
+//! path reads that same field through TextAna, so one value feeds both.
+//! The crate tracks 1.11 since the 2026-10-17 repin (before that only
+//! textana was 1.11-semantics while the rest stayed 1.10). Only the default
+//! surface is ported: TextOption="par", WordOption="colloc", UDParse="none"
+//! — the validator/toolbox call shape (MaltParser UD depth is out of scope,
+//! SynDepth stays 0.0 like upstream's default path).
 //!
 //! Wire format: the txtfeats dict serialized like
 //! `json.dumps(txtfeats, ensure_ascii=False, sort_keys=True, separators=(",", ":"))`
@@ -727,9 +729,9 @@ pub(crate) fn compute_textana(sess: &mut Session, alltext: &str) -> Result<TextA
     if f.des_tot_w == 0 {
         return Err(stat_err("division by zero")); // upstream: ZeroDivisionError at LdvTTR
     }
-    // tltk 1.11: LdvTTR = DesTotT * 100 / DesTotW (1.10 had * 1000)
+    // tltk 1.11: LdvTTR = DesTotT * 100 / DesTotW (1.10 had * 1000); the
+    // TextClass/txt2feat path reads this same field via TextAna's return
     let ldv_ttr = ((des_tot_t * 100) as f64) / f.des_tot_w as f64;
-    let ldv_ttr_1000 = ((des_tot_t * 1000) as f64) / f.des_tot_w as f64;
 
     let totw = f.des_tot_w as f64;
     let ratio = |c: i64| -> String { py_float_repr(((c * 1000) as f64) / totw) };
@@ -782,7 +784,7 @@ pub(crate) fn compute_textana(sess: &mut Session, alltext: &str) -> Result<TextA
     features.insert("DesTotW", f.des_tot_w as f64);
     features.insert("DesWrdL", match des_wrd_l { PyNum::Int(i) => i as f64, PyNum::Float(f) => f });
     features.insert("DesWrdLd", des_wrd_ld);
-    features.insert("LdvTTR", ldv_ttr_1000); // 1.10 semantics for textclass/txt2feat
+    features.insert("LdvTTR", ldv_ttr);
     features.insert("SynDepth", syn_depth);
 
     let ratio_f = |c: i64| -> f64 { ((c * 1000) as f64) / totw };
