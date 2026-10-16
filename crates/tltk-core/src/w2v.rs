@@ -957,11 +957,24 @@ fn blit_text(
     store: &GlyphStore,
 ) {
     let mut cx = baseline_x;
-    for c in text.chars() {
+    let mut prev_adv = 0i32;
+    let chars: Vec<char> = text.chars().collect();
+    for (ci, &c) in chars.iter().enumerate() {
         let g = store.get(c);
         if g.w > 0 && g.h > 0 {
-            let gx = cx + g.off_x as i32;
-            let gy = baseline_y + g.off_y as i32;
+            // Combining marks (adv == 0) anchor to the ORIGIN of the base glyph
+            // (the pen position before its advance), not the pen after it.
+            let anchor_x = if g.adv == 0 { cx - prev_adv } else { cx };
+            let gx = anchor_x + g.off_x as i32;
+            // Thai: a tone mark directly before SARA AM (ำ) stacks ABOVE the
+            // nikhahit circle — raise it by the sara-am top height (matplotlib
+            // does the same via its combining handling; matches the goldens).
+            let mut gy = baseline_y + g.off_y as i32;
+            let is_tone = matches!(c, '\u{0E48}'..='\u{0E4B}');
+            let next_is_sara_am = chars.get(ci + 1) == Some(&'\u{0E33}');
+            if is_tone && next_is_sara_am {
+                gy -= g.h as i32 + 1;
+            }
             for dy in 0..g.h as i32 {
                 for dx in 0..g.w as i32 {
                     let px = gx + dx;
@@ -983,6 +996,7 @@ fn blit_text(
                 }
             }
         }
+        prev_adv = g.adv as i32;
         cx += g.adv as i32;
     }
 }
@@ -1142,5 +1156,42 @@ mod tests {
         assert_eq!(&png_rice[16..20], &942u32.to_be_bytes());
         assert_eq!(&png_rice[20..24], &144u32.to_be_bytes());
         let _ = std::fs::write("/tmp/rust_rice.png", &png_rice);
+    }
+
+    #[test]
+    fn text_preview_hard_words() {
+        use crate::embedded::with_models;
+        let manifest_dir = env!("CARGO_MANIFEST_DIR");
+        let mut extra = std::collections::HashMap::new();
+        for name in ["edu.bin.gz", "w2v.bin.gz"] {
+            let p = std::path::Path::new(manifest_dir).join("data").join(name);
+            extra.insert(name.to_string(), std::fs::read(&p).unwrap());
+        }
+        let tltk = crate::Tltk::new(with_models(&extra));
+        let mut sess = tltk.session();
+        // stacked marks (ที่ ชั้น), below-vowel+tone (สู่), tone+SARA AM (น้ำ), clusters (จันทร์)
+        let out = sess.process("plotwords", "ที่ ชั้น สู่ น้ำ ปี จันทร์", "medium").unwrap();
+        assert!(out.starts_with("IMAGE:"), "got: {}", &out[..60.min(out.len())]);
+        fn b64_d(s: &str) -> Vec<u8> {
+            let m = |c: char| match c {
+                'A'..='Z' => c as u8 - b'A',
+                'a'..='z' => c as u8 - b'a' + 26,
+                '0'..='9' => c as u8 - b'0' + 52,
+                '+' => 62,
+                '/' => 63,
+                _ => 0,
+            };
+            let b: Vec<u8> = s.chars().filter(|&c| c != '=').map(m).collect();
+            b.chunks(4).flat_map(|c| {
+                let n = c.iter().fold(0u32, |a, x| a << 6 | *x as u32)
+                    << (6 * (4 - c.len()) % 24);
+                (0..c.len().saturating_sub(1))
+                    .map(|i| (n >> (16 - 8 * i)) as u8)
+                    .collect::<Vec<_>>()
+            }).collect()
+        }
+        let png = b64_d(&out[6..]);
+        assert_eq!(&png[16..20], &942u32.to_be_bytes());
+        std::fs::write("/tmp/text_preview.png", &png).unwrap();
     }
 }

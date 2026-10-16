@@ -68,12 +68,14 @@ def main():
         list(range(0x0E50, 0x0E5A))
     )
     
-    baseline_temp = 23
+    baseline_temp = 5 + font.getmetrics()[0]  # true baseline: origin + font ascent
     for cp in codepoints:
         ch = chr(cp)
-        temp = Image.new("L", (40, 40), 0)
+        temp = Image.new("L", (48, 56), 0)
         d = ImageDraw.Draw(temp)
-        d.text((5, 5), ch, font=font, fill=255)
+        # anchor="ls": x=origin, y=BASELINE — off_x/off_y then measure true
+        # bearings, including how high the font designs each combining mark.
+        d.text((5, baseline_temp), ch, font=font, fill=255, anchor="ls")
         bbox = temp.getbbox()
         
         comb = is_combining(cp)
