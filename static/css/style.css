@@ -89,37 +89,6 @@ body {
   color: var(--text-muted);
 }
 
-.runtime-badges {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 4px 10px;
-  border-radius: 9999px;
-  font-size: 0.8rem;
-  font-weight: 600;
-  line-height: 1;
-}
-
-.badge-neutral {
-  background-color: var(--border-color);
-  color: var(--text-main);
-}
-
-.badge-info {
-  background-color: var(--primary-light);
-  color: var(--primary);
-}
-
-.badge-success {
-  background-color: var(--success-bg);
-  color: var(--success);
-}
-
 /* Progress & Alert Bars */
 .progress-section {
   background-color: var(--surface-color);
@@ -416,25 +385,6 @@ body {
 }
 
 /* Footer */
-.app-footer {
-  border-top: 1px solid var(--border-color);
-  padding-top: 16px;
-  font-size: 0.85rem;
-  color: var(--text-muted);
-  text-align: center;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.about-line strong {
-  color: var(--text-main);
-}
-
-.arch-line {
-  font-size: 0.775rem;
-}
-
 /* Utility */
 .hidden {
   display: none !important;

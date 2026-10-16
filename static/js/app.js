@@ -145,8 +145,6 @@ const FUNCTION_MAP = new Map(FUNCTIONS.map(f => [f.id, f]));
 const manager = new TltkManager();
 
 // DOM Elements
-const flavorBadge = document.getElementById('flavorBadge');
-const modelTierBadge = document.getElementById('modelTierBadge');
 const functionSelect = document.getElementById('functionSelect');
 const functionDesc = document.getElementById('functionDesc');
 const tierTag = document.getElementById('tierTag');
@@ -172,38 +170,6 @@ const copyBtn = document.getElementById('copyBtn');
 const imageOutputWrapper = document.getElementById('imageOutputWrapper');
 const outputImage = document.getElementById('outputImage');
 const downloadImgLink = document.getElementById('downloadImgLink');
-
-/**
- * Updates UI to reflect current SIMD probe resolution.
- */
-function updateFlavorBadge() {
-  const flavor = selectFlavor();
-  if (flavor === 'simd') {
-    flavorBadge.textContent = 'WASM SIMD128';
-    flavorBadge.className = 'badge badge-success';
-    flavorBadge.title = 'ระบบรองรับ WebAssembly 128-bit SIMD (โหมดประสิทธิภาพสูง)';
-  } else {
-    flavorBadge.textContent = 'WASM Scalar';
-    flavorBadge.className = 'badge badge-neutral';
-    flavorBadge.title = 'ทำงานในโหมด Scalar มาตรฐาน';
-  }
-}
-
-/**
- * Updates the Model Tier Badge in header.
- */
-function updateModelBadge() {
-  if (manager.tier2Loaded) {
-    modelTierBadge.textContent = 'โมเดล: Tier 1 + 2 พร้อม';
-    modelTierBadge.className = 'badge badge-success';
-  } else if (manager.tier1Loaded) {
-    modelTierBadge.textContent = 'โมเดล: Tier 1 พร้อม';
-    modelTierBadge.className = 'badge badge-info';
-  } else {
-    modelTierBadge.textContent = 'โมเดล: รอเรียกใช้งาน';
-    modelTierBadge.className = 'badge badge-neutral';
-  }
-}
 
 /**
  * Initializes the function dropdown.
@@ -295,7 +261,6 @@ async function runProcess() {
 
     // Hide progress bar on successful complete
     progressSection.classList.add('hidden');
-    updateModelBadge();
 
     execStats.textContent = `ประมวลผลสำเร็จใน ${elapsed} ms`;
 
@@ -313,7 +278,6 @@ async function runProcess() {
     }
   } catch (err) {
     progressSection.classList.add('hidden');
-    updateModelBadge();
 
     // Check if failure was caused by Tier 2
     if (TIER2_FUNCTIONS.has(fnId) && manager.tier2Error) {
@@ -389,6 +353,4 @@ inputText.addEventListener('keydown', (e) => {
 });
 
 // Initial Setup
-updateFlavorBadge();
 initFunctionSelect();
-updateModelBadge();

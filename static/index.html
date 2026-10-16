@@ -11,11 +11,7 @@
     <header class="app-header">
       <div class="header-content">
         <h1>TLTK Web Toolbox</h1>
-        <p class="subtitle">เครื่องมือประมวลผลภาษาไทยทำงานบนเบราว์เซอร์ 100% (Client-Only / Zero Server)</p>
-      </div>
-      <div class="runtime-badges">
-        <span id="flavorBadge" class="badge badge-neutral" title="เอนจินประมวลผล WebAssembly">กำลังตรวจสอบเอนจิน...</span>
-        <span id="modelTierBadge" class="badge badge-info" title="สถานะโมเดล">โมเดล: รอเรียกใช้งาน</span>
+        <p class="subtitle">เครื่องมือประมวลผลภาษาไทย</p>
       </div>
     </header>
 
@@ -106,29 +102,17 @@
         <!-- Image Output View (plotwords) -->
         <div id="imageOutputWrapper" class="output-wrapper hidden">
           <div class="output-header">
-            <span class="output-title">ผลลัพธ์แผนภาพ PCA (Scatter Plot):</span>
+            <span class="output-title">ผลลัพธ์แผนภาพค่าเวกเตอร์รายมิติ:</span>
             <a id="downloadImgLink" class="btn btn-secondary btn-sm" download="tltk-plotwords.png">
               ดาวน์โหลดรูปภาพ (PNG)
             </a>
           </div>
           <div class="image-box">
-            <img id="outputImage" alt="TLTK Word Vector PCA Plot">
+            <img id="outputImage" alt="แผนภาพค่าเวกเตอร์คำรายมิติ">
           </div>
         </div>
       </section>
     </main>
-
-    <!-- About & Attribution Footer -->
-    <footer class="app-footer">
-      <p class="about-line">
-        โมเดลและขั้นตอนวิธีพัฒนาโดย <strong>TLTK / จุฬาลงกรณ์มหาวิทยาลัย (Chulalongkorn University)</strong>
-        — ผลลัพธ์ตรงกันแบบ byte-identical กับ tltk 1.10
-      </p>
-      <p class="arch-line">
-        รันด้วย WebAssembly ฝั่งไคลเอนต์ล้วนโดยไม่มีการส่งข้อมูลกลับเซิร์ฟเวอร์
-        | รองรับ SIMD128 อัตโนมัติพร้อมโหมดสำรอง Scalar
-      </p>
-    </footer>
   </div>
 
   <script type="module" src="js/app.js"></script>
