@@ -27,7 +27,7 @@ use std::collections::{BTreeMap, HashMap, HashSet};
 /// CPython `repr(float)` / `json.dumps` float form: shortest round-trip digits,
 /// fixed notation while -4 < decpt <= 16, else scientific with sign and >=2
 /// exponent digits. Integral floats carry ".0" (the ADD_DOT_0 repr flag).
-fn py_float_repr(v: f64) -> String {
+pub(crate) fn py_float_repr(v: f64) -> String {
     if v.is_nan() {
         return "NaN".to_string();
     }
@@ -477,6 +477,15 @@ fn stat_err(msg: &str) -> ProcessError {
 /// The textana dispatch body. `text` is analysed with upstream's default
 /// options; see the module doc for the wire format and crash parity.
 pub fn textana(sess: &mut Session, alltext: &str) -> Result<String, ProcessError> {
+    compute_textana(sess, alltext).map(|o| o.json)
+}
+
+pub(crate) struct TextAnaOutput {
+    pub json: String,
+    pub features: HashMap<&'static str, f64>,
+}
+
+pub(crate) fn compute_textana(sess: &mut Session, alltext: &str) -> Result<TextAnaOutput, ProcessError> {
     if sess.m.wordtier.is_none() {
         return Err(stat_err("wordtier.bin missing (textana requires it)"));
     }
@@ -746,6 +755,88 @@ pub fn textana(sess: &mut Session, alltext: &str) -> Result<String, ProcessError
 
     // sorted-key JSON emit (Python: json.dumps(..., sort_keys=True,
     // separators=(",", ":")))
+    let mut features: HashMap<&'static str, f64> = HashMap::with_capacity(96);
+    features.insert("CrfCNL", crf_cnl);
+    features.insert("CrfCTL", crf_ctl);
+    features.insert("CrfCWL", crf_cwl);
+    features.insert("DesChC", des_ch_c as f64);
+    features.insert("DesClusterC", f.des_cluster_c as f64);
+    features.insert("DesCorrFinalC", f.des_corr_final_c as f64);
+    features.insert("DesCorrToneC", f.des_corr_tone_c as f64);
+    features.insert("DesDoubVowelC", f.des_doub_vowel_c as f64);
+    features.insert("DesEduC", des_edu_c as f64);
+    features.insert("DesEduL", match des_edu_l { PyNum::Int(i) => i as f64, PyNum::Float(f) => f });
+    features.insert("DesEduLd", des_edu_ld);
+    features.insert("DesInCorrFinalC", f.des_in_corr_final_c as f64);
+    features.insert("DesInCorrToneC", f.des_in_corr_tone_c as f64);
+    features.insert("DesKaranC", f.des_karan_c as f64);
+    features.insert("DesLeadC", f.des_lead_c as f64);
+    features.insert("DesNElC", f.des_nel_c as f64);
+    features.insert("DesNEoC", f.des_neo_c as f64);
+    features.insert("DesNEpC", f.des_nep_c as f64);
+    features.insert("DesPC", des_pc as f64);
+    features.insert("DesPL", match des_pl { PyNum::Int(i) => i as f64, PyNum::Float(f) => f });
+    features.insert("DesSpC", des_sp_c as f64);
+    features.insert("DesTotT", des_tot_t as f64);
+    features.insert("DesTotW", f.des_tot_w as f64);
+    features.insert("DesWrdL", match des_wrd_l { PyNum::Int(i) => i as f64, PyNum::Float(f) => f });
+    features.insert("DesWrdLd", des_wrd_ld);
+    features.insert("LdvTTR", ldv_ttr);
+    features.insert("SynDepth", syn_depth);
+
+    let ratio_f = |c: i64| -> f64 { ((c * 1000) as f64) / totw };
+    features.insert("WrdADJ", ratio_f(f.wrd_adj));
+    features.insert("WrdADP", ratio_f(f.wrd_adp));
+    features.insert("WrdADV", ratio_f(f.wrd_adv));
+    features.insert("WrdAUX", ratio_f(f.wrd_aux));
+    features.insert("WrdArf", wrd_arf_sum / tott);
+    features.insert("WrdBasicM", ratio_f(f.wrd_basic_m));
+    features.insert("WrdBasicT", ratio_f(f.wrd_basic_t));
+    features.insert("WrdC", ratio_f(f.wrd_c));
+    features.insert("WrdCCONJ", ratio_f(f.wrd_cconj));
+    features.insert("WrdCF", ratio_f(f.wrd_cf));
+    features.insert("WrdCluster", ratio_f(f.des_cluster_c));
+    features.insert("WrdCorrFinal", ratio_f(f.des_corr_final_c));
+    features.insert("WrdCorrTone", ratio_f(f.des_corr_tone_c));
+    features.insert("WrdDET", ratio_f(f.wrd_det));
+    features.insert("WrdDoubVowel", ratio_f(f.des_doub_vowel_c));
+    features.insert("WrdF", ratio_f(f.wrd_f));
+    features.insert("WrdFrmComp", ratio_f(f.wrd_frm_comp));
+    features.insert("WrdFrmSing", ratio_f(f.wrd_frm_sing));
+    features.insert("WrdFrmTran", ratio_f(f.wrd_frm_tran));
+    features.insert("WrdINTJ", ratio_f(f.wrd_intj));
+    features.insert("WrdInCorrFinal", ratio_f(f.des_in_corr_final_c));
+    features.insert("WrdInCorrTone", ratio_f(f.des_in_corr_tone_c));
+    features.insert("WrdKaran", ratio_f(f.des_karan_c));
+    features.insert("WrdLead", ratio_f(f.des_lead_c));
+    features.insert("WrdNEl", ratio_f(f.des_nel_c));
+    features.insert("WrdNEo", ratio_f(f.des_neo_c));
+    features.insert("WrdNEp", ratio_f(f.des_nep_c));
+    features.insert("WrdNeg", ratio_f(f.des_neg_c));
+    features.insert("WrdNOUN", ratio_f(f.wrd_noun));
+    features.insert("WrdNUM", ratio_f(f.wrd_num));
+    features.insert("WrdPART", ratio_f(f.wrd_part));
+    features.insert("WrdPRON", ratio_f(f.wrd_pron));
+    features.insert("WrdPROPN", ratio_f(f.wrd_propn));
+    features.insert("WrdPUNCT", ratio_f(f.wrd_punct));
+    features.insert("WrdSCONJ", ratio_f(f.wrd_sconj));
+    features.insert("WrdSYM", ratio_f(f.wrd_sym));
+    features.insert("WrdSemOpaq", ratio_f(f.wrd_sem_opaq));
+    features.insert("WrdSemSemi", ratio_f(f.wrd_sem_semi));
+    features.insert("WrdSemSimp", ratio_f(f.wrd_sem_simp));
+    features.insert("WrdSemTran", ratio_f(f.wrd_sem_tran));
+    features.insert("WrdTfidf", tfidf_sum / tott);
+    features.insert("WrdTNCt1", ratio_f(f.des_tnct1c));
+    features.insert("WrdTNCt2", ratio_f(f.des_tnct2c));
+    features.insert("WrdTNCt3", ratio_f(f.des_tnct3c));
+    features.insert("WrdTNCt4", ratio_f(f.des_tnct4c));
+    features.insert("WrdTTC1", ratio_f(f.des_ttc1));
+    features.insert("WrdTTC2", ratio_f(f.des_ttc2));
+    features.insert("WrdTTC3", ratio_f(f.des_ttc3));
+    features.insert("WrdTTC4", ratio_f(f.des_ttc4));
+    features.insert("WrdTncDisp", tnc_disp_sum / tott);
+    features.insert("WrdTtcDisp", ttc_disp_sum / tott);
+    features.insert("WrdVERB", ratio_f(f.wrd_verb));
     let mut parts: Vec<(&str, String)> = Vec::with_capacity(96);
     parts.push(("CrfCNL", py_float_repr(crf_cnl)));
     parts.push(("CrfCTL", py_float_repr(crf_ctl)));
@@ -772,36 +863,47 @@ pub fn textana(sess: &mut Session, alltext: &str) -> Result<String, ProcessError
     // only when non-zero — CrfCVL additionally never gets the /no_Crf pass
     if f.crf_cvl > 0 {
         parts.push(("CrfCVL", f.crf_cvl.to_string()));
+        features.insert("CrfCVL", f.crf_cvl as f64);
     }
     if f.des_symb_c > 0 {
         parts.push(("DesSymbC", f.des_symb_c.to_string()));
+        features.insert("DesSymbC", f.des_symb_c as f64);
     }
     if f.des_tnct1c > 0 {
         parts.push(("DesTNCt1C", f.des_tnct1c.to_string()));
+        features.insert("DesTNCt1C", f.des_tnct1c as f64);
     }
     if f.des_tnct2c > 0 {
         parts.push(("DesTNCt2C", f.des_tnct2c.to_string()));
+        features.insert("DesTNCt2C", f.des_tnct2c as f64);
     }
     if f.des_tnct3c > 0 {
         parts.push(("DesTNCt3C", f.des_tnct3c.to_string()));
+        features.insert("DesTNCt3C", f.des_tnct3c as f64);
     }
     if f.des_tnct4c > 0 {
         parts.push(("DesTNCt4C", f.des_tnct4c.to_string()));
+        features.insert("DesTNCt4C", f.des_tnct4c as f64);
     }
     if f.des_ttc1 > 0 {
         parts.push(("DesTTC1", f.des_ttc1.to_string()));
+        features.insert("DesTTC1", f.des_ttc1 as f64);
     }
     if f.des_ttc2 > 0 {
         parts.push(("DesTTC2", f.des_ttc2.to_string()));
+        features.insert("DesTTC2", f.des_ttc2 as f64);
     }
     if f.des_ttc3 > 0 {
         parts.push(("DesTTC3", f.des_ttc3.to_string()));
+        features.insert("DesTTC3", f.des_ttc3 as f64);
     }
     if f.des_ttc4 > 0 {
         parts.push(("DesTTC4", f.des_ttc4.to_string()));
+        features.insert("DesTTC4", f.des_ttc4 as f64);
     }
     if f.des_neg_c > 0 {
         parts.push(("DesNegC", f.des_neg_c.to_string()));
+        features.insert("DesNegC", f.des_neg_c as f64);
     }
     parts.push(("DesTotT", des_tot_t.to_string()));
     parts.push(("DesTotW", f.des_tot_w.to_string()));
@@ -902,7 +1004,7 @@ pub fn textana(sess: &mut Session, alltext: &str) -> Result<String, ProcessError
         out.push_str(v);
     }
     out.push('}');
-    Ok(out)
+    Ok(TextAnaOutput { json: out, features })
 }
 
 #[cfg(test)]

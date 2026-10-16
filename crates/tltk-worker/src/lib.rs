@@ -33,6 +33,7 @@ async fn router(req: Request, env: Env) -> Result<Response> {
                 "th2ipa","th2roman","word_segment","syl_segment","segment","g2p",
                 "th2read","spell_variants","spoonerism","pos_tag","ner_tag",
                 "similar_words","similarity","outofgroup","analogy","plotwords",
+                "textana","text_class","txt2feat",
                 "chunk","tnc_tag",
                 "th2ipa_all","sylparse_all",
                 "wrd_len","match_engtext","known","edits2","check_thaidict","reset_thaidict","read_thaidict"
