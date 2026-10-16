@@ -1,9 +1,13 @@
 # AGENTS.md — tltk-rs
 
-Rust rewrite of TLTK (Thai NLP toolkit) — 17 functions: the 16 validator
-functions **byte-identical to tltk 1.10**, plus `textana` at **tltk 1.11
-semantics** (1.11's only functional change is inside TextAna: LdvTTR ×100).
-The verifier corpus decides parity, not opinions.
+Rust rewrite of TLTK (Thai NLP toolkit) — **38 wire functions**: the 16
+validator functions **byte-identical to tltk 1.10**, `textana` at **tltk 1.11
+semantics** (1.11's only functional change is inside TextAna: LdvTTR ×100),
+and 21 more of upstream's inference surface ported per `PORTING-GAPS.md`
+(pipelines, tree helpers, translit variants, dict/spell/text utils, w2v
+extras, RF text classifier — byte-identical to the Python oracle except the
+disclosed-diff plot renderers). The verifier corpus decides parity, not
+opinions.
 
 ## Environment: mise.toml is the single source of truth
 
@@ -62,10 +66,13 @@ Port surface is **1.10 + textana@1.11** — the 16 validator functions track
 the version app.stichula.org runs; `textana` carries 1.11 semantics (its only
 functional change: LdvTTR ×100 — and upstream's "single-paragraph now works"
 release note was never implemented in code: crash cases stay `ok=false`
-goldens). `mise run upstream-check` prints PyPI release notes + a file/def
+goldens); everything else ported tracks 1.10 oracle behaviour byte-for-byte.
+`mise run upstream-check` prints PyPI release notes + a file/def
 diff of latest vs the ported pin + the re-port checklist. As of 2026-10:
-nothing functional in 1.11 remains unported (expanding the surface →
-PORTING-GAPS.md §4).
+nothing functional in 1.11 remains unported; the only upstream names still
+absent are data/JVM-blocked (TNC.3g n-grams + mm/nbest segmenters,
+MaltParser, similar_edu — PORTING-GAPS.md §1a/§1c/§2a/§2b carries the
+evidence).
 Upstream truth for behaviour questions and any port: the Python oracle at
 `~/.cache/tltk-rs/tltk-1.10-pkg/tltk/` (`nlp.py` + `corpus.py` are the
 entire upstream API; `mise run oracle-setup` creates the era-correct env).

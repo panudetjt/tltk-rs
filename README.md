@@ -20,7 +20,7 @@ corpus.jsonl ──▶ scripts/capture_stichula.py ──▶ golden/stichula.jso
 
 | path | what |
 |---|---|
-| `crates/tltk-core/` | the library: all 17 functions, no network, no async |
+| `crates/tltk-core/` | the library: all 38 wire functions, no network, no async |
 | `crates/tltk-worker/` | Cloudflare Worker (workers-rs) — thin HTTP shell over the core |
 | `crates/tltk-verifier/` | parity harness (`run` / `check` / `selftest`) |
 | `tools/convert/` | Python scripts: pickle → portable binary models, local oracle |
@@ -35,14 +35,22 @@ which never touches HTTP so it can also be used as a plain library.
 
 `POST /process` with `{"text": "...", "function": "...", "cutoff": "medium"}` →
 `{"success": true, "function": ..., "input": ..., "result": "..."}` (or
-`success: false` + `error`). Functions: `th2ipa`, `th2roman`, `word_segment`,
-`syl_segment`, `segment`, `g2p`, `th2read`, `spell_variants`, `spoonerism`,
-`pos_tag`, `ner_tag`, `similar_words`, `similarity`, `outofgroup`, `analogy`,
-`plotwords`, `textana`, `text_class`, `txt2feat`. The 16 stichula functions are byte-identical to
-tltk 1.10; `textana` carries tltk 1.11 semantics (1.11's only functional
-change is inside TextAna: LdvTTR ×100) with python-oracle goldens instead of
-validator goldens — see [PORTING-GAPS.md](PORTING-GAPS.md) for the full
-inventory of what is (and isn't) ported.
+`success: false` + `error`). 38 functions: the 16 validator names
+(`th2ipa`, `th2roman`, `word_segment`, `syl_segment`, `segment`, `g2p`,
+`th2read`, `spell_variants`, `spoonerism`, `pos_tag`, `ner_tag`,
+`similar_words`, `similarity`, `outofgroup`, `analogy`, `plotwords`) plus
+`textana`, `text_class`, `txt2feat`, `chunk`, `tnc_tag`, `th2ipa_all`,
+`sylparse_all`, `wrd_len`, `match_engtext`, `known`, `edits2`,
+`check_thaidict`, `reset_thaidict`, `read_thaidict`, `dg_print`, `dg_save`,
+`print_dtree`, `scan_dtree`, `get_tree_depth`, `tree_max_depth`, `w2v`,
+`compound`, `w2v_diffplot`, `w2v_dimplot`, `w2v_compare_color`. The 16
+stichula functions are byte-identical to tltk 1.10; `textana` carries tltk
+1.11 semantics (1.11's only functional change is inside TextAna: LdvTTR
+×100) with python-oracle goldens instead of validator goldens; the rest are
+byte-identical to the 1.10 Python oracle (the three `w2v_*plot` renderers
+are disclosed-diff PNG, like `plotwords`) — see
+[PORTING-GAPS.md](PORTING-GAPS.md) for the full inventory, including what
+stays blocked (TNC.3g data, MaltParser's JVM).
 
 ## Model pipeline
 

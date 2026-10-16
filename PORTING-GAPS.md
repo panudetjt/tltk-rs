@@ -33,15 +33,27 @@ Status legend:
 |---|---|
 | wire (16) | `word_segment`, `syl_segment`, `spell_variants`, `pos_tag`, `segment`, `ner_tag`, `g2p`, `th2ipa`, `th2roman`, `th2read`, `spoonerism`, `textana`, `text_class`, `txt2feat`, `th2ipa_all`, `sylparse_all` |
 | internal (7) | `initial` (→ `Models::load`), `spell_candidates` (`spell.rs:53`), `pos_tag_wordlist` (folded into `pos.rs::pos_tag`), `ner` (`ner.rs:133`), `SylAna` + `WordAna` (`textana.rs`), `TranformData*` (`textclass.rs`) |
-| MISSING (8) | see below |
+| MISSING (10) | see below — 7 BLOCKED-DATA (TNC.3g), 2 BLOCKED-JVM (MaltParser), 1 derivable (`TextAna2json`) |
 
-### 1a. Segmentation variants — MISSING
+### 1a. Segmentation variants — BLOCKED-DATA
 
 | upstream | notes |
 |---|---|
 | `word_segment_mm` / `wordseg_mm` | the `method="mm"` maximal-matching segmenter. Rust `word_segment` is colloc-only (`wordseg.rs:12`). Needs the mm chart (`chartparse_mm`) + `BigramProb`. |
 | `word_segment_nbest` | n-best segmentation; needs `wordsegmm_bn` + `chartparse_mm_bn` + `chartparse_ngram`. |
 | `chartparse_mm`, `chartparse_ngram`, `chartparse_mm_bn`, `BigramProb` | the charts backing the two above. (`chart_parse` in `g2p.rs:727` is the g2p-side chart — a different animal, already ported.) |
+
+**Why blocked (2026-10-16):** `BigramProb` calls `tltk.corpus.bigram`, which
+queries the **TNC.3g** word-level n-gram pickle (`download_TNC3g`,
+corpus.py:52). The upstream URL
+`https://www.arts.chula.ac.th/ling/wp-content/uploads/TNC.3g` returns
+**HTTP 403** (also under a browser UA + referer; the `~ling/contents/Upload/`
+path variant 404s; archive.org was fully offline the same day) — the same
+WAF block that hits `download_TNCd2v` (§2b `similar_edu`). When the data
+becomes obtainable, these plus all of §2a port in one wave: converter for
+the pickle → `TNC3g_load` counts → the n-gram queries → `BigramProb` → the
+three chart-backed segmenters (every other primitive they touch is already
+ported).
 
 ### 1b. Analysis layer — TextAna family ported, the rest MISSING
 
@@ -65,7 +77,7 @@ Data status: the word-tier lexicon (`word.pklz` → WT01) and the two RF classif
 |---|---|
 | ~~`chunk(txt)`~~ | ✅ wire (one-shot sylseg → EDU → wordseg → POS → NER). |
 | ~~`TNC_tag`~~ | ✅ wire (XML tagging transcription + POS for corpus prep). |
-| `MaltParser`, `MaltParser_wordlist` | UD dependency parsing, model `thamalt.mco`. Hardest single item: transition-based parser + model conversion. `TextAna(UDParse="Malt")` depends on it. |
+| `MaltParser`, `MaltParser_wordlist` | UD dependency parsing, model `thamalt.mco`. **BLOCKED-JVM (2026-10-16):** upstream itself shells out to Java — `from nltk.parse import malt` + `mp = malt.MaltParser(parser_dirname=Maltparser_Path, ...)`; without the MaltParser jar installed upstream PRINTS an install instruction and `sys.exit()`s, i.e. there is no self-contained Python behaviour to mirror. A faithful port means embedding a JVM or reimplementing MaltParser's transition-based parser bit-for-bit against JVM floats — excluded like the training tooling (§2c). `thamalt.mco` ships in the wheel, so the model file is not the blocker; the engine is. |
 | ~~`print_dtree`, `dg_print`, `dg_save`, `scan_dtree`, `get_tree_depth`, `tree_max_depth`~~ | ✅ wire (`dtree.rs`) — consume the parse-RESULT dict (`dg_save` shape), NOT MaltParser; oracle goldens from nltk `DependencyGraph` via `ref_dump`. Cycle edge cases: `RecursionError` mirrored; pure-cycle `print_dtree` prints nothing upstream (nothing reachable from node 0). |
 
 ### 1d. Transliteration variants — wire
@@ -108,15 +120,16 @@ artifacts instead of lazy pickle loads).
 | MISSING (inference) | see below |
 | OUT OF SCOPE | see below |
 
-### 2a. Word-level n-gram statistics — MISSING
+### 2a. Word-level n-gram statistics — BLOCKED-DATA (same TNC.3g block as §1a)
 
 `unigram`, `bigram`, `trigram`, `collocates`, `compute_colloc2`,
 `TNC_load`/`trigram_load`/`TNC3g_load`.
 
 These query **TNC3g** (word-level n-grams from the Thai National Corpus),
 which is a separate upstream download (`download_TNC3g`), not shipped inside
-the tltk package — convert.py doesn't touch it today. Note `sylseg.rs` has
-syllable-level stats (needed by the segmenter); this is a different dataset.
+the tltk package — convert.py doesn't touch it today; the URL 403s
+(evidence in §1a). Note `sylseg.rs` has syllable-level stats (needed by the
+segmenter); this is a different dataset.
 
 ### 2b. w2v extras — PARTIAL (`w2v` + `compound` + 3 plot renderers ✅ wire 2026-10-16)
 
