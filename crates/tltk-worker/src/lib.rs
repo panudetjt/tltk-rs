@@ -34,7 +34,8 @@ async fn router(req: Request, env: Env) -> Result<Response> {
                 "th2read","spell_variants","spoonerism","pos_tag","ner_tag",
                 "similar_words","similarity","outofgroup","analogy","plotwords",
                 "chunk","tnc_tag",
-                "th2ipa_all","sylparse_all"
+                "th2ipa_all","sylparse_all",
+                "wrd_len","match_engtext","known","edits2","check_thaidict","reset_thaidict","read_thaidict"
             ],
         })),
         _ => Response::error("Not Found", 404),

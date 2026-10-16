@@ -1,13 +1,78 @@
-//! Spelling: edits1/candidates (Norvig), spell_variants, spoonerism.
+//! Spelling, text utilities, and thaidict management.
+//!
+//! # Oracle Probes (tltk 1.10)
+//!
+//! Probed on Python 3.9 oracle (`~/.cache/tltk-rs/tltk-1.10-pkg/tltk/nlp.py`):
+//!
+//! 1. `wrd_len`:
+//!    - `nlp.wrd_len('')` -> `'s'`
+//!    - `nlp.wrd_len('แมว')` -> `'s'`
+//!    - `nlp.wrd_len('1234567890')` -> `'s'`
+//!    - `nlp.wrd_len('12345678901')` -> `'m'`
+//!    - `nlp.wrd_len('12345678901234567890')` -> `'m'`
+//!    - `nlp.wrd_len('123456789012345678901')` -> `'l'`
+//!
+//!    Thresholds: `>20` -> `'l'`, `>10` -> `'m'`, else `'s'`.
+//!
+//! 2. `match_Engtext` (wire name `match_engtext`):
+//!    - `nlp.match_Engtext('hello 123')` -> `True`
+//!    - `nlp.match_Engtext('hello world!')` -> `False` (ASCII 33 '!' excluded)
+//!    - `nlp.match_Engtext('แมว')` -> `False`
+//!    - `nlp.match_Engtext('helloแมว')` -> `False`
+//!    - `nlp.match_Engtext('')` -> `False`
+//!    - `nlp.match_Engtext('   ')` -> `True`
+//!    - `nlp.match_Engtext('a-b_c')` -> `True`
+//!    - `nlp.match_Engtext('user@test.com')` -> `True`
+//!    - `nlp.match_Engtext('100%')` -> `True`
+//!    - `nlp.match_Engtext('$10.50')` -> `True`
+//!
+//!    Matches ASCII printable characters (32..=126) except '!' (ASCII 33).
+//!
+//! 3. `known`:
+//!    - `nlp.known(['แมว', 'หมา', 'โน๊ตบุ๊ค123'])` -> `['แมว', 'หมา']`
+//!    - `nlp.known([])` -> `[]`
+//!
+//!    Input tokenization: whitespace-separated words (`text.split_whitespace()`).
+//!    Returns Python list representation matching `str(list)`.
+//!
+//! 4. `edits2` (size probe):
+//!    - `len(nlp.edits2('กก'))` -> `181493`
+//!    - `len(nlp.edits2('ก'))` -> `75696`
+//!    - `len(nlp.edits2(''))` -> `17404`
+//!    - `nlp.edits2('ก')[:5]` -> `['ก', 'ข', 'ฃ', 'ค', 'ฅ']`
+//!
+//!    Input tokenization: first whitespace token (`text.split_whitespace().next().unwrap_or("")`).
+//!    Alphabet range: 76 letters from `0x0E01` ('ก') to `0x0E4C` ('์').
+//! 5. `thaidict` lifecycle and state sequence:
+//!    - Initial: stock dictionary contains 65,431 words (`len(TDICT) == 65431`).
+//!    - `check_thaidict('แมว')` -> `1`, `check_thaidict('custom_word')` -> `0`.
+//!    - `reset_thaidict()` -> `1`; clears TDICT (`len(TDICT) == 0`).
+//!    - After reset: `check_thaidict('แมว')` -> `0`, `known(['แมว'])` -> `[]`.
+//!    - `read_thaidict` with content `"แมว\ncustom_word\ndot.word\n"` -> `1`.
+//!      Words are stripped with `rstrip()`, `.` is escaped to `\.`, inserted into TDICT.
+//!    - After read: `len(TDICT) == 3`.
+//!      `check_thaidict('แมว')` -> `1`
+//!      `check_thaidict('custom_word')` -> `1`
+//!      `check_thaidict('dot.word')` -> `0`
+//!      `check_thaidict('dot\\.word')` -> `1`
+//!      `known(['แมว', 'dot\\.word', 'หมา'])` -> `['แมว', 'dot\\.word']`.
+//!
+//! Wire return values:
+//! - `wrd_len`: `"s"`, `"m"`, or `"l"`
+//! - `match_engtext`: `"True"` or `"False"`
+//! - `check_thaidict`: `"1"` or `"0"`
+//! - `reset_thaidict`: `"1"`
+//! - `read_thaidict`: `"1"`
+//! - `known`, `edits2`: Python list repr format (`['...']`)
 
 use crate::g2p::pcompose;
 use crate::prelude::*;
 use crate::translit::phone_to_thai;
 use crate::Session;
 
-/// Thai alphabet used by edits1: chr(0x0E01)..=chr(0x0E4E).
+/// Thai alphabet used by edits1: chr(0x0E01)..=chr(0x0E4C) ('ก'..='์').
 fn letters() -> impl Iterator<Item = char> {
-    (0x0E01u32..=0x0E4E).filter_map(char::from_u32)
+    (0x0E01u32..=0x0E4C).filter_map(char::from_u32)
 }
 
 /// Port of edits1 — order: deletes, transposes, replaces, inserts.
@@ -166,4 +231,171 @@ pub fn spoonerism(sess: &mut Session, word: &str) -> Result<String, crate::Proce
         }
     }
     Ok(py_list_repr(&output))
+}
+
+/// Size classification of word length:
+/// > 20 -> 'l', > 10 -> 'm', else -> 's'.
+pub fn wrd_len(word: &str) -> &'static str {
+    let len = word.chars().count();
+    if len > 20 {
+        "l"
+    } else if len > 10 {
+        "m"
+    } else {
+        "s"
+    }
+}
+
+/// Port of match_Engtext regex: matches ASCII printable (32..=126) except '!' (ASCII 33).
+pub fn is_engtext(text: &str) -> bool {
+    !text.is_empty() && text.bytes().all(|b| (32..=126).contains(&b) && b != b'!')
+}
+
+pub fn match_engtext(text: &str) -> &'static str {
+    if is_engtext(text) {
+        "True"
+    } else {
+        "False"
+    }
+}
+
+/// Port of edits2 = edits1∘edits1.
+pub fn edits2(word: &str) -> Vec<String> {
+    let e1 = edits1(word);
+    let mut out = Vec::new();
+    for w in e1 {
+        out.extend(edits1(&w));
+    }
+    out
+}
+
+fn py_str_repr_tltk(s: &str) -> String {
+    let has_sq = s.contains('\'');
+    let has_dq = s.contains('"');
+    let (quote, esc) = if has_sq && !has_dq { ('"', true) } else { ('\'', has_sq) };
+    let mut out = String::new();
+    out.push(quote);
+    for c in s.chars() {
+        match c {
+            '\\' => out.push_str("\\\\"),
+            '\n' => out.push_str("\\n"),
+            '\r' => out.push_str("\\r"),
+            '\t' => out.push_str("\\t"),
+            '\u{0E3B}' => out.push_str(r"\u0e3b"),
+            '\u{0E3C}' => out.push_str(r"\u0e3c"),
+            '\u{0E3D}' => out.push_str(r"\u0e3d"),
+            '\u{0E3E}' => out.push_str(r"\u0e3e"),
+            c if esc && c == quote => {
+                out.push('\\');
+                out.push(c);
+            }
+            c => out.push(c),
+        }
+    }
+    out.push(quote);
+    out
+}
+
+fn py_list_repr_tltk(items: &[String]) -> String {
+    let mut out = String::from("[");
+    for (i, s) in items.iter().enumerate() {
+        if i > 0 {
+            out.push_str(", ");
+        }
+        out.push_str(&py_str_repr_tltk(s));
+    }
+    out.push(']');
+    out
+}
+
+pub fn wire_edits2(text: &str) -> String {
+    let w = text.split_whitespace().next().unwrap_or("");
+    let res = edits2(w);
+    py_list_repr_tltk(&res)
+}
+#[derive(Default)]
+pub struct ThaidictState {
+    pub cleared: bool,
+    pub custom: std::collections::HashSet<String>,
+}
+
+impl ThaidictState {
+    pub fn reset(&mut self) {
+        self.cleared = true;
+        self.custom.clear();
+    }
+
+    pub fn read(&mut self, text: &str) {
+        for line in text.lines() {
+            let w = line.trim_end();
+            let escaped = w.replace('.', r"\.");
+            self.custom.insert(escaped);
+        }
+    }
+
+    pub fn contains(&self, m: &crate::model::Models, word: &str) -> bool {
+        if self.custom.contains(word) {
+            return true;
+        }
+        if !self.cleared && m.thdict.contains(word) {
+            return true;
+        }
+        false
+    }
+}
+
+static THAIDICT_STATE: std::sync::LazyLock<std::sync::RwLock<ThaidictState>> =
+    std::sync::LazyLock::new(|| {
+        std::sync::RwLock::new(ThaidictState {
+            cleared: false,
+            custom: std::collections::HashSet::new(),
+        })
+    });
+
+fn state_read<'a>() -> std::sync::RwLockReadGuard<'a, ThaidictState> {
+    THAIDICT_STATE.read().unwrap_or_else(std::sync::PoisonError::into_inner)
+}
+
+fn state_write<'a>() -> std::sync::RwLockWriteGuard<'a, ThaidictState> {
+    THAIDICT_STATE.write().unwrap_or_else(std::sync::PoisonError::into_inner)
+}
+
+pub fn reset_thaidict() -> &'static str {
+    state_write().reset();
+    "1"
+}
+
+pub fn read_thaidict(text: &str) -> &'static str {
+    state_write().read(text);
+    "1"
+}
+
+pub fn check_thaidict(sess: &Session, word: &str) -> &'static str {
+    if state_read().contains(sess.m, word) {
+        "1"
+    } else {
+        "0"
+    }
+}
+
+pub fn known(sess: &Session, words: &[String]) -> Vec<String> {
+    let state = state_read();
+    words
+        .iter()
+        .filter(|w| state.contains(sess.m, w))
+        .cloned()
+        .collect()
+}
+
+pub fn wire_known(sess: &Session, text: &str) -> String {
+    let words: Vec<String> = text.split_whitespace().map(|s| s.to_string()).collect();
+    let k = known(sess, &words);
+    py_list_repr_tltk(&k)
+}
+
+#[cfg(test)]
+pub fn reset_thaidict_to_stock() {
+    let mut state = state_write();
+    state.cleared = false;
+    state.custom.clear();
 }

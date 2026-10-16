@@ -1,0 +1,24 @@
+{"function": "wrd_len", "text": "แมว"}
+{"function": "wrd_len", "text": "12345678901"}
+{"function": "wrd_len", "text": "123456789012345678901"}
+{"function": "match_engtext", "text": "hello 123"}
+{"function": "match_engtext", "text": "hello world!"}
+{"function": "match_engtext", "text": "สวัสดี hello"}
+{"function": "edits2", "text": "ก"}
+{"function": "edits2", "text": "กก"}
+{"function": "check_thaidict", "text": "แมว"}
+{"function": "check_thaidict", "text": "คำพิเศษยังไม่เพิ่ม"}
+{"function": "known", "text": "แมว ช้าง คำพิเศษยังไม่เพิ่ม"}
+{"function": "known", "text": ""}
+{"function": "reset_thaidict", "text": "reset1"}
+{"function": "check_thaidict", "text": "ช้าง"}
+{"function": "known", "text": "ช้าง หมา"}
+{"function": "read_thaidict", "text": "คำพิเศษหนึ่ง\nคำพิเศษสอง\nword.with.dots\n"}
+{"function": "check_thaidict", "text": "คำพิเศษหนึ่ง"}
+{"function": "check_thaidict", "text": "word.with.dots"}
+{"function": "check_thaidict", "text": "word\\.with\\.dots"}
+{"function": "known", "text": "คำพิเศษหนึ่ง word\\.with\\.dots เสือ"}
+{"function": "read_thaidict", "text": "คำพิเศษสาม\n"}
+{"function": "check_thaidict", "text": "คำพิเศษสาม"}
+{"function": "reset_thaidict", "text": "reset2"}
+{"function": "check_thaidict", "text": "คำพิเศษสอง"}

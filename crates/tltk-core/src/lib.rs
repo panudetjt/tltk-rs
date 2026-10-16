@@ -107,6 +107,13 @@ impl<'a> Session<'a> {
             "tnc_tag" => self.tnc_tag(text),
             "th2ipa_all" => Ok(self.th2ipa_all(text)),
             "sylparse_all" => Ok(self.sylparse_all(text)),
+            "wrd_len" => Ok(spell::wrd_len(text).to_string()),
+            "match_engtext" => Ok(spell::match_engtext(text).to_string()),
+            "known" => Ok(spell::wire_known(self, text)),
+            "edits2" => Ok(spell::wire_edits2(text)),
+            "check_thaidict" => Ok(spell::check_thaidict(self, text).to_string()),
+            "reset_thaidict" => Ok(spell::reset_thaidict().to_string()),
+            "read_thaidict" => Ok(spell::read_thaidict(text).to_string()),
             other => Err(ProcessError(format!("Unknown function: {}", other))),
         }
     }

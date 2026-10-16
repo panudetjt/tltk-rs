@@ -91,6 +91,30 @@ elif mode == "corpus":
                 # sorted keys, compact separators — see crates/tltk-core/src/textana.rs
                 r = json.dumps(nlp.TextAna(text), ensure_ascii=False, sort_keys=True,
                                separators=(",", ":"))
+            elif fn == "wrd_len":
+                r = nlp.wrd_len(text)
+            elif fn == "match_engtext":
+                r = str(nlp.match_Engtext(text))
+            elif fn == "known":
+                r = str(nlp.known(text.split()))
+            elif fn == "edits2":
+                words = text.split()
+                w = words[0] if words else ""
+                r = str(nlp.edits2(w))
+            elif fn == "check_thaidict":
+                r = str(nlp.check_thaidict(text))
+            elif fn == "reset_thaidict":
+                r = str(nlp.reset_thaidict())
+            elif fn == "read_thaidict":
+                import tempfile
+                with tempfile.NamedTemporaryFile("w+", delete=False, encoding="utf-8") as tf:
+                    tf.write(text)
+                    tmp_name = tf.name
+                try:
+                    r = str(nlp.read_thaidict(tmp_name))
+                finally:
+                    if os.path.exists(tmp_name):
+                        os.remove(tmp_name)
             elif fn == "similar_words":
                 c = {"low": 0.3, "medium": 0.5, "high": 0.7}[cutoff]
                 from tltk import corpus
