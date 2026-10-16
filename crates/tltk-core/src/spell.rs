@@ -229,3 +229,170 @@ pub fn spoonerism(sess: &mut Session, word: &str) -> Result<String, crate::Proce
     }
     Ok(py_list_repr(&output))
 }
+
+/// Size classification of word length:
+/// > 20 -> 'l', > 10 -> 'm', else -> 's'.
+pub fn wrd_len(word: &str) -> &'static str {
+    let len = word.chars().count();
+    if len > 20 {
+        "l"
+    } else if len > 10 {
+        "m"
+    } else {
+        "s"
+    }
+}
+
+/// Port of match_Engtext regex: matches ASCII printable (32..=126) except '!' (ASCII 33).
+pub fn is_engtext(text: &str) -> bool {
+    !text.is_empty() && text.bytes().all(|b| (32..=126).contains(&b) && b != b'!')
+}
+
+pub fn match_engtext(text: &str) -> &'static str {
+    if is_engtext(text) {
+        "True"
+    } else {
+        "False"
+    }
+}
+
+/// Port of edits2 = edits1∘edits1.
+pub fn edits2(word: &str) -> Vec<String> {
+    let e1 = edits1(word);
+    let mut out = Vec::new();
+    for w in e1 {
+        out.extend(edits1(&w));
+    }
+    out
+}
+
+fn py_str_repr_tltk(s: &str) -> String {
+    let has_sq = s.contains('\'');
+    let has_dq = s.contains('"');
+    let (quote, esc) = if has_sq && !has_dq { ('"', true) } else { ('\'', has_sq) };
+    let mut out = String::new();
+    out.push(quote);
+    for c in s.chars() {
+        match c {
+            '\\' => out.push_str("\\\\"),
+            '\n' => out.push_str("\\n"),
+            '\r' => out.push_str("\\r"),
+            '\t' => out.push_str("\\t"),
+            '\u{0E3B}' => out.push_str(r"\u0e3b"),
+            '\u{0E3C}' => out.push_str(r"\u0e3c"),
+            '\u{0E3D}' => out.push_str(r"\u0e3d"),
+            '\u{0E3E}' => out.push_str(r"\u0e3e"),
+            c if esc && c == quote => {
+                out.push('\\');
+                out.push(c);
+            }
+            c => out.push(c),
+        }
+    }
+    out.push(quote);
+    out
+}
+
+fn py_list_repr_tltk(items: &[String]) -> String {
+    let mut out = String::from("[");
+    for (i, s) in items.iter().enumerate() {
+        if i > 0 {
+            out.push_str(", ");
+        }
+        out.push_str(&py_str_repr_tltk(s));
+    }
+    out.push(']');
+    out
+}
+
+pub fn wire_edits2(text: &str) -> String {
+    let w = text.split_whitespace().next().unwrap_or("");
+    let res = edits2(w);
+    py_list_repr_tltk(&res)
+}
+#[derive(Default)]
+pub struct ThaidictState {
+    pub cleared: bool,
+    pub custom: std::collections::HashSet<String>,
+}
+
+impl ThaidictState {
+    pub fn reset(&mut self) {
+        self.cleared = true;
+        self.custom.clear();
+    }
+
+    pub fn read(&mut self, text: &str) {
+        for line in text.lines() {
+            let w = line.trim_end();
+            let escaped = w.replace('.', r"\.");
+            self.custom.insert(escaped);
+        }
+    }
+
+    pub fn contains(&self, m: &crate::model::Models, word: &str) -> bool {
+        if self.custom.contains(word) {
+            return true;
+        }
+        if !self.cleared && m.thdict.contains(word) {
+            return true;
+        }
+        false
+    }
+}
+
+static THAIDICT_STATE: std::sync::LazyLock<std::sync::RwLock<ThaidictState>> =
+    std::sync::LazyLock::new(|| {
+        std::sync::RwLock::new(ThaidictState {
+            cleared: false,
+            custom: std::collections::HashSet::new(),
+        })
+    });
+
+fn state_read<'a>() -> std::sync::RwLockReadGuard<'a, ThaidictState> {
+    THAIDICT_STATE.read().unwrap_or_else(std::sync::PoisonError::into_inner)
+}
+
+fn state_write<'a>() -> std::sync::RwLockWriteGuard<'a, ThaidictState> {
+    THAIDICT_STATE.write().unwrap_or_else(std::sync::PoisonError::into_inner)
+}
+
+pub fn reset_thaidict() -> &'static str {
+    state_write().reset();
+    "1"
+}
+
+pub fn read_thaidict(text: &str) -> &'static str {
+    state_write().read(text);
+    "1"
+}
+
+pub fn check_thaidict(sess: &Session, word: &str) -> &'static str {
+    if state_read().contains(sess.m, word) {
+        "1"
+    } else {
+        "0"
+    }
+}
+
+pub fn known(sess: &Session, words: &[String]) -> Vec<String> {
+    let state = state_read();
+    words
+        .iter()
+        .filter(|w| state.contains(sess.m, w))
+        .cloned()
+        .collect()
+}
+
+pub fn wire_known(sess: &Session, text: &str) -> String {
+    let words: Vec<String> = text.split_whitespace().map(|s| s.to_string()).collect();
+    let k = known(sess, &words);
+    py_list_repr_tltk(&k)
+}
+
+#[cfg(test)]
+pub fn reset_thaidict_to_stock() {
+    let mut state = state_write();
+    state.cleared = false;
+    state.custom.clear();
+}

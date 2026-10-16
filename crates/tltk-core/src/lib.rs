@@ -102,6 +102,13 @@ impl<'a> Session<'a> {
             "analogy" => self.wire_analogy(text),
             "plotwords" => self.wire_plotwords(text),
             "textana" => textana::textana(self, text),
+            "wrd_len" => Ok(spell::wrd_len(text).to_string()),
+            "match_engtext" => Ok(spell::match_engtext(text).to_string()),
+            "known" => Ok(spell::wire_known(self, text)),
+            "edits2" => Ok(spell::wire_edits2(text)),
+            "check_thaidict" => Ok(spell::check_thaidict(self, text).to_string()),
+            "reset_thaidict" => Ok(spell::reset_thaidict().to_string()),
+            "read_thaidict" => Ok(spell::read_thaidict(text).to_string()),
             other => Err(ProcessError(format!("Unknown function: {}", other))),
         }
     }
