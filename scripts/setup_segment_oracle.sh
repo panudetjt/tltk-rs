@@ -58,7 +58,7 @@ verify_env() {
 
     "$py_bin" - <<'EOF'
 import importlib.metadata
-import numpy, sklearn, pandas, gensim, nltk, requests
+import numpy, sklearn, pandas, gensim, nltk, requests, matplotlib
 assert tuple(int(x) for x in numpy.__version__.split(".")[:2]) < (1, 24)
 assert sklearn.__version__ == "1.1.1"
 assert pandas.__version__.startswith("1.5.")
@@ -92,7 +92,7 @@ uv venv --quiet --python 3.9 "$VENV_DIR"
 echo "==> Installing pinned era-correct deps"
 uv pip install --quiet --python "$VENV_DIR/bin/python" \
     "numpy<1.24" "scipy<1.13" "scikit-learn==1.1.1" "pandas==1.5.3" \
-    "gensim==4.3.2" "nltk" "sklearn-crfsuite" "requests"
+    "gensim==4.3.2" "nltk" "sklearn-crfsuite" "requests" "matplotlib"
 
 fetch_tltk_ref
 verify_env

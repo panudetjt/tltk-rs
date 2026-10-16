@@ -8,7 +8,7 @@
 //!   verifier selftest <models-dir>               a few known sanity checks
 //!   verifier bench <corpus.jsonl> <models-dir> [--warmup W] [--repeat N] [--json] [--long] [--mem]
 //!       measure per-function and optional long-input pass latency and memory
-//!   verifier mem <corpus.jsonl> <models-dir>
+//!   verifier mem <corpus.jsonl> <models-dir> [--json]
 //!       measure memory usage (after load, after run, peak)
 //!
 //! corpus.jsonl rows: {"function": "...", "text": "...", "cutoff": "medium"(opt)}
@@ -71,6 +71,114 @@ fn read_proc_status() -> Option<ProcMemory> {
         .or_else(|_| std::env::var("PROC_STATUS_PATH"))
         .unwrap_or_else(|_| "/proc/self/status".to_string());
     read_proc_status_path(&path)
+}
+
+/// RFC3339 UTC from unix seconds (no chrono dep; Howard Hinnant's civil algo).
+fn rfc3339_utc(secs: u64) -> String {
+    let days = secs / 86400;
+    let rem = secs % 86400;
+    let (h, m, s) = (rem / 3600, (rem % 3600) / 60, rem % 60);
+    let z = days as i64 + 719_468;
+    let era = if z >= 0 { z } else { z - 146_096 } / 146_097;
+    let doe = z - era * 146_097;
+    let yoe = (doe - doe / 1460 + doe / 36_524 - doe / 146_096) / 365;
+    let y = yoe + era * 400;
+    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+    let mp = (5 * doy + 2) / 153;
+    let d = doy - (153 * mp + 2) / 5 + 1;
+    let mth = if mp < 10 { mp + 3 } else { mp - 9 };
+    let y = if mth <= 2 { y + 1 } else { y };
+    format!("{y:04}-{mth:02}-{d:02}T{h:02}:{m:02}:{s:02}Z")
+}
+
+fn rfc3339_utc_now() -> String {
+    let secs = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
+    rfc3339_utc(secs)
+}
+
+fn first_line(path: &str) -> Option<String> {
+    let s = std::fs::read_to_string(path).ok()?;
+    s.lines().next().map(|l| l.trim().to_string())
+}
+
+/// Short HEAD sha + dirty-file count, so every report names the exact source
+/// state it measured (None outside a git repo / when git is unavailable).
+fn git_state() -> Option<String> {
+    let out = std::process::Command::new("git")
+        .args(["rev-parse", "--short", "HEAD"])
+        .output()
+        .ok()?;
+    if !out.status.success() {
+        return None;
+    }
+    let sha = String::from_utf8_lossy(&out.stdout).trim().to_string();
+    if sha.is_empty() {
+        return None;
+    }
+    let dirty = std::process::Command::new("git")
+        .args(["status", "--porcelain"])
+        .output()
+        .ok()
+        .map(|o| String::from_utf8_lossy(&o.stdout).lines().count())
+        .unwrap_or(0);
+    Some(if dirty > 0 {
+        format!("{sha}+{dirty} dirty files")
+    } else {
+        sha
+    })
+}
+
+/// System runtime context recorded alongside every bench/mem report, so the
+/// numbers carry their own measurement conditions (best-effort: fields degrade
+/// to null off-Linux rather than failing the run).
+fn environment_block() -> serde_json::Value {
+    let cpu_model = std::fs::read_to_string("/proc/cpuinfo")
+        .ok()
+        .and_then(|s| {
+            s.lines()
+                .find(|l| l.starts_with("model name"))
+                .and_then(|l| l.split(':').next_back())
+                .map(|m| m.trim().to_string())
+        });
+    let mem_total_kb = std::fs::read_to_string("/proc/meminfo")
+        .ok()
+        .and_then(|s| {
+            s.lines().find(|l| l.starts_with("MemTotal:")).and_then(|l| {
+                l.split_whitespace()
+                    .nth(1)
+                    .and_then(|v| v.parse::<u64>().ok())
+            })
+        });
+    let load_avg = std::fs::read_to_string("/proc/loadavg")
+        .ok()
+        .and_then(|s| {
+            let vals: Vec<f64> = s
+                .split_whitespace()
+                .take(3)
+                .filter_map(|v| v.parse().ok())
+                .collect();
+            (vals.len() == 3).then_some(vals)
+        });
+    let cores = std::thread::available_parallelism()
+        .map(|n| n.get())
+        .unwrap_or(0);
+
+    serde_json::json!({
+        "timestamp_utc": rfc3339_utc_now(),
+        "host": first_line("/proc/sys/kernel/hostname"),
+        "os": std::env::consts::OS,
+        "kernel": first_line("/proc/sys/kernel/osrelease"),
+        "cpu_model": cpu_model,
+        "cpu_cores_available": cores,
+        "mem_total_kb": mem_total_kb,
+        "load_avg_1m_5m_15m": load_avg,
+        "git": git_state(),
+        "rustc": env!("VERIFIER_RUSTC_VERSION"),
+        "profile": if cfg!(debug_assertions) { "debug" } else { "release" },
+    })
 }
 
 fn load_cases(path: &str) -> Vec<Case> {
@@ -137,13 +245,17 @@ fn print_help() {
     println!("  verifier check <corpus.jsonl> <golden.jsonl> <models-dir>");
     println!("  verifier selftest <models-dir>");
     println!("  verifier bench <corpus.jsonl> <models-dir> [--warmup W] [--repeat N] [--json] [--long] [--mem]");
-    println!("  verifier mem <corpus.jsonl> <models-dir>\n");
+    println!("  verifier mem <corpus.jsonl> <models-dir> [--json]\n");
     println!("Bench options:");
     println!("  --warmup W    Number of warmup passes before timing (default: 3)");
     println!("  --repeat N    Number of timed passes (default: 10)");
     println!("  --json        Output benchmark results as JSON to stdout; human table to stderr");
     println!("  --long        Include synthetic long input benchmarks (~200, ~500, ~800 chars)");
-    println!("  --mem         Measure memory usage via /proc/self/status at each phase\n");
+    println!("  --mem         Measure memory usage via /proc/self/status at each phase");
+    println!("  mem --json    Same, JSON (includes the recorded environment block)\n");
+    println!("Every bench/mem run prints an environment block (timestamp, host, kernel,");
+    println!("CPU, cores, RAM, load average, rustc, profile) so recorded numbers carry");
+    println!("their measurement conditions.");
     println!("Note on fresh Session per pass:");
     println!("  TLTK sessions accumulate colloc-bump state; fresh-per-pass keeps runs comparable.");
 }
@@ -347,6 +459,19 @@ fn cmd_bench(args: &[String]) {
     let corpus_path = &positional[0];
     let models_dir = &positional[1];
 
+    let environment = environment_block();
+    {
+        let env_line = format!(
+            "# env: {}",
+            serde_json::to_string(&environment).unwrap_or_default()
+        );
+        if json {
+            eprintln!("{env_line}");
+        } else {
+            println!("{env_line}");
+        }
+    }
+
     let cases = load_cases(corpus_path);
     let tltk = load_models(models_dir);
     let mem_after_load = if mem { read_proc_status() } else { None };
@@ -546,6 +671,7 @@ fn cmd_bench(args: &[String]) {
             "total_median_us_per_pass": total_median,
             "repeat": repeat,
             "warmup": warmup,
+            "environment": environment,
         });
 
         if mem {
@@ -577,16 +703,29 @@ fn cmd_bench(args: &[String]) {
 }
 
 fn cmd_mem(args: &[String]) {
-    if args.len() >= 3 && (args[2] == "--help" || args[2] == "-h") {
-        println!("usage: verifier mem <corpus.jsonl> <models-dir>");
-        return;
+    let mut json = false;
+    let mut positional = Vec::new();
+    for a in &args[2..] {
+        match a.as_str() {
+            "--help" | "-h" => {
+                println!("usage: verifier mem <corpus.jsonl> <models-dir> [--json]");
+                return;
+            }
+            "--json" => json = true,
+            other => positional.push(other.to_string()),
+        }
     }
-    if args.len() < 4 {
-        eprintln!("usage: verifier mem <corpus.jsonl> <models-dir>");
+    if positional.len() < 2 {
+        eprintln!("usage: verifier mem <corpus.jsonl> <models-dir> [--json]");
         std::process::exit(2);
     }
-    let cases = load_cases(&args[2]);
-    let tltk = load_models(&args[3]);
+    let environment = environment_block();
+    let env_line = format!(
+        "# env: {}",
+        serde_json::to_string(&environment).unwrap_or_default()
+    );
+    let cases = load_cases(&positional[0]);
+    let tltk = load_models(&positional[1]);
     let mem_after_load = read_proc_status();
 
     let mut sess = tltk.session();
@@ -596,7 +735,35 @@ fn cmd_mem(args: &[String]) {
     }
     let mem_after_run = read_proc_status();
 
-    match (mem_after_load, mem_after_run) {
+    let phase = (mem_after_load, mem_after_run);
+    if json {
+        let (after_load_kb, after_run_kb, vmhwm_kb) = match phase {
+            (Some(load), Some(run)) => (
+                serde_json::json!(load.vm_rss_kb),
+                serde_json::json!(run.vm_rss_kb),
+                serde_json::json!(run.vm_hwm_kb.max(load.vm_hwm_kb)),
+            ),
+            _ => (
+                serde_json::Value::Null,
+                serde_json::Value::Null,
+                serde_json::Value::Null,
+            ),
+        };
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&serde_json::json!({
+                "environment": environment,
+                "after_load_kb": after_load_kb,
+                "after_run_kb": after_run_kb,
+                "vmhwm_kb": vmhwm_kb,
+            }))
+            .unwrap()
+        );
+        return;
+    }
+
+    println!("{env_line}");
+    match phase {
         (Some(load), Some(run)) => {
             println!(
                 "mem: after_load_kb={} after_run_kb={} vmhwm_kb={}",
@@ -642,6 +809,14 @@ mod tests {
         let parsed = parse_proc_status(fake_proc.as_bytes()).unwrap();
         assert_eq!(parsed.vm_rss_kb, 258304);
         assert_eq!(parsed.vm_hwm_kb, 270140);
+    }
+
+    #[test]
+    fn test_rfc3339_utc() {
+        assert_eq!(rfc3339_utc(0), "1970-01-01T00:00:00Z");
+        assert_eq!(rfc3339_utc(1_700_000_000), "2023-11-14T22:13:20Z");
+        // 2026-10-16T12:00:00Z (bench-cut era)
+        assert_eq!(rfc3339_utc(1_792_152_000), "2026-10-16T12:00:00Z");
     }
 
     #[test]

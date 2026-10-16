@@ -47,8 +47,26 @@ node scripts/node_parity.mjs --wasm-dir web/wasm/simd --corpus corpus/corpus.jso
 """
 
 [tasks.bench]
-description = "release bench, JSON to stdout (compare with --compare)"
+description = "release bench of tltk-core over the corpus (JSON to stdout)"
 run = "cargo run --release -q -p tltk-verifier -- bench corpus/corpus.jsonl crates/tltk-core/data --json"
+
+[tasks.bench-python]
+description = "bench the python oracle (tltk 1.10, era-correct venv) over the corpus"
+run = """
+bash scripts/setup_segment_oracle.sh --check >/dev/null 2>&1 || bash scripts/setup_segment_oracle.sh; \
+"$HOME/.local/share/tltk-rs/venv-segment-oracle/bin/python" scripts/bench_python.py corpus/corpus.jsonl --json
+"""
+
+[tasks.bench-report]
+description = "reproducible 4-lane perf+mem report (python/native/wasm, ROUNDS=3) -> target/bench/<stamp>"
+run = "bash scripts/bench_report.sh"
+
+[tasks.bench-wasm]
+description = "bench the shipped browser wasm under node, both flavors"
+run = """
+node scripts/node_bench.mjs --wasm-dir web/wasm/simd --corpus corpus/corpus.jsonl --label wasm-simd --json && \
+node scripts/node_bench.mjs --wasm-dir web/wasm/scalar --corpus corpus/corpus.jsonl --label wasm-scalar --json
+"""
 
 [tasks.mem]
 description = "memory profile (VmHWM phases)"

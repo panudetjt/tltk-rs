@@ -42,3 +42,54 @@ bash scripts/setup_segment_oracle.sh --force
 ```bash
 PYTHONPATH=~/.cache/tltk-rs/tltk-1.10-pkg ~/.local/share/tltk-rs/venv-segment-oracle/bin/python your_script.py
 ```
+
+## Benchmark the Python oracle
+
+`mise run bench-python` runs `scripts/bench_python.py` in this venv over
+`corpus/corpus.jsonl` with the same protocol as `verifier bench`: per function
+group, warmup 3 then repeat 10 timed passes (one pass = every corpus case of
+that function once), reporting the median µs per pass. The mutable colloc
+counters (`BiCount`/`Count`/`TotalWord`/... in `nlp` and `th2ipa`) are
+snapshotted and restored between passes — the fresh-process state the Rust
+bench reproduces with a new `Session`. Models (pos/ner/edu/w2v) load once
+before timing.
+
+### Reproducing the published numbers end-to-end
+
+`mise run bench-report` (env `ROUNDS=n` to change round count, default 3)
+runs ROUNDS interleaved rounds of all four lanes — python oracle, native rust,
+shipped browser wasm (simd128 + scalar flavors) under Node — plus a rust
+memory profile, and writes everything to `target/bench/<UTC-stamp>/`:
+
+- `bench_py_<n>.json` / `bench_rs_<n>.json` — raw per-round results, each
+  embedding a recorded `environment` block (timestamp, host, kernel, CPU
+  model, available cores, total RAM, load average, git revision + dirty-file
+  count; plus the full python dep versions / the rustc version and build
+  profile)
+- `bench_wasm_simd_<n>.json` / `bench_wasm_scalar_<n>.json` — the wasm lanes
+  (`scripts/node_bench.mjs`, also standalone as `mise run bench-wasm`): they
+  drive the real `tltk_web` glue the browser toolbox uses (wasm-bindgen
+  boundary included) with a persistent warm engine — browser semantics, the
+  engine is built once per page and reused for every query. Their environment
+  block adds the node/v8 versions and the sha256 + byte size of the exact
+  `tltk_web.wasm` measured
+- `mem.json` — `verifier mem --json` (phase RSS + peak VmHWM + environment)
+- `summary.md` — best-of-rounds table across lanes (py→native speedup,
+  simd→native wasm overhead), environment sections, memory section (generated
+  by `scripts/bench_summary.py`, which can also be run standalone on any
+  artifacts directory)
+
+The Performance table in the top-level README cites one of these
+`summary.md` reports verbatim.
+
+Notes:
+
+- `setup_segment_oracle.sh` installs `matplotlib` too (needed by the
+  `plotwords` render path); existing venvs created before that need
+  `uv pip install --python <venv>/bin/python matplotlib` or a `--force` setup.
+- `TNCc5model3.bin` is not in the wheel; the bench seeds it into the package
+  dir from `$TLTK_W2V_BIN` or `~/.cache/tltk-bench/TNCc5model3.bin`, and
+  downloads it from the official URL (`corpus.py download_TNCw2v`) on first use.
+- Per-case exceptions are results, not bench failures — tltk 1.10 has
+  disclosed crash cases (e.g. `spoonerism('สวัสดี')` raises `KeyError: 'dat'`;
+  the validator 500s on it and the goldens record it with `ok: false`).

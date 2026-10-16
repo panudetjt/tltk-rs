@@ -41,20 +41,38 @@ hand-type the commands they wrap.
 - `crates/tltk-core/data/edu.bin.gz` + `w2v.bin.gz` are **gitignored** —
   fresh checkouts must `mise run fetch-models` or parity silently shows a
   wrong-looking ~215/29 shape (w2v rows failing, models incomplete).
+  `wordtier.bin.gz` (textana's lexicon, from `word.pklz`) is committed —
+  the same pickle in 1.10 and 1.11, regenerate with `tools/convert/convert.py`.
 - wasm ships in two flavors (simd128 probed at runtime in the browser);
   `wasm-parity` runs the wasip1 lane and auto-downloads wasmtime.
 - Edition 2024: SIMD code in `w2v.rs` keeps inner `unsafe {}` blocks
   (`unsafe_op_in_unsafe_fn` is a hard error now).
+- `mise run build-web` changes engine bytes — bump `DEFAULT_VERSION` in
+  `web/js/loader.js` (content hash) in the same change, or returning browsers
+  serve the stale engine from the SW cache.
+- This checkout often carries in-flight work from parallel sessions: check
+  `git status` + `git diff` before editing shared docs (AGENTS.md/README —
+  your context may be stale) and keep commits scoped to one concern; when a
+  shared file mixes both, stage hunk-wise (`git apply --cached`).
 
 ## Upstream
 
-Port target is **1.10** — the version app.stichula.org runs (not PyPI
-latest). `mise run upstream-check` prints PyPI release notes + a file/def
-diff of latest vs 1.10 + the re-port checklist. As of 2026-10: 1.11 exists,
-TextAna-module fixes only — outside our 16-function port surface. A weekly
-`upstream-watch` workflow runs the same check on GitHub (Mondays 03:17 UTC,
-plus manual dispatch) and opens one issue per new upstream version —
-Dependabot can't watch it: the pin lives in shell scripts, not a manifest.
+Port surface is **1.10 + textana@1.11** — the 16 validator functions track
+the version app.stichula.org runs; `textana` carries 1.11 semantics (its only
+functional change: LdvTTR ×100 — and upstream's "single-paragraph now works"
+release note was never implemented in code: crash cases stay `ok=false`
+goldens). `mise run upstream-check` prints PyPI release notes + a file/def
+diff of latest vs the ported pin + the re-port checklist. As of 2026-10:
+nothing functional in 1.11 remains unported (expanding the surface →
+PORTING-GAPS.md §4).
+Upstream truth for behaviour questions and any port: the Python oracle at
+`~/.cache/tltk-rs/tltk-1.10-pkg/tltk/` (`nlp.py` + `corpus.py` are the
+entire upstream API; `mise run oracle-setup` creates the era-correct env).
+Upstream-only names (the Ana family, all of corpus.py) grep in the oracle,
+not the repo — the repo carries only the validator's snake_case wire names.
+A weekly `upstream-watch` workflow runs the same check
+on GitHub and opens one issue per new upstream version — Dependabot can't
+watch it: the pin lives in shell scripts, not a manifest.
 
 ## Shipping
 

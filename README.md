@@ -202,32 +202,99 @@ with distributions.
 
 ## Performance
 
-Recorded at the optimization cut (2026-10-16, native `--release` build, best-of-3
-× repeat=10 medians, interleaved A/B on one box — see `mise run bench` to
-reproduce). "Before" = the post-round-1 baseline, i.e. already including the
-regex-hoisting wins; the untouched original was slower still.
+**Four lanes on the same corpus** (the 16-function `corpus/corpus.jsonl`,
+244 cases, same protocol, same box): the Python oracle (tltk 1.10), native
+Rust (`tltk-core --release`), and — because that is what the browser actually
+runs — the **shipped wasm engine** (`tltk-web` glue, `wasm32-unknown-unknown`)
+in both flavors the toolbox serves: simd128 and scalar. One command reproduces
+everything below:
 
-| function | before (µs/pass) | after (µs/pass) | gain |
-|---|---:|---:|---:|
-| th2read | 110,924 | 21,937 | **5.1×** |
-| spoonerism | 30,258 | 5,629 | 5.4× |
-| ner_tag | 255,902 | 94,523 | 2.7× |
-| word_segment | 197,044 | 75,269 | 2.6× |
-| syl_segment | 188,567 | 81,433 | 2.3× |
-| g2p | 103,096 | 40,760 | 2.5× |
-| th2ipa | 73,527 | 27,762 | 2.6× |
-| similar_words | 36,670 | 4,170 | 8.8× |
-| **whole corpus pass** | **1,227,417** | **467,804** | **2.6×** |
+```bash
+mise run bench-report          # ROUNDS=3 default; ROUNDS=n to change
+```
 
-- Memory: peak RSS **257 MB vs 258–263 MB original** — faster *and* smaller than
-  the pre-optimization baseline (the w2v unit-vector trade is documented in the
-  bench history; `mise run mem` reproduces).
-- The biggest single wins: regex hoisting, chart-loop clone elimination,
-  allocation-free edge generation, CHD perfect-hash lookups, AVX2/simd128 w2v.
+It runs interleaved rounds of all four lanes plus a memory profile and writes
+raw per-round JSON + `summary.md` to `target/bench/<UTC-stamp>/`. Every
+artifact embeds a recorded environment block — timestamp, host, kernel, CPU
+model, available cores, total RAM, load average, **git revision + dirty-file
+count**, toolchain versions; the wasm lanes add the **sha256 of the exact
+`tltk_web.wasm` measured** — so the numbers and their measurement conditions
+always travel together. Protocol (all lanes): models warm, warmup 3 × repeat
+10 timed passes where one pass = every corpus case of that function once,
+median reported, best of 3 interleaved rounds. State semantics: native resets
+its `Session` per pass and Python restores fresh counter state per pass; the
+wasm lanes keep one persistent warm engine — browser semantics, the engine is
+built once per page and reused for every query.
+
+The table cites `target/bench/20261016T134149Z/` (measured 2026-10-16 at git
+`e458358`, rustc 1.99.1 `--release`, tltk 1.10 on CPython 3.9.25, wasm under
+Node — full environment at the bottom).
+
+| function | tltk 1.10 (Python) | native Rust | wasm simd128 | wasm scalar | py→native | simd→native |
+|---|---:|---:|---:|---:|---:|---:|
+| segment | 4,994,760 | 45,904 | 62,279 | 64,607 | 108.8× | 1.4× |
+| syl_segment | 3,521,125 | 66,145 | 104,578 | 111,623 | 53.2× | 1.6× |
+| word_segment | 3,481,343 | 67,391 | 105,811 | 112,658 | 51.7× | 1.6× |
+| ner_tag | 2,939,044 | 84,358 | 129,656 | 132,390 | 34.8× | 1.5× |
+| g2p | 1,598,522 | 33,785 | 52,485 | 55,626 | 47.3× | 1.6× |
+| th2roman | 1,355,584 | 26,662 | 41,164 | 43,853 | 50.8× | 1.5× |
+| th2ipa | 1,350,445 | 26,169 | 40,729 | 43,797 | 51.6× | 1.6× |
+| pos_tag | 1,121,584 | 24,467 | 39,050 | 40,739 | 45.8× | 1.6× |
+| th2read | 1,082,867 | 21,523 | 32,381 | 33,800 | 50.3× | 1.5× |
+| spell_variants | 525,729 | 6,358 | 9,693 | 10,379 | 82.7× | 1.5× |
+| spoonerism | 418,059 | 5,429 | 8,265 | 8,726 | 77.0× | 1.5× |
+| plotwords | 155,894 | 837 | 1,349 | 1,561 | 186.3× | 1.6× |
+| similar_words | 74,233 | 2,958 | 4,109 | 11,459 | 25.1× | 1.4× |
+| analogy | 42,340 | 583 | 949 | 2,505 | 72.6× | 1.6× |
+| similarity | 2,026 | 1 | 8 | 8 | see note | — |
+| outofgroup | 1,598 | 2 | 9 | 11 | see note | — |
+| **whole corpus pass** | **22,665,153** | **412,572** | **632,515** | **673,742** | **54.9×** | **1.5×** |
+
+All four columns are µs/pass; "py→native" is the python/native speedup and
+"simd→native" is what the browser's wasm runtime adds over native (simd128
+flavor — the honest end-to-end number for a wasm-capable browser query).
+
+- The "whole corpus pass" row is the sum of the per-function medians (the same
+  statistic `verifier bench` reports as `total`).
+- The wasm runtime cost is a flat **~1.5×** over native across the suite — the
+  scalar fallback costs about the same except on the w2v functions, where the
+  simd128 build is what pays (similar_words 4.1 ms vs 11.5 ms scalar).
+- `similarity`/`outofgroup` are near-instant in every lane; their rows measure
+  tltk's OOV idiom (a ~90k-word `list(index_to_key)` scan per call) against a
+  hash lookup, so the "speedup" is a µs-scale curiosity, not a headline.
+- `plotwords`: all lanes render a real chart, but the python renderer differs
+  by design (disclosed divergence #2 — matplotlib vs the Rust rasterizer).
+- Memory, warm models: peak RSS **~253 MiB** native Rust (`verifier mem`) vs
+  **~730–735 MiB** python vs **~285 MiB** node (wasm engine incl. node process
+  overhead, not browser-isolated) — recorded in the artifact's `mem.json` /
+  per-round JSON.
+- The optimization history of tltk-core itself — regex hoisting, CHD perfect
+  hashing, allocation-free chart edges, AVX2/simd128 w2v (~2.6× on the whole
+  corpus) — lives in the `perf*` commit series (`git log --grep '^perf'`).
 - In the browser: simd128 is runtime-probed (scalar fallback), the service
   worker precaches tier 1 → tier 2 assets and **pre-decodes the engine in the
   background after first paint**, so the first query is instant on a warm
   visit, and the toolbox works fully offline after the first load.
+
+<details>
+<summary>Recorded environment of the cited run (also embedded in every artifact)</summary>
+
+- box: `DESKTOP-KIBRVR7` — Intel(R) Core(TM) i5-14400 (16 cores available),
+  28,064,072 KiB RAM, Linux kernel `5.15.167.4-microsoft-standard-WSL2`
+- git: `e458358` + 11 dirty files (the bench tooling itself, measured from a
+  pinned worktree so in-flight core changes could not contaminate the run)
+- rust (native lane): `rustc 1.99.1 (58cf8f9c3 2026-10-13)`, `release` profile
+- wasm lanes: `wasm32-unknown-unknown` via the `tltk-web` glue under Node
+  `v22.21.1` (V8 `12.4.254.21-node.33`); simd128 blob 1,684,169 bytes,
+  sha256 `da781394…c9d5b7`; scalar blob 1,687,395 bytes,
+  sha256 `fbe607f9…62eb5c30` (full hashes in the artifacts)
+- python: CPython `3.9.25` (era-correct oracle venv), tltk `1.10`, deps:
+  numpy 1.23.5, pandas 1.5.3, scikit-learn 1.1.1, scipy 1.12.0, gensim 4.3.2,
+  nltk 3.9.2, sklearn-crfsuite 0.5.0, matplotlib 3.9.4, requests 2.32.5
+- load average at round start (py/rs/wasm): `[3.14, 1.19, 1.25]` /
+  `[2.13, 1.73, 1.45]` / `[1.96, 1.71, 1.45]`
+
+</details>
 
 ## Run on a new machine
 
