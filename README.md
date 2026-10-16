@@ -38,7 +38,7 @@ which never touches HTTP so it can also be used as a plain library.
 `success: false` + `error`). Functions: `th2ipa`, `th2roman`, `word_segment`,
 `syl_segment`, `segment`, `g2p`, `th2read`, `spell_variants`, `spoonerism`,
 `pos_tag`, `ner_tag`, `similar_words`, `similarity`, `outofgroup`, `analogy`,
-`plotwords`, `textana`. The 16 stichula functions are byte-identical to
+`plotwords`, `textana`, `text_class`, `txt2feat`. The 16 stichula functions are byte-identical to
 tltk 1.10; `textana` carries tltk 1.11 semantics (1.11's only functional
 change is inside TextAna: LdvTTR ×100) with python-oracle goldens instead of
 validator goldens — see [PORTING-GAPS.md](PORTING-GAPS.md) for the full
@@ -60,6 +60,7 @@ with binary search at load:
 | pos | 1.1 MB | pos_tagger.pklz (PerceptronTagger) | embedded |
 | wordtier | 0.4 MB | word.pklz (TextAna tier lexicon) | embedded |
 | ner | 0.09 MB | crfsuite model (see NER note) | embedded |
+| textclass | 1.0 MB | chklevel_rf.pklz + chkgenre_rf.pklz | embedded |
 | edu | 6.2 MB | sent_segment.pklz (DictVectorizer+RF) | **R2** (`MODELS` binding) |
 | w2v | 11.6 MB | TNCc5model3.bin (gensim KeyedVectors) | **R2** |
 Workers cap uploads at 10 MB gz, which is why edu + w2v ride in R2 and are

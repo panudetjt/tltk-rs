@@ -145,6 +145,22 @@ export const FUNCTIONS = [
     tier: 1
   },
   {
+    id: 'text_class',
+    name: 'text_class',
+    thaiName: 'จำแนกระดับหรือประเภทข้อความ (Text Classification)',
+    desc: 'จำแนกระดับความยากง่าย (L1-L4) หรือประเภทข้อความ (10 ประเภท) ด้วยโมเดล Random Forest',
+    placeholder: 'แมวกินปลาอยู่ในครัว\nหมูกินข้าวในถัง',
+    tier: 2
+  },
+  {
+    id: 'txt2feat',
+    name: 'txt2feat',
+    thaiName: 'สกัดเวกเตอร์คุณลักษณะข้อความ (Text Feature Extraction)',
+    desc: 'สร้างเวกเตอร์คุณลักษณะ 129 มิติจากข้อความสำหรับงานการเรียนรู้ของเครื่อง',
+    placeholder: 'แมวกินปลาอยู่ในครัว\nหมูกินข้าวในถัง',
+    tier: 2
+  },
+  {
     id: 'chunk',
     name: 'chunk',
     thaiName: 'แบ่งหน่วยความหมายและวิเคราะห์โครงสร้าง (Chunk Parsing)',
@@ -159,6 +175,8 @@ export const FUNCTIONS = [
     desc: 'กำกับเสียงอ่านสัทอักษรและชนิดของคำในรูปแบบ XML สำหรับคลังข้อมูล TNC',
     placeholder: 'แมวกินปลา',
     tier: 2
+  },
+  {
     id: 'th2ipa_all',
     name: 'th2ipa_all',
     thaiName: 'แปลงตัวเขียนเป็นสัทอักษรสากลทุกรูปแบบ (Thai to IPA All Candidates)',
@@ -369,7 +387,7 @@ async function runProcess() {
     } else {
       // textana returns compact JSON — pretty-print for display only
       let shown = result;
-      if (fnId === 'textana' && result) {
+      if ((fnId === 'textana' || fnId === 'text_class' || fnId === 'txt2feat') && result) {
         try {
           shown = JSON.stringify(JSON.parse(result), null, 2);
         } catch (_) { /* fall through to raw */ }
