@@ -1,6 +1,6 @@
 # tltk-rs
 
-Rust rewrite of [TLTK](https://github.com/panudetjt/tltk) (Thai Language
+Rust rewrite of [TLTK](https://pypi.org/project/tltk/) (Thai Language
 Toolkit, Chulalongkorn University) — the Python package behind
 [app.stichula.org/py/tltk](https://app.stichula.org/py/tltk/) — served as a
 JSON API on a **Cloudflare Worker**.
