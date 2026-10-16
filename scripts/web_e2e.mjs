@@ -37,12 +37,13 @@ const REPO = dirname(dirname(fileURLToPath(import.meta.url)));
 const WEB = join(REPO, 'web');
 
 function parseArgs(argv) {
-  const a = { base: null, only: null, timeout: 240000 };
+  const a = { base: null, only: null, timeout: 240000, loadOnly: false };
   for (let i = 2; i < argv.length; i++) {
     if (argv[i] === '--base') a.base = argv[++i];
     else if (argv[i] === '--prod') a.base = 'https://tltk.panudet.dev/';
     else if (argv[i] === '--only') a.only = new Set(argv[++i].split(','));
     else if (argv[i] === '--timeout') a.timeout = Number(argv[++i]);
+    else if (argv[i] === '--load-only') a.loadOnly = true;
     else if (argv[i] === '--help') a.help = true;
   }
   if (a.help) {
@@ -195,6 +196,13 @@ async function main() {
     }
   }
   console.log(`[e2e] dropdown OK (${uiIds.length} options)`);
+
+  if (args.loadOnly) {
+    // deploy-time gate: the page loads and the dropdown matches — the loop
+    // over every function lives in the CI web-e2e job, not on the deploy path
+    console.log('[e2e] load gate passed (--load-only)');
+    await browser.close(); closer?.(); process.exit(0);
+  }
 
   // Gate 3: run every function through the real UI.
   const expected = args.only ? cards.filter((c) => args.only.has(c.id)) : cards;

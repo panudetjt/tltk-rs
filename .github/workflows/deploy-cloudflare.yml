@@ -60,6 +60,22 @@ jobs:
 
       # Direct CLI (wrangler-action + mise's npx shim prompts in CI and dies);
       # npx -y answers the install prompt, wrangler reads the CF_* env vars.
+      - name: Module-syntax gate (the browser parses web/js as ES modules — 2026-10-17 "no options" incident)
+        run: |
+          set -e
+          for f in web/js/*.js; do
+            cp "$f" /tmp/check.mjs
+            node --check /tmp/check.mjs
+          done
+          echo "module syntax OK"
+
+      - name: Browser load gate (page alive, dropdown matches app.js)
+        run: |
+          cd web/e2e && npm install --no-fund --no-audit --silent
+          npx playwright install --with-deps chromium
+          cd ../..
+          node scripts/web_e2e.mjs --load-only --timeout 120000
+
       - name: Deploy static toolbox to Cloudflare
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}

@@ -36,7 +36,9 @@ hand-type the commands they wrap.
   presence); `textana.rs`'s module doc is the worked example, and
   PORTING-GAPS.md §4 carries the checklist.
 - Algorithm changes are allowed only when outputs stay byte-identical;
-  verify with `mise run parity`, `mise run node-parity`, `mise run wasm-parity`.
+  verify with `mise run parity`, `mise run node-parity`, `mise run wasm-parity`
+  — and `mise run web-e2e` for anything touching `web/js/` (the browser parses
+  those files as ES modules; a CJS `node --check` passing proves nothing).
 - Perf work: `mise run bench-report` (4 lanes — python oracle, native rust,
   shipped wasm simd128 + scalar under Node — plus memory; artifacts with
   recorded environments under `target/bench/<stamp>/`); sides: `mise run bench`
@@ -66,6 +68,11 @@ hand-type the commands they wrap.
   `git status` + `git diff` before editing shared docs (AGENTS.md/README —
   your context may be stale) and keep commits scoped to one concern; when a
   shared file mixes both, stage hunk-wise (`git apply --cached`).
+- Land worker branches with `mise run land -- worker/<slug>` — it merges
+  without committing, runs gate + parity on the merged tree, and only a green
+  tree reaches the commit. Keep-both conflict seams (2026-10-16/17: a missing
+  comma ×2 and a stray `}` that blanked the production dropdown) all came
+  from plain merges committed before any check ran.
 
 ## Upstream
 
