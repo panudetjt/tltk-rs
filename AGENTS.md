@@ -38,7 +38,10 @@ hand-type the commands they wrap.
 Port target is **1.10** — the version app.stichula.org runs (not PyPI
 latest). `mise run upstream-check` prints PyPI release notes + a file/def
 diff of latest vs 1.10 + the re-port checklist. As of 2026-10: 1.11 exists,
-TextAna-module fixes only — outside our 16-function port surface.
+TextAna-module fixes only — outside our 16-function port surface. A weekly
+`upstream-watch` workflow runs the same check on GitHub (Mondays 03:17 UTC,
+plus manual dispatch) and opens one issue per new upstream version —
+Dependabot can't watch it: the pin lives in shell scripts, not a manifest.
 
 ## Shipping
 

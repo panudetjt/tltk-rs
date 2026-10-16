@@ -1,0 +1,77 @@
+# Weekly watch for a newer tltk on PyPI vs the pinned port target.
+# Dependabot can't do this job: the pin lives in shell scripts, not a manifest
+# Dependabot reads. Reuses scripts/upstream_check.sh via the mise task; opens
+# one issue per new upstream version (exact-title dedup, no commit-back).
+name: upstream-watch
+
+on:
+  schedule:
+    - cron: '17 3 * * 1' # Mondays 03:17 UTC = 10:17 ICT
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: "Install pinned toolchain (mise: uv + python for upstream_check.sh)"
+        uses: jdx/mise-action@v2
+
+      - name: Upstream check (mise run upstream-check)
+        run: |
+          set -o pipefail
+          mise run upstream-check | tee upstream-report.txt
+
+      - name: Detect newer upstream version
+        id: detect
+        run: |
+          ported=$(sed -n 's/^ported: \([0-9.]*\).*/\1/p' upstream-report.txt | head -1)
+          latest=$(sed -n 's/.*latest on PyPI: \([0-9.]*\).*/\1/p' upstream-report.txt | head -1)
+          [ -n "$ported" ] && [ -n "$latest" ] || { echo "cannot parse versions from report" >&2; exit 1; }
+          echo "ported=$ported" >> "$GITHUB_OUTPUT"
+          echo "latest=$latest" >> "$GITHUB_OUTPUT"
+          if [ "$latest" = "$ported" ]; then
+            echo "updated=false" >> "$GITHUB_OUTPUT"
+            echo "tltk ${ported} — up to date" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "updated=true" >> "$GITHUB_OUTPUT"
+            echo "tltk ${latest} on PyPI vs ${ported} ported — issue required" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Open an issue when upstream moved past the port target
+        if: steps.detect.outputs.updated == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PORTED: ${{ steps.detect.outputs.ported }}
+          LATEST: ${{ steps.detect.outputs.latest }}
+        run: |
+          title="tltk ${LATEST} released upstream (ported: ${PORTED})"
+          if gh issue list --state open --limit 200 --json title --jq '.[].title' | grep -Fxq "$title"; then
+            echo "issue already open for tltk ${LATEST}"
+            exit 0
+          fi
+          {
+            echo "PyPI now ships **tltk ${LATEST}**; this repo ports **${PORTED}** (the version app.stichula.org runs)."
+            echo
+            echo '```'
+            cat upstream-report.txt
+            echo '```'
+            echo
+            echo "Fresh diff: \`mise run upstream-check\`. Do **not** bump the pin without the full re-port checklist (inside the report above): fetch-models → oracle-setup → regenerate goldens from the new oracle → all three parity lanes."
+          } > issue-body.md
+          gh issue create --title "$title" --body-file issue-body.md
+
+      - name: Show report in the run summary
+        if: always()
+        run: |
+          {
+            echo "## upstream-check report"
+            echo '```'
+            [ -f upstream-report.txt ] && cat upstream-report.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
