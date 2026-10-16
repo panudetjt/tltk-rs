@@ -93,6 +93,11 @@ jobs:
       - name: Install pinned toolchain (rust 1.99.1 / node 24 LTS)
         uses: jdx/mise-action@v2
 
+      - name: Add wasm target + wasm-bindgen CLI
+        run: |
+          rustup target add wasm32-unknown-unknown
+          cargo install wasm-bindgen-cli --locked --version 0.2.129
+
       - name: Build web engine (wasm, both flavors)
         run: mise run build-web
 
