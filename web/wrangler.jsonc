@@ -6,8 +6,8 @@
   "compatibility_date": "2026-10-16",
   "assets": {
     // "." is relative to this config file: web/ (index.html, css/, js/, wasm/, data/)
+    // no "binding": assets-only Workers (no script) must not declare one
     "directory": ".",
-    "binding": "ASSETS",
     "html_handling": "auto-trailing-slash",
     "not_found_handling": "single-page-application"
   }
