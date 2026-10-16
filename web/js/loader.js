@@ -46,7 +46,7 @@ export const TIER2_FUNCTIONS = new Set([
  * Version note: Model assets default to 'data/<filename>'.
  * A query string such as '?v=8f42992' can be appended for immutable cache-busting.
  */
-const DEFAULT_VERSION = '759c81a';
+const DEFAULT_VERSION = '69e25a3';
 
 /** Asset URL in the same versioned form getAssetUrl produces (SW prefetch). */
 export function assetUrl(filename) {
