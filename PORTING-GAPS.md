@@ -118,14 +118,14 @@ which is a separate upstream download (`download_TNC3g`), not shipped inside
 the tltk package — convert.py doesn't touch it today. Note `sylseg.rs` has
 syllable-level stats (needed by the segmenter); this is a different dataset.
 
-### 2b. w2v extras — PARTIAL (`w2v` + `compound` ✅ wire 2026-10-16)
+### 2b. w2v extras — PARTIAL (`w2v` + `compound` + 3 plot renderers ✅ wire 2026-10-16)
 
 | upstream | notes |
 |---|---|
 | `w2v(w)` | ✅ wire 2026-10-16. Raw fetch: the WV01 blob now carries the RAW f32 matrix (regenerated from TNCc5model3.bin via convert.py's gensim path); `W2v` keeps `vectors_raw` alongside the unit vectors. Wire emits `str(list(v))` (numpy float32 shortest-repr); OOV → `()`. |
 | `compound(w1, w2)` | ✅ wire 2026-10-16. Oracle pipeline: dnrm2 (exact-f64 sqrt of f64 Σx²) + single-rounded `f32(f64(x)·(1/norm))` units + f32 dot (`w2v_oracle_similarity`). fn_w2v golden pairs are byte-stable under this dot layout (277/4000 vocab pairs match the oracle exactly; those are the corpus rows). |
 | `similar_edu(seg, n)` | ❌ BLOCKED-DATA: needs TNCd2v.bin — upstream URL `https://www.arts.chula.ac.th/ling/wp-content/uploads/TNCd2v.bin` returns HTTP 403 (checked 2026-10-16); no alternative source. |
-| `w2v_compare_color`, `w2v_diffplot`, `w2v_dimplot` | other plot variants — `plotwords` covers only `w2v_plot`. |
+| `w2v_diffplot`, `w2v_dimplot`, `w2v_compare_color` | ✅ wire 2026-10-16. Hand-rolled Rust PNG rendering (plotwords precedent; no image crate). Structural parity: same axes (measured off the oracle renders: line plots 555x418, spines x=50..546/y=10..379; compare_color gray plot area 45..787 × 9..130, dot rows y≈12.5/68.5/124.5, dots x 60..780), tab10/Spectral colors, legends, y-tick labels. **Disclosed diff**: PNG bytes differ from matplotlib (same class as the 2 plotwords rows) — `corpus_fn_plots.jsonl` × `golden/local_python_fn_plots.jsonl` is fail=N by design (every row a PNG-byte diff, missing_golden=0); `mise run parity` special-cases it. OOV: diffplot/compare_color raise (upstream KeyError), dimplot filters. |
 
 ### 2c. Training / building / downloading — OUT OF SCOPE
 
