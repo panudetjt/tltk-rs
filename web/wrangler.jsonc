@@ -7,6 +7,8 @@
   // Custom domain (requires the panudet.dev zone on the deploying CF account;
   // the workers.dev URL stays live alongside it).
   "routes": [{ "pattern": "tltk.panudet.dev", "custom_domain": true }],
+  // keep the workers.dev URL as a fallback alongside the custom domain
+  "workers_dev": true,
   "assets": {
     // "." is relative to this config file: web/ (index.html, css/, js/, wasm/, data/)
     // no "binding": assets-only Workers (no script) must not declare one
