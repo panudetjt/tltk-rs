@@ -4,13 +4,180 @@
 use crate::prelude::fmt4;
 use crate::Session;
 
-/// f32 dot product (naive accumulation order).
-fn dot(a: &[f32], b: &[f32]) -> f32 {
+#[inline]
+fn dot_scalar(a: &[f32], b: &[f32]) -> f32 {
     let mut s = 0.0f32;
     for i in 0..a.len() {
         s += a[i] * b[i];
     }
     s
+}
+
+#[cfg(target_arch = "x86_64")]
+fn has_avx2() -> bool {
+    use std::sync::atomic::{AtomicU8, Ordering};
+    static AVX2_STATE: AtomicU8 = AtomicU8::new(0);
+    match AVX2_STATE.load(Ordering::Relaxed) {
+        1 => false,
+        2 => true,
+        _ => {
+            let detected = is_x86_feature_detected!("avx2");
+            AVX2_STATE.store(if detected { 2 } else { 1 }, Ordering::Relaxed);
+            detected
+        }
+    }
+}
+
+#[cfg(target_arch = "x86_64")]
+#[target_feature(enable = "avx2")]
+unsafe fn dot_avx2(a: &[f32], b: &[f32]) -> f32 {
+    use std::arch::x86_64::*;
+
+    let mut sum0 = _mm256_setzero_ps();
+    let mut sum1 = _mm256_setzero_ps();
+    let mut sum2 = _mm256_setzero_ps();
+    let mut sum3 = _mm256_setzero_ps();
+
+    let a_chunks = a.chunks_exact(8);
+    let b_chunks = b.chunks_exact(8);
+
+    let rem_a = a_chunks.remainder();
+    let rem_b = b_chunks.remainder();
+
+    let mut a_ptr = a.as_ptr();
+    let mut b_ptr = b.as_ptr();
+    let n_chunks = a_chunks.len().min(b_chunks.len());
+
+    let unroll4 = n_chunks / 4;
+    for _ in 0..unroll4 {
+        let va0 = _mm256_loadu_ps(a_ptr);
+        let vb0 = _mm256_loadu_ps(b_ptr);
+        sum0 = _mm256_add_ps(sum0, _mm256_mul_ps(va0, vb0));
+
+        let va1 = _mm256_loadu_ps(a_ptr.add(8));
+        let vb1 = _mm256_loadu_ps(b_ptr.add(8));
+        sum1 = _mm256_add_ps(sum1, _mm256_mul_ps(va1, vb1));
+
+        let va2 = _mm256_loadu_ps(a_ptr.add(16));
+        let vb2 = _mm256_loadu_ps(b_ptr.add(16));
+        sum2 = _mm256_add_ps(sum2, _mm256_mul_ps(va2, vb2));
+
+        let va3 = _mm256_loadu_ps(a_ptr.add(24));
+        let vb3 = _mm256_loadu_ps(b_ptr.add(24));
+        sum3 = _mm256_add_ps(sum3, _mm256_mul_ps(va3, vb3));
+
+        a_ptr = a_ptr.add(32);
+        b_ptr = b_ptr.add(32);
+    }
+
+    for _ in (unroll4 * 4)..n_chunks {
+        let va = _mm256_loadu_ps(a_ptr);
+        let vb = _mm256_loadu_ps(b_ptr);
+        sum0 = _mm256_add_ps(sum0, _mm256_mul_ps(va, vb));
+        a_ptr = a_ptr.add(8);
+        b_ptr = b_ptr.add(8);
+    }
+
+    let sum01 = _mm256_add_ps(sum0, sum1);
+    let sum23 = _mm256_add_ps(sum2, sum3);
+    let sum = _mm256_add_ps(sum01, sum23);
+
+    let mut rem_sum = 0.0f32;
+    for (&x, &y) in rem_a.iter().zip(rem_b.iter()) {
+        rem_sum += x * y;
+    }
+
+    let mut arr = [0.0f32; 8];
+    _mm256_storeu_ps(arr.as_mut_ptr(), sum);
+    arr[0] + arr[1] + arr[2] + arr[3] + arr[4] + arr[5] + arr[6] + arr[7] + rem_sum
+}
+#[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
+#[target_feature(enable = "simd128")]
+unsafe fn dot_simd128(a: &[f32], b: &[f32]) -> f32 {
+    use core::arch::wasm32::*;
+
+    let mut sum0 = f32x4_splat(0.0);
+    let mut sum1 = f32x4_splat(0.0);
+    let mut sum2 = f32x4_splat(0.0);
+    let mut sum3 = f32x4_splat(0.0);
+
+    let a_chunks = a.chunks_exact(4);
+    let b_chunks = b.chunks_exact(4);
+
+    let rem_a = a_chunks.remainder();
+    let rem_b = b_chunks.remainder();
+
+    let mut a_ptr = a.as_ptr() as *const v128;
+    let mut b_ptr = b.as_ptr() as *const v128;
+    let n_chunks = a_chunks.len().min(b_chunks.len());
+
+    let unroll4 = n_chunks / 4;
+    for _ in 0..unroll4 {
+        let va0 = v128_load(a_ptr);
+        let vb0 = v128_load(b_ptr);
+        sum0 = f32x4_add(sum0, f32x4_mul(va0, vb0));
+
+        let va1 = v128_load(a_ptr.add(1));
+        let vb1 = v128_load(b_ptr.add(1));
+        sum1 = f32x4_add(sum1, f32x4_mul(va1, vb1));
+
+        let va2 = v128_load(a_ptr.add(2));
+        let vb2 = v128_load(b_ptr.add(2));
+        sum2 = f32x4_add(sum2, f32x4_mul(va2, vb2));
+
+        let va3 = v128_load(a_ptr.add(3));
+        let vb3 = v128_load(b_ptr.add(3));
+        sum3 = f32x4_add(sum3, f32x4_mul(va3, vb3));
+
+        a_ptr = a_ptr.add(4);
+        b_ptr = b_ptr.add(4);
+    }
+
+    for _ in (unroll4 * 4)..n_chunks {
+        let va = v128_load(a_ptr);
+        let vb = v128_load(b_ptr);
+        sum0 = f32x4_add(sum0, f32x4_mul(va, vb));
+        a_ptr = a_ptr.add(1);
+        b_ptr = b_ptr.add(1);
+    }
+
+    let sum01 = f32x4_add(sum0, sum1);
+    let sum23 = f32x4_add(sum2, sum3);
+    let sum = f32x4_add(sum01, sum23);
+
+    let mut rem_sum = 0.0f32;
+    for (&x, &y) in rem_a.iter().zip(rem_b.iter()) {
+        rem_sum += x * y;
+    }
+
+    f32x4_extract_lane::<0>(sum)
+        + f32x4_extract_lane::<1>(sum)
+        + f32x4_extract_lane::<2>(sum)
+        + f32x4_extract_lane::<3>(sum)
+        + rem_sum
+}
+
+#[inline]
+fn dot(a: &[f32], b: &[f32]) -> f32 {
+    #[cfg(target_arch = "x86_64")]
+    if has_avx2() {
+        return unsafe { dot_avx2(a, b) };
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    {
+        #[cfg(target_feature = "simd128")]
+        {
+            return unsafe { dot_simd128(a, b) };
+        }
+        #[cfg(not(target_feature = "simd128"))]
+        {
+            return dot_scalar(a, b);
+        }
+    }
+
+    #[allow(unreachable_code)]
+    dot_scalar(a, b)
 }
 
 fn unit_vec(v: &[f32], norm: f32) -> Vec<f32> {
@@ -61,15 +228,30 @@ impl<'a> Session<'a> {
             let unit = wv.vector_unit(i);
             dists.push((i, dot(unit, mean)));
         }
-        dists.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
-        let mut out = Vec::new();
         let limit = topn + exclude.len();
-        for (i, d) in dists {
+        let cmp = |a: &(usize, f32), b: &(usize, f32)| {
+            b.1.partial_cmp(&a.1)
+                .unwrap_or(std::cmp::Ordering::Equal)
+                .then_with(|| a.0.cmp(&b.0))
+        };
+        if dists.len() > limit {
+            dists.select_nth_unstable_by(limit, cmp);
+            dists[..limit].sort_by(cmp);
+        } else {
+            dists.sort_by(cmp);
+        }
+        let mut out = Vec::new();
+        let candidates = if dists.len() > limit {
+            &dists[..limit]
+        } else {
+            &dists[..]
+        };
+        for &(i, d) in candidates {
             if exclude.contains(wv.words[i].as_str()) {
                 continue;
             }
             out.push((wv.words[i].clone(), d as f64));
-            if out.len() >= topn || out.len() >= limit {
+            if out.len() >= topn {
                 break;
             }
         }

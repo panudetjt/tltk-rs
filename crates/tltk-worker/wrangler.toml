@@ -14,4 +14,5 @@ bucket_name = "tltk-models"
 BASE_PATH = "/py/tltk"
 
 [build]
-command = "cargo install -q worker-build && worker-build --release"
+# Enable wasm simd128 for vectorized w2v query dot products.
+command = "cargo install -q worker-build && RUSTFLAGS=\"-C target-feature=+simd128\" worker-build --release"
