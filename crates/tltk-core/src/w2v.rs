@@ -521,9 +521,8 @@ impl<'a> Session<'a> {
         out.into_iter().next()
     }
 
-    /// Server wrapper for plotwords — renders a PNG scatter of the first two
-    /// principal components, same `IMAGE:<base64 png>` wire shape as the
-    /// matplotlib backend (pixel-level parity is out of scope).
+    /// Server wrapper for plotwords — renders a 100-dim chart of raw vectors
+    /// matching the stichula validator's w2v_dimplot chart.
     pub fn wire_plotwords(&mut self, text: &str) -> Result<String, crate::ProcessError> {
         let words: Vec<&str> = text.split_whitespace().collect();
         let wv = match self.m.w2v.as_ref() {
@@ -534,41 +533,129 @@ impl<'a> Session<'a> {
         if known.len() < 2 {
             return Ok("กรุณาใส่คำอย่างน้อย 2 คำ (คำที่มีใน word2vec model)".to_string());
         }
-        let pts: Vec<Vec<f32>> = known
-            .iter()
-            .map(|w| wv.vector(wv.index(w).unwrap()).to_vec())
-            .collect();
-        let (p1, p2) = pca2(&pts);
-        let proj: Vec<(f32, f32)> = pts.iter().map(|p| (dot(p, &p1), dot(p, &p2))).collect();
-        let minx = proj.iter().map(|p| p.0).fold(f32::INFINITY, f32::min);
-        let maxx = proj.iter().map(|p| p.0).fold(f32::NEG_INFINITY, f32::max);
-        let miny = proj.iter().map(|p| p.1).fold(f32::INFINITY, f32::min);
-        let maxy = proj.iter().map(|p| p.1).fold(f32::NEG_INFINITY, f32::max);
-        let (w, h) = (640usize, 400usize);
+
+        static ATLAS: std::sync::LazyLock<([u8; 256 * 128], GlyphStore)> =
+            std::sync::LazyLock::new(|| {
+                let decoded = decode_png_gray_256x128(GLYPH_ATLAS_PNG);
+                let store = GlyphStore::parse(GLYPH_METRICS_JSON);
+                (decoded, store)
+            });
+        let (atlas, glyph_store) = &*ATLAS;
+
+        let (w, h) = (942usize, 144usize);
         let mut img = vec![255u8; w * h * 3];
-        let span_x = (maxx - minx).abs().max(1e-6);
-        let span_y = (maxy - miny).abs().max(1e-6);
-        for p in &proj {
-            let x = (((p.0 - minx) / span_x) * (w as f32 - 80.0) + 40.0) as usize;
-            let y = (((p.1 - miny) / span_y) * (h as f32 - 80.0) + 40.0) as usize;
-            let y = h - 1 - y.min(h - 1); // y up
-            let x = x.min(w - 1);
-            // 6px dot in #764ba2
-            for dy in -3i32..=3 {
-                for dx in -3i32..=3 {
-                    if dx * dx + dy * dy <= 9 {
-                        let xx = x as i32 + dx;
-                        let yy = y as i32 + dy;
-                        if xx >= 0 && yy >= 0 && (xx as usize) < w && (yy as usize) < h {
-                            let o = (yy as usize * w + xx as usize) * 3;
-                            img[o] = 0x76;
-                            img[o + 1] = 0x4b;
-                            img[o + 2] = 0xa2;
-                        }
-                    }
-                }
+
+        // 1. Gray plot area
+        for y in 11..=92 {
+            for x in 44..=934 {
+                let idx = (y * w + x) * 3;
+                img[idx] = 128;
+                img[idx + 1] = 128;
+                img[idx + 2] = 128;
             }
         }
+
+        // 2. Spines
+        for x in 44..=934 {
+            let top_idx = (11 * w + x) * 3;
+            img[top_idx] = 27;
+            img[top_idx + 1] = 27;
+            img[top_idx + 2] = 27;
+            let bot_idx = (92 * w + x) * 3;
+            img[bot_idx] = 27;
+            img[bot_idx + 1] = 27;
+            img[bot_idx + 2] = 27;
+        }
+        for y in 11..=92 {
+            let left_idx = (y * w + 44) * 3;
+            img[left_idx] = 27;
+            img[left_idx + 1] = 27;
+            img[left_idx + 2] = 27;
+            let right_idx = (y * w + 934) * 3;
+            img[right_idx] = 27;
+            img[right_idx + 1] = 27;
+            img[right_idx + 2] = 27;
+        }
+
+        // 3. X ticks and labels
+        const XTICKS: [(i32, usize); 6] = [
+            (0, 84),
+            (20, 248),
+            (40, 411),
+            (60, 575),
+            (80, 739),
+            (100, 902),
+        ];
+        for (val, tx) in XTICKS {
+            for y in 92..=95 {
+                let idx = (y * w + tx) * 3;
+                img[idx] = 27;
+                img[idx + 1] = 27;
+                img[idx + 2] = 27;
+            }
+            let s = val.to_string();
+            let tw = measure_text(&s, glyph_store);
+            blit_text(
+                &mut img,
+                (w, h),
+                atlas,
+                &s,
+                (tx as i32 - tw / 2, 112),
+                glyph_store,
+            );
+        }
+
+        // 4. X label "Dimension"
+        let dim_w = measure_text("Dimension", glyph_store);
+        blit_text(
+            &mut img,
+            (w, h),
+            atlas,
+            "Dimension",
+            (489 - dim_w / 2, 131),
+            glyph_store,
+        );
+
+        // 5. Y series rows, ticks, labels, and colored dots
+        let n = known.len();
+        for (idx, &word) in known.iter().enumerate() {
+            let y_pos = (88.0 - (idx as f32) * (74.0 / ((n - 1) as f32))).round() as i32;
+            for x in 39..=43 {
+                let p_idx = (y_pos as usize * w + x) * 3;
+                img[p_idx] = 27;
+                img[p_idx + 1] = 27;
+                img[p_idx + 2] = 27;
+            }
+            let lw = measure_text(word, glyph_store);
+            blit_text(
+                &mut img,
+                (w, h),
+                atlas,
+                word,
+                (32 - lw, y_pos + 6),
+                glyph_store,
+            );
+
+            let vec = wv.vector(wv.index(word).unwrap());
+            let mut vmin = f32::INFINITY;
+            let mut vmax = f32::NEG_INFINITY;
+            for &v in vec {
+                if v < vmin {
+                    vmin = v;
+                }
+                if v > vmax {
+                    vmax = v;
+                }
+            }
+            let denom = if vmax > vmin { vmax - vmin } else { 1.0 };
+            for (d, &val) in vec.iter().take(100).enumerate() {
+                let t = (val - vmin) / denom;
+                let color = spectral_color(t);
+                let dot_x = 83.6 + (d as f32) * 8.212;
+                draw_dot(&mut img, (w, h), (dot_x, y_pos as f32), color, 2.2);
+            }
+        }
+
         let png = encode_png(&img, w as u32, h as u32);
         Ok(format!("IMAGE:{}", base64_encode(&png)))
     }
@@ -645,58 +732,287 @@ fn base64_encode(data: &[u8]) -> String {
     out
 }
 
-fn pca2(pts: &[Vec<f32>]) -> (Vec<f32>, Vec<f32>) {
-    let dim = pts[0].len();
-    let mut mean = vec![0.0f32; dim];
-    for p in pts {
-        for i in 0..dim {
-            mean[i] += p[i];
+const GLYPH_ATLAS_PNG: &[u8] = include_bytes!("../data/glyph_atlas.png");
+const GLYPH_METRICS_JSON: &str = include_str!("../data/glyph_metrics.json");
+
+#[derive(Clone, Copy)]
+struct GlyphMetric {
+    adv: u8,
+    off_x: i8,
+    off_y: i8,
+    w: u8,
+    h: u8,
+    ax: u16,
+    ay: u16,
+}
+
+struct GlyphStore {
+    fallback: GlyphMetric,
+    ascii: [Option<GlyphMetric>; 128],
+    thai: [Option<GlyphMetric>; 128],
+}
+
+impl GlyphStore {
+    fn parse(json: &str) -> Self {
+        let mut fallback = GlyphMetric {
+            adv: 9,
+            off_x: 0,
+            off_y: -10,
+            w: 8,
+            h: 10,
+            ax: 1,
+            ay: 1,
+        };
+        let mut ascii = [None; 128];
+        let mut thai = [None; 128];
+
+        let inner = json.trim().trim_start_matches('{').trim_end_matches('}');
+        let bytes = inner.as_bytes();
+        let mut cursor = 0;
+        while cursor < bytes.len() {
+            if bytes[cursor] != b'"' {
+                cursor += 1;
+                continue;
+            }
+            cursor += 1;
+            let key_start = cursor;
+            while cursor < bytes.len() && bytes[cursor] != b'"' {
+                cursor += 1;
+            }
+            let key_str = &inner[key_start..cursor];
+            cursor += 1; // skip closing quote
+            if cursor + 2 > bytes.len() || &bytes[cursor..cursor + 2] != b":[" {
+                continue;
+            }
+            cursor += 2;
+            let val_start = cursor;
+            while cursor < bytes.len() && bytes[cursor] != b']' {
+                cursor += 1;
+            }
+            let val_str = &inner[val_start..cursor];
+            cursor += 1; // skip closing ']'
+
+            let cp: u32 = match key_str.parse() {
+                Ok(v) => v,
+                Err(_) => continue,
+            };
+            let nums: Vec<i32> = val_str.split(',').filter_map(|s| s.parse().ok()).collect();
+            if nums.len() == 7 {
+                let m = GlyphMetric {
+                    adv: nums[0] as u8,
+                    off_x: nums[1] as i8,
+                    off_y: nums[2] as i8,
+                    w: nums[3] as u8,
+                    h: nums[4] as u8,
+                    ax: nums[5] as u16,
+                    ay: nums[6] as u16,
+                };
+                if cp == 0 {
+                    fallback = m;
+                } else if cp < 128 {
+                    ascii[cp as usize] = Some(m);
+                } else if (0x0E00..=0x0E7F).contains(&cp) {
+                    thai[(cp - 0x0E00) as usize] = Some(m);
+                }
+            }
+        }
+        GlyphStore {
+            fallback,
+            ascii,
+            thai,
         }
     }
-    for m in mean.iter_mut() {
-        *m /= pts.len() as f32;
+
+    #[inline]
+    fn get(&self, ch: char) -> GlyphMetric {
+        let cp = ch as u32;
+        if cp < 128 {
+            self.ascii[cp as usize].unwrap_or(self.fallback)
+        } else if (0x0E00..=0x0E7F).contains(&cp) {
+            self.thai[(cp - 0x0E00) as usize].unwrap_or(self.fallback)
+        } else {
+            self.fallback
+        }
     }
-    let mut cov = vec![vec![0.0f32; dim]; dim];
-    for p in pts {
-        for i in 0..dim {
-            for j in 0..dim {
-                cov[i][j] += (p[i] - mean[i]) * (p[j] - mean[j]);
+}
+
+fn decode_png_gray_256x128(png_data: &[u8]) -> [u8; 256 * 128] {
+    use flate2::read::ZlibDecoder;
+    use std::io::Read;
+
+    let mut offset = 8;
+    let mut idat_payload = Vec::new();
+
+    while offset + 8 <= png_data.len() {
+        let len = u32::from_be_bytes(png_data[offset..offset + 4].try_into().unwrap()) as usize;
+        let tag = &png_data[offset + 4..offset + 8];
+        offset += 8;
+        if tag == b"IDAT" {
+            idat_payload.extend_from_slice(&png_data[offset..offset + len]);
+        }
+        offset += len + 4;
+        if tag == b"IEND" {
+            break;
+        }
+    }
+
+    let mut z = ZlibDecoder::new(&idat_payload[..]);
+    let mut decompressed = Vec::with_capacity(128 * 257);
+    z.read_to_end(&mut decompressed).unwrap();
+
+    fn paeth(a: i32, b: i32, c: i32) -> u8 {
+        let p = a + b - c;
+        let pa = (p - a).abs();
+        let pb = (p - b).abs();
+        let pc = (p - c).abs();
+        if pa <= pb && pa <= pc {
+            a as u8
+        } else if pb <= pc {
+            b as u8
+        } else {
+            c as u8
+        }
+    }
+
+    let mut out = [0u8; 256 * 128];
+    let mut src = 0;
+    for y in 0..128 {
+        let filter = decompressed[src];
+        src += 1;
+        for x in 0..256 {
+            let b = decompressed[src];
+            src += 1;
+            let left = if x > 0 {
+                out[y * 256 + x - 1] as i32
+            } else {
+                0
+            };
+            let up = if y > 0 {
+                out[(y - 1) * 256 + x] as i32
+            } else {
+                0
+            };
+            let up_left = if x > 0 && y > 0 {
+                out[(y - 1) * 256 + x - 1] as i32
+            } else {
+                0
+            };
+            let val = match filter {
+                0 => b,
+                1 => b.wrapping_add(left as u8),
+                2 => b.wrapping_add(up as u8),
+                3 => b.wrapping_add(((left + up) / 2) as u8),
+                4 => b.wrapping_add(paeth(left, up, up_left)),
+                _ => b,
+            };
+            out[y * 256 + x] = val;
+        }
+    }
+    out
+}
+
+fn spectral_color(t: f32) -> (u8, u8, u8) {
+    const STOPS: [(f32, f32, f32, f32); 11] = [
+        (0.0, 158.0, 1.0, 66.0),
+        (0.1, 213.0, 62.0, 79.0),
+        (0.2, 244.0, 109.0, 67.0),
+        (0.3, 253.0, 174.0, 97.0),
+        (0.4, 254.0, 224.0, 139.0),
+        (0.5, 255.0, 255.0, 191.0),
+        (0.6, 230.0, 245.0, 152.0),
+        (0.7, 171.0, 221.0, 164.0),
+        (0.8, 102.0, 194.0, 165.0),
+        (0.9, 50.0, 136.0, 189.0),
+        (1.0, 94.0, 79.0, 162.0),
+    ];
+    let t = t.clamp(0.0, 1.0);
+    for i in 0..(STOPS.len() - 1) {
+        let (t0, r0, g0, b0) = STOPS[i];
+        let (t1, r1, g1, b1) = STOPS[i + 1];
+        if t <= t1 || i == STOPS.len() - 2 {
+            let f = (t - t0) / (t1 - t0);
+            let r = (r0 + f * (r1 - r0)).round() as u8;
+            let g = (g0 + f * (g1 - g0)).round() as u8;
+            let b = (b0 + f * (b1 - b0)).round() as u8;
+            return (r, g, b);
+        }
+    }
+    (94, 79, 162)
+}
+
+fn measure_text(text: &str, store: &GlyphStore) -> i32 {
+    let mut w = 0;
+    for ch in text.chars() {
+        w += store.get(ch).adv as i32;
+    }
+    w
+}
+
+fn blit_text(
+    canvas: &mut [u8],
+    (cw, ch): (usize, usize),
+    atlas: &[u8; 256 * 128],
+    text: &str,
+    (baseline_x, baseline_y): (i32, i32),
+    store: &GlyphStore,
+) {
+    let mut cx = baseline_x;
+    for c in text.chars() {
+        let g = store.get(c);
+        if g.w > 0 && g.h > 0 {
+            let gx = cx + g.off_x as i32;
+            let gy = baseline_y + g.off_y as i32;
+            for dy in 0..g.h as i32 {
+                for dx in 0..g.w as i32 {
+                    let px = gx + dx;
+                    let py = gy + dy;
+                    if px >= 0 && px < cw as i32 && py >= 0 && py < ch as i32 {
+                        let atlas_idx =
+                            (g.ay as usize + dy as usize) * 256 + (g.ax as usize + dx as usize);
+                        let a = atlas[atlas_idx] as f32 / 255.0;
+                        if a > 0.0 {
+                            let canvas_idx = (py as usize * cw + px as usize) * 3;
+                            let bg_r = canvas[canvas_idx] as f32;
+                            let bg_g = canvas[canvas_idx + 1] as f32;
+                            let bg_b = canvas[canvas_idx + 2] as f32;
+                            canvas[canvas_idx] = ((1.0 - a) * bg_r).round() as u8;
+                            canvas[canvas_idx + 1] = ((1.0 - a) * bg_g).round() as u8;
+                            canvas[canvas_idx + 2] = ((1.0 - a) * bg_b).round() as u8;
+                        }
+                    }
+                }
+            }
+        }
+        cx += g.adv as i32;
+    }
+}
+
+fn draw_dot(
+    canvas: &mut [u8],
+    (cw, ch): (usize, usize),
+    (cx, cy): (f32, f32),
+    (r, g, b): (u8, u8, u8),
+    radius: f32,
+) {
+    for dy in -3i32..=3 {
+        for dx in -3i32..=3 {
+            let dist = ((dx * dx + dy * dy) as f32).sqrt();
+            let cov = (radius + 0.5 - dist).clamp(0.0, 1.0);
+            if cov > 0.0 {
+                let px = (cx + dx as f32).round() as i32;
+                let py = (cy + dy as f32).round() as i32;
+                if px >= 0 && px < cw as i32 && py >= 0 && py < ch as i32 {
+                    let idx = (py as usize * cw + px as usize) * 3;
+                    let bg_r = canvas[idx] as f32;
+                    let bg_g = canvas[idx + 1] as f32;
+                    let bg_b = canvas[idx + 2] as f32;
+                    canvas[idx] = ((1.0 - cov) * bg_r + cov * (r as f32)).round() as u8;
+                    canvas[idx + 1] = ((1.0 - cov) * bg_g + cov * (g as f32)).round() as u8;
+                    canvas[idx + 2] = ((1.0 - cov) * bg_b + cov * (b as f32)).round() as u8;
+                }
             }
         }
     }
-    let n = pts.len() as f32;
-    for row in cov.iter_mut() {
-        for v in row.iter_mut() {
-            *v /= n;
-        }
-    }
-    let power = |m: &Vec<Vec<f32>>| -> Vec<f32> {
-        let mut v = vec![1.0f32; dim];
-        for _ in 0..64 {
-            let mut nv = vec![0.0f32; dim];
-            for i in 0..dim {
-                nv[i] = (0..dim).map(|j| m[i][j] * v[j]).sum();
-            }
-            let norm = (nv.iter().map(|x| x * x).sum::<f32>()).sqrt();
-            for x in nv.iter_mut() {
-                *x /= norm;
-            }
-            v = nv;
-        }
-        v
-    };
-    let p1 = power(&cov);
-    // symmetric deflation: cov2 = cov − (p1ᵀ cov p1) p1 p1ᵀ
-    let covp1: Vec<f32> = (0..dim).map(|i| (0..dim).map(|j| cov[i][j] * p1[j]).sum()).collect();
-    let lam: f32 = (0..dim).map(|k| p1[k] * covp1[k]).sum();
-    let mut cov2 = cov.clone();
-    for i in 0..dim {
-        for j in 0..dim {
-            cov2[i][j] -= lam * p1[i] * p1[j];
-        }
-    }
-    let p2 = power(&cov2);
-    (p1, p2)
 }
 
 #[cfg(test)]
@@ -774,5 +1090,57 @@ mod tests {
             );
         }
         println!("All {} dot products bit-exact identical between scan_avx2_dim100 and dot_avx2!", dists1.len());
+    }
+    #[test]
+    fn test_plotwords_dimplot_output() {
+        use crate::embedded::with_models;
+        let manifest_dir = env!("CARGO_MANIFEST_DIR");
+        let p_w2v = std::path::Path::new(manifest_dir).join("data/w2v.bin.gz");
+        let d_w2v = std::fs::read(&p_w2v).expect("w2v.bin.gz");
+        let mut extra = std::collections::HashMap::new();
+        extra.insert("w2v.bin.gz".to_string(), d_w2v);
+        let m = with_models(&extra);
+        let tltk = crate::Tltk::new(m);
+        let mut sess = tltk.session();
+
+        let err = sess.wire_plotwords("กิน").unwrap();
+        assert_eq!(err, "กรุณาใส่คำอย่างน้อย 2 คำ (คำที่มีใน word2vec model)");
+
+        fn b64_decode(s: &str) -> Vec<u8> {
+            let mut out = Vec::new();
+            let mut buf = 0u32;
+            let mut bits = 0;
+            for b in s.bytes() {
+                let v = match b {
+                    b'A'..=b'Z' => b - b'A',
+                    b'a'..=b'z' => b - b'a' + 26,
+                    b'0'..=b'9' => b - b'0' + 52,
+                    b'+' => 62,
+                    b'/' => 63,
+                    _ => continue,
+                };
+                buf = (buf << 6) | (v as u32);
+                bits += 6;
+                if bits >= 8 {
+                    bits -= 8;
+                    out.push((buf >> bits) as u8);
+                }
+            }
+            out
+        }
+
+        let out = sess.wire_plotwords("แมว หมา").unwrap();
+        assert!(out.starts_with("IMAGE:"));
+        let png_catdog = b64_decode(&out[6..]);
+        assert_eq!(&png_catdog[16..20], &942u32.to_be_bytes());
+        assert_eq!(&png_catdog[20..24], &144u32.to_be_bytes());
+        let _ = std::fs::write("/tmp/rust_catdog.png", &png_catdog);
+
+        let out_rice = sess.wire_plotwords("ข้าว น้ำ ผัก").unwrap();
+        assert!(out_rice.starts_with("IMAGE:"));
+        let png_rice = b64_decode(&out_rice[6..]);
+        assert_eq!(&png_rice[16..20], &942u32.to_be_bytes());
+        assert_eq!(&png_rice[20..24], &144u32.to_be_bytes());
+        let _ = std::fs::write("/tmp/rust_rice.png", &png_rice);
     }
 }
