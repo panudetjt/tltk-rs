@@ -159,7 +159,23 @@ export const FUNCTIONS = [
     desc: 'กำกับเสียงอ่านสัทอักษรและชนิดของคำในรูปแบบ XML สำหรับคลังข้อมูล TNC',
     placeholder: 'แมวกินปลา',
     tier: 2
-  }
+  },
+  {
+    id: 'w2v',
+    name: 'w2v',
+    thaiName: 'ดึงเวกเตอร์คำจากโมเดล Word2Vec (Raw Vector)',
+    desc: 'แสดงเวกเตอร์ดิบขนาด 100 มิติของคำจากโมเดล Word2Vec (TNC)',
+    placeholder: 'แมว',
+    tier: 2
+  },
+  {
+    id: 'compound',
+    name: 'compound',
+    thaiName: 'ตรวจสอบคำประสม (Compound Word)',
+    desc: 'ตรวจสอบว่าคำสองคำ (คั่นด้วยเว้นวรรค) รวมกันเป็นคำประสมในโมเดล Word2Vec หรือไม่ พร้อมค่าความคล้าย 3 คู่',
+    placeholder: 'ราช การ',
+    tier: 2
+  },
 ];
 
 // Map for quick lookup by ID

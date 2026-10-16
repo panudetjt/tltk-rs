@@ -131,6 +131,17 @@ elif mode == "corpus":
                 else:
                     r = "ความคล้ายระหว่าง '%s' กับ '%s' = %.4f" % (
                         parts[0], parts[1], corpus.similarity(parts[0], parts[1]))
+            elif fn == "w2v":
+                from tltk import corpus
+                corpus.w2v_load()
+                v = corpus.w2v(text.split()[0])
+                r = "()" if len(v) == 0 else str(list(v))
+            elif fn == "compound":
+                from tltk import corpus
+                corpus.w2v_load()
+                parts = text.split()[:2]
+                c = corpus.compound(parts[0], parts[1]) if len(parts) >= 2 else []
+                r = str(c)
             else:
                 continue
             ok = True
