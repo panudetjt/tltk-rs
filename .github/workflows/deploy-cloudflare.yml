@@ -44,10 +44,11 @@ jobs:
 
       - name: Stage model data for static serving
         run: |
-          mkdir -p web/data
+          # web/data is a symlink to crates/tltk-core/data in the repo (local
+          # serve convenience) — replace with real copies for the asset upload.
+          rm -rf web/data && mkdir -p web/data
           cp crates/tltk-core/data/*.bin.gz web/data/
-          cp crates/tltk-core/data/sylrule.txt web/data/
-          cp crates/tltk-core/data/thaisyl.txt web/data/
+          cp crates/tltk-core/data/sylrule.txt crates/tltk-core/data/thaisyl.txt web/data/
           ls -la web/data/
 
       # A deploy that fails parity is not a deploy.
