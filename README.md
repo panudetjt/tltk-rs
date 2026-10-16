@@ -43,12 +43,13 @@ which never touches HTTP so it can also be used as a plain library.
 `sylparse_all`, `wrd_len`, `match_engtext`, `known`, `edits2`,
 `check_thaidict`, `reset_thaidict`, `read_thaidict`, `dg_print`, `dg_save`,
 `print_dtree`, `scan_dtree`, `get_tree_depth`, `tree_max_depth`, `w2v`,
-`compound`, `w2v_diffplot`, `w2v_dimplot`, `w2v_compare_color`. The 16
-stichula functions are byte-identical to tltk 1.10; `textana` carries tltk
-1.11 semantics (1.11's only functional change is inside TextAna: LdvTTR
-×100) with python-oracle goldens instead of validator goldens; the rest are
-byte-identical to the 1.10 Python oracle (the three `w2v_*plot` renderers
-are disclosed-diff PNG, like `plotwords`) — see
+`compound`, `w2v_diffplot`, `w2v_dimplot`, `w2v_compare_color`. The port
+surface is **tltk 1.11** (repinned 2026-10-17; 1.11's only functional change
+vs 1.10 is TextAna's LdvTTR ×1000 → ×100, which the `text_class`/`txt2feat`
+feature path reads through TextAna). The 16 stichula functions are
+byte-identical to the validator (captured at 1.10 and unchanged in 1.11);
+the rest are byte-identical to the 1.11 Python oracle (the three
+`w2v_*plot` renderers are disclosed-diff PNG, like `plotwords`) — see
 [PORTING-GAPS.md](PORTING-GAPS.md) for the full inventory, including what
 stays blocked (TNC.3g data, MaltParser's JVM).
 
@@ -77,9 +78,9 @@ fetched once per isolate at cold start.
 ## Parity status (verifier, corpus = corpus/corpus.jsonl, 244 cases)
 
 - **vs the live stichula validator: 241/244 (98.8%)**
-- vs the local Python oracle (tltk 1.10 wheel in a venv): 227/229
-  (one case is a ref_dump formatting artifact — the local wrapper lacks the
-  server's OOV check; `selftest` covers the anchor case 9/9)
+- vs the local Python oracle (tltk 1.11 wheel in a venv): 240/241
+  (one case is the disclosed NER tag-boundary flip above; the local wrapper's
+  OOV check and `selftest` cover the anchor case 9/9)
 
 Known, documented divergences:
 
@@ -149,7 +150,7 @@ A client-only web toolbox page usable identically to the stichula original with 
 ### What it is
 
 - **Full 16-function Thai NLP suite**: `th2ipa`, `th2roman`, `word_segment`, `syl_segment`, `segment`, `g2p`, `th2read`, `spell_variants`, `spoonerism`, `pos_tag`, `ner_tag`, `similar_words`, `similarity`, `outofgroup`, `analogy`, and `plotwords` (PCA scatter plot rendered as inline PNG).
-- **Byte-identical results**: strictly follows tltk 1.10 / stichula parity.
+- **Byte-identical results**: strictly follows tltk 1.11 / stichula parity.
 - **Zero external dependencies**: no frameworks, no bundler, no CDN fonts or scripts — works completely offline once cached.
 
 ### How to run locally
@@ -197,7 +198,7 @@ npx wrangler pages deploy static
 - **Asset footprint**: Total UI overhead (HTML + CSS + JS, excluding WASM binaries and model blobs) is under 45 KB.
 ## Credits
 
-TLTK by Wirote Aroonmanakun, Chulalongkorn University (PyPI `tltk` 1.10).
+TLTK by Wirote Aroonmanakun, Chulalongkorn University (PyPI `tltk` 1.11).
 This project reimplements the inference pipelines in Rust for the
 [stichula.org](https://app.stichula.org/py/tltk/) API surface; model artifacts
 remain © their original authors.
@@ -205,7 +206,7 @@ remain © their original authors.
 ## License
 
 Code: MIT (see [LICENSE](LICENSE)). This project derives from and redistributes
-converted artifacts of TLTK 1.10 (BSD-3-Clause) and a Thai font atlas — see
+converted artifacts of TLTK 1.11 (BSD-3-Clause) and a Thai font atlas — see
 [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md) for the notices that travel
 with distributions.
 
@@ -313,7 +314,7 @@ for the environment and for producing/running every artifact (`mise tasks` to li
 
 ```bash
 mise install             # installs the pinned toolchain
-mise run fetch-models    # tltk==1.10 from PyPI + TNCc5 w2v -> edu/w2v blobs (1st run only)
+mise run fetch-models    # tltk==1.11 from PyPI + TNCc5 w2v -> edu/w2v blobs (1st run only)
 mise run build-web       # builds web/wasm/{scalar,simd}
 mise run serve           # serves the toolbox at http://localhost:8080
 ```
@@ -337,12 +338,14 @@ sets), `mise run node-parity` (shipped browser wasm, both flavors),
 
 ## Staying current with upstream
 
-The port targets **tltk 1.10** — the version the stichula validator runs. When
-upstream moves, `mise run upstream-check` fetches the latest wheel from PyPI,
-diffs `nlp.py`/`corpus.py` against 1.10 (file level + function level), and
+The port targets **tltk 1.11** (repinned 2026-10-17; the stichula validator
+goldens were captured against its 1.10-era service and stay green because
+1.11 touches nothing in that surface). When upstream moves, `mise run
+upstream-check` fetches the latest wheel from PyPI, diffs `nlp.py`/
+`corpus.py` against the pinned version (file level + function level), and
 prints the re-port checklist (bump pins, re-convert models, regenerate oracle
-goldens, run all parity lanes). Every parity diff after a bump is a real
-signal, not noise.
+goldens via `tools/convert/ref_dump.py` under the era venv, run all parity
+lanes). Every parity diff after a bump is a real signal, not noise.
 
 ## Releasing
 

@@ -1,18 +1,21 @@
-# PORTING-GAPS.md — upstream tltk 1.10 surface not yet ported
+# PORTING-GAPS.md — upstream tltk 1.11 surface not yet ported
 
 Scope note: the project is named after tltk, but the parity contract
-(AGENTS.md) covers the 16 validator functions + `textana` (1.11 semantics).
+(AGENTS.md) covers the 16 validator functions + `textana` + the ported
+inference surface (all at tltk 1.11 since the 2026-10-17 repin).
 This document inventories everything else the upstream package exposes, so
 expanding the scope is a checklist, not archaeology.
 
 - **Source of truth**: the Python oracle copy at
-  `~/.cache/tltk-rs/tltk-1.10-pkg/` (`tltk/nlp.py` + `tltk/corpus.py`) — the
+  `~/.cache/tltk-rs/tltk-1.11-pkg/` (`tltk/nlp.py` + `tltk/corpus.py`) — the
   same copy `tools/convert/convert.py` reads. `mise run upstream-check` keeps
   it honest.
-- **1.11 relevance**: upstream 1.11's only functional change is inside
-  TextAna (LdvTTR ×1000 → ×100) — **ported 2026-10-16**: `textana` carries
-  1.11 semantics while the other 16 functions stay 1.10. Future upstream
-  versions: re-run `mise run upstream-check` and re-open this inventory.
+- **Version history**: 1.11's only functional change vs 1.10 is inside
+  TextAna (LdvTTR ×1000 → ×100) — `textana` carried it since 2026-10-16;
+  the whole surface repinned to 1.11 on 2026-10-17 (goldens recaptured from
+  the 1.11 oracle; `text_class`/`txt2feat` follow ×100 through TextAna).
+  Future upstream versions: re-run `mise run upstream-check` and re-open
+  this inventory.
 
 Status legend:
 

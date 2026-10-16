@@ -1,13 +1,13 @@
 # AGENTS.md — tltk-rs
 
-Rust rewrite of TLTK (Thai NLP toolkit) — **41 wire functions**: the 16
-validator functions **byte-identical to tltk 1.10**, `textana` at **tltk 1.11
-semantics** (1.11's only functional change is inside TextAna: LdvTTR ×100),
-and 24 more of upstream's inference surface ported per `PORTING-GAPS.md`
-(pipelines, tree helpers, translit variants, dict/spell/text utils, w2v
-extras, RF text classifier — byte-identical to the Python oracle except the
-disclosed-diff plot renderers). The verifier corpus decides parity, not
-opinions.
+Rust rewrite of TLTK (Thai NLP toolkit) — **41 wire functions**, port surface
+**tltk 1.11** (repinned 2026-10-17; 1.11's only functional change vs 1.10 is
+TextAna's LdvTTR ×1000 → ×100): the 16 validator functions **byte-identical
+to the stichula validator / Python oracle**, and 25 more of upstream's
+inference surface ported per `PORTING-GAPS.md` (pipelines, tree helpers,
+translit variants, dict/spell/text utils, w2v extras, RF text classifier —
+byte-identical to the Python oracle except the disclosed-diff plot
+renderers). The verifier corpus decides parity, not opinions.
 
 ## Environment: mise.toml is the single source of truth
 
@@ -18,13 +18,17 @@ hand-type the commands they wrap.
 ## Parity contract — read before touching tltk-core
 
 - Golden sets: `corpus/corpus.jsonl` × `golden/stichula.jsonl` (baseline
-  **241/3/0**) and `golden/local_python.jsonl` (**228/7/9**) — the 3+7 are
-  disclosed upstream diffs (1 ner_tag CRF float flip, 2 plotwords renderer,
-  + 6 plot-renderer rows in `corpus_fn_plots` — separate file, fail-by-design);
-  and `corpus/corpus_extra.jsonl` × `golden/local_python_extra.jsonl`
-  (**100/0/0**, must stay zero — these are python-oracle goldens; the 13
-  `textana` rows are captured from the tltk **1.11** oracle, the rest from
-  1.10 — legitimate because 1.11 changes nothing outside TextAna).
+  **241/3/0**) and `golden/local_python.jsonl` (**240/1/3**) — the 3+1 are
+  disclosed upstream diffs (1 ner_tag CRF float flip — the same row in both
+  lanes, 2 plotwords renderer, + 6 plot-renderer rows in `corpus_fn_plots` —
+  separate file, fail-by-design); and `corpus/corpus_extra.jsonl` ×
+  `golden/local_python_extra.jsonl` (**100/0/0**, must stay zero — these are
+  python-oracle goldens). All oracle goldens are captured from the tltk
+  **1.11** oracle under the era venv (2026-10-17 repin; the repin's re-capture
+  also replaced the local set's segment/similarity rows that the original
+  capture had recorded as sklearn unpickle errors — the Rust's real
+  segmentations match the fixed goldens, which moved the local baseline
+  228/7/9 → 240/1/3).
 - Goldens are captured from the Python oracle or the stichula validator —
   **never from the Rust binary** (circular evidence). Porting a new function:
   **probe the oracle first** — Python hides wire traps (dict insertion-order
@@ -55,6 +59,9 @@ hand-type the commands they wrap.
 - `mise run build-web` changes engine bytes — bump `DEFAULT_VERSION` in
   `web/js/loader.js` (content hash) in the same change, or returning browsers
   serve the stale engine from the SW cache.
+- tltk 1.11's METADATA pins `scikit-learn~=1.2.0`, which cannot unpickle its
+  own `sent_segment.pklz` (needs <1.2) — irrelevant here because the era venv
+  installs deps directly and PYTHONPATHs the tree; never `pip install tltk`.
 - This checkout often carries in-flight work from parallel sessions: check
   `git status` + `git diff` before editing shared docs (AGENTS.md/README —
   your context may be stale) and keep commits scoped to one concern; when a
@@ -62,19 +69,24 @@ hand-type the commands they wrap.
 
 ## Upstream
 
-Port surface is **1.10 + textana@1.11** — the 16 validator functions track
-the version app.stichula.org runs; `textana` carries 1.11 semantics (its only
-functional change: LdvTTR ×100 — and upstream's "single-paragraph now works"
-release note was never implemented in code: crash cases stay `ok=false`
-goldens); everything else ported tracks 1.10 oracle behaviour byte-for-byte.
+Port surface is **tltk 1.11** (repinned 2026-10-17; before that
+1.10 + textana@1.11) — 1.11's only functional change vs 1.10 is LdvTTR ×100
+inside TextAna, and the TextClass/txt2feat feature path reads that same
+field through TextAna, so one ported value covers both. The stichula
+validator goldens stay captured from app.stichula.org (still 1.10) and stay
+green because 1.11 touches nothing in that surface. Upstream's
+"single-paragraph now works" release note was never implemented in code:
+crash cases stay `ok=false` goldens.
 `mise run upstream-check` prints PyPI release notes + a file/def
-diff of latest vs the ported pin + the re-port checklist. As of 2026-10:
+diff of latest vs the ported pin + the re-port checklist (step 4's golden
+regen = `tools/convert/ref_dump.py` corpus mode under the era venv, one
+process in corpus order). As of 2026-10:
 nothing functional in 1.11 remains unported; the only upstream names still
 absent are data/JVM-blocked (TNC.3g n-grams + mm/nbest segmenters,
 MaltParser, similar_edu — PORTING-GAPS.md §1a/§1c/§2a/§2b carries the
 evidence).
 Upstream truth for behaviour questions and any port: the Python oracle at
-`~/.cache/tltk-rs/tltk-1.10-pkg/tltk/` (`nlp.py` + `corpus.py` are the
+`~/.cache/tltk-rs/tltk-1.11-pkg/tltk/` (`nlp.py` + `corpus.py` are the
 entire upstream API; `mise run oracle-setup` creates the era-correct env).
 Upstream-only names (the Ana family, all of corpus.py) grep in the oracle,
 not the repo — the repo carries only the validator's snake_case wire names.
