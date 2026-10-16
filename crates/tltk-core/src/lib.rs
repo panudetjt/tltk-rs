@@ -105,6 +105,8 @@ impl<'a> Session<'a> {
             "textana" => textana::textana(self, text),
             "chunk" => Ok(self.chunk(text)),
             "tnc_tag" => self.tnc_tag(text),
+            "th2ipa_all" => Ok(self.th2ipa_all(text)),
+            "sylparse_all" => Ok(self.sylparse_all(text)),
             other => Err(ProcessError(format!("Unknown function: {}", other))),
         }
     }

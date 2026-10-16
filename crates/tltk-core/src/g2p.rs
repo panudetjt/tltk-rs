@@ -1,6 +1,19 @@
 //! Grapheme-to-phoneme pipeline (port of nlp.sylparse / wordparse / g2p and
 //! their helpers: ReplaceSnd, NotExceptionSyl, ToneAssign, DeadSyl,
 //! TransformSyl, SelectPhones, ProbPhone).
+//!
+//! ### Upstream Probes: sylparse_all and th2ipa_all (tltk 1.10)
+//! Recorded from Python oracle ($HOME/.local/share/tltk-rs/venv-segment-oracle):
+//! - nlp.sylparse_all('แมว') -> [('แมว', "ma3'wxx0"), ('แมว', 'mxxw0')]
+//! - nlp.th2ipa_all('แมว')   -> [('แมว', 'ma4.wɛː1'), ('แมว', 'mɛːw1')]
+//! - nlp.sylparse_all('cat') -> []
+//! - nlp.th2ipa_all('cat')   -> [('cat', 'cat')]
+//! - nlp.sylparse_all('')    -> []
+//! - nlp.th2ipa_all('')      -> []
+//! - nlp.sylparse_all('catแมว') -> []
+//! - nlp.th2ipa_all('catแมว')   -> [('', '')]
+//! - nlp.sylparse_all('123') -> [('1~2~3', 'nUN1~sOON4~saam4')]
+//! - nlp.th2ipa_all('123')   -> [('123', '123')]
 
 use crate::prelude::*;
 use crate::sylseg::SpanMap;
@@ -579,6 +592,241 @@ impl<'a> Session<'a> {
         }
         format!("<Fail>{}</Fail>", input)
     }
+
+    /// Port of sylparse_all — returns all candidate syllable segmentations and pronunciations as tuples.
+    pub fn sylparse_all_tuples(&mut self, input: &str) -> Vec<(String, String)> {
+        self.pronun.clear();
+        let offs: Vec<usize> = input.char_indices().map(|(b, _)| b).collect();
+        let n = offs.len();
+        if n == 0 {
+            return Vec::new();
+        }
+        let mut phchart: Vec<SpanMap<Vec<String>>> = (0..=n).map(|_| SpanMap::new()).collect();
+        static RE_THORR: std::sync::LazyLock<regex::Regex> =
+            std::sync::LazyLock::new(|| regex::Regex::new(r"^ทร").unwrap());
+        static RE_THR: std::sync::LazyLock<regex::Regex> =
+            std::sync::LazyLock::new(|| regex::Regex::new(r"^thr").unwrap());
+
+        for pp in &self.m.pron {
+            if pp.pattern == "([ก-ฮ])" && pp.codes.as_slice() == ["XOO"] {
+                continue;
+            }
+            for i in 0..n {
+                let rest = &input[offs[i]..];
+                let m = match pp.re.captures(rest) {
+                    Some(m) => m,
+                    None => continue,
+                };
+                let whole = m.get(0).unwrap();
+                let keymatch = whole.as_str().to_string();
+                let ng = pp.n_groups;
+                let charmatch: String = if ng >= 3 {
+                    format!("{} {} {}", g1(&m), g2(&m), g3(&m))
+                } else if ng == 2 {
+                    format!("{} {}", g1(&m), g2(&m))
+                } else if ng == 1 {
+                    g1(&m)
+                } else {
+                    self.pronun
+                        .entry(keymatch.clone())
+                        .or_default()
+                        .extend(pp.codes.iter().cloned());
+                    String::new()
+                };
+                let k = i + whole.as_str().chars().count();
+                let frm_orig = whole.as_str().to_string();
+
+                for pronf in &pp.codes {
+                    let codematch: String = pronf
+                        .chars()
+                        .filter(|c| "AKYDZCRX".contains(*c))
+                        .collect();
+                    let mut frm = frm_orig.clone();
+                    let mut phone;
+                    if !codematch.is_empty() {
+                        phone = replace_snd(pronf, &codematch, &charmatch);
+                        if not_exception_syl(&codematch, &charmatch, &keymatch, &phone) {
+                            let (mut p, tone) =
+                                tone_assign(&keymatch, &phone, &codematch, &charmatch);
+                            if tone_lt5(&tone) {
+                                p = if tone.is_empty() {
+                                    p
+                                 } else {
+                                    p.replace('8', &tone)
+                                };
+                            }
+                            let (_, p2) = transform_syl(&keymatch, &p);
+                            phone = p2;
+                            add_to_chart(&mut phchart[i], k, &format!("{}/{}", frm, phone));
+                            if RE_THORR.is_match(&keymatch) && RE_THR.is_match(&phone) {
+                                phone = phone.replace("thr", "s");
+                            }
+                        }
+                    } else {
+                        frm = pp.pattern.clone();
+                        phone = pronf.clone();
+                    }
+                    add_to_chart(&mut phchart[i], k, &format!("{}/{}", frm, phone));
+                }
+            }
+        }
+
+        for j in 0..n {
+            if let Some(s1_list) = phchart[0].get(j).cloned() {
+                let mut row0 = SpanMap {
+                    items: phchart[0].items.clone(),
+                };
+                for s1 in &s1_list {
+                    for &(k, ref s2_list) in &phchart[j].items {
+                        for s2 in s2_list {
+                            let tmp = format!("{}~{}", s1, s2);
+                            add_to_chart(&mut row0, k, &tmp);
+                        }
+                    }
+                }
+                phchart[0] = row0;
+            }
+        }
+
+        let mut outlst = Vec::new();
+        let final_items = match phchart[0].get(n) {
+            Some(items) => items,
+            None => return outlst,
+        };
+        for out in final_items {
+            let mut form = Vec::new();
+            let mut ph = Vec::new();
+            for x in out.split('~') {
+                if let Some((f, p)) = x.split_once('/') {
+                    form.push(f);
+                    ph.push(p);
+                }
+            }
+            outlst.push((form.join("~"), ph.join("~")));
+        }
+        outlst
+    }
+
+    /// Port of sylparse_all — wire representation as Python list-of-tuples string repr.
+    pub fn sylparse_all(&mut self, input: &str) -> String {
+        let items = self.sylparse_all_tuples(input);
+        py_tuple_list_repr(&items)
+    }
+
+    /// Port of th2ipa_all — returns all candidate IPA transliterations as tuples.
+    pub fn th2ipa_all_tuples(&mut self, input: &str) -> Vec<(String, String)> {
+        if input.is_empty() {
+            return Vec::new();
+        }
+        static RE_NON_THAI: std::sync::LazyLock<regex::Regex> =
+            std::sync::LazyLock::new(|| regex::Regex::new(r"^[^ก-์]+$").unwrap());
+        if RE_NON_THAI.is_match(input) {
+            return vec![(input.to_string(), input.to_string())];
+        }
+        let lst = self.sylparse_all_tuples(input);
+        if lst.is_empty() {
+            return vec![(String::new(), String::new())];
+        }
+        static RE_ASP: std::sync::LazyLock<regex::Regex> =
+            std::sync::LazyLock::new(|| regex::Regex::new(r"([ptkc])h").unwrap());
+        let mut output = Vec::with_capacity(lst.len());
+        for (th, tran) in lst {
+            let mut t = sub_double_vowel_ipa(&tran);
+            t = RE_ASP.replace_all(&t, "${1}\u{02B0}").into_owned();
+            for (k, v) in IPA_NORMALIZE_ALL {
+                t = t.replace(k, v);
+            }
+            output.push((th, t));
+        }
+        output
+    }
+
+    /// Port of th2ipa_all — wire representation as Python list-of-tuples string repr.
+    pub fn th2ipa_all(&mut self, input: &str) -> String {
+        let items = self.th2ipa_all_tuples(input);
+        py_tuple_list_repr(&items)
+    }
+}
+
+fn add_to_chart(chart_i: &mut SpanMap<Vec<String>>, k: usize, entry: &str) {
+    if let Some((_, list)) = chart_i.items.iter_mut().find(|(kk, _)| *kk == k) {
+        if !list.iter().any(|x| x == entry) {
+            list.push(entry.to_string());
+        }
+    } else {
+        chart_i.items.push((k, vec![entry.to_string()]));
+    }
+}
+
+const IPA_NORMALIZE_ALL: &[(&str, &str)] = &[
+    ("O", "\u{1D10}"),
+    ("x", "\u{025B}"),
+    ("@", "\u{0264}"),
+    ("N", "\u{014B}"),
+    ("?", "\u{0294}"),
+    ("U", "\u{026F}"),
+    ("|", " "),
+    ("~", "."),
+    ("^", "."),
+    ("'", "."),
+    ("4", "5"),
+    ("3", "4"),
+    ("2", "3"),
+    ("1", "2"),
+    ("0", "1"),
+];
+
+fn sub_double_vowel_ipa(tran: &str) -> String {
+    const V: &[char] = &['a', 'e', 'i', 'o', 'u', 'U', 'x', 'O', '@'];
+    let chars: Vec<char> = tran.chars().collect();
+    let mut out = String::with_capacity(tran.len());
+    let mut i = 0;
+    while i < chars.len() {
+        if i + 1 < chars.len() && chars[i] == chars[i + 1] && V.contains(&chars[i]) {
+            out.push(chars[i]);
+            out.push('ː');
+            i += 2;
+        } else {
+            out.push(chars[i]);
+            i += 1;
+        }
+    }
+    out
+}
+
+fn py_str_repr(out: &mut String, s: &str) {
+    let has_single = s.contains('\'');
+    let has_double = s.contains('"');
+    let quote = if has_single && !has_double { '"' } else { '\'' };
+    out.push(quote);
+    for c in s.chars() {
+        match c {
+            '\\' => out.push_str(r"\\"),
+            '\n' => out.push_str(r"\n"),
+            '\r' => out.push_str(r"\r"),
+            '\t' => out.push_str(r"\t"),
+            '\'' if quote == '\'' => out.push_str(r"\'"),
+            '"' if quote == '"' => out.push_str(r#"\""#),
+            other => out.push(other),
+        }
+    }
+    out.push(quote);
+}
+
+fn py_tuple_list_repr(items: &[(String, String)]) -> String {
+    let mut out = String::from("[");
+    for (i, (a, b)) in items.iter().enumerate() {
+        if i > 0 {
+            out.push_str(", ");
+        }
+        out.push('(');
+        py_str_repr(&mut out, a);
+        out.push_str(", ");
+        py_str_repr(&mut out, b);
+        out.push(')');
+    }
+    out.push(']');
+    out
 }
 
 fn g1(m: &regex::Captures) -> String {
