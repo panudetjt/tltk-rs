@@ -34,7 +34,15 @@ out=$(cargo run -q -p tltk-verifier -- check corpus/corpus.jsonl golden/stichula
 out=$(cargo run -q -p tltk-verifier -- check corpus/corpus.jsonl golden/local_python.jsonl crates/tltk-core/data || true); echo "$out"; echo "$out" | grep -q "pass=228 fail=7 missing_golden=9" || exit 1
 out=$(cargo run -q -p tltk-verifier -- check corpus/corpus_extra.jsonl golden/local_python_extra.jsonl crates/tltk-core/data || true); echo "$out"; echo "$out" | grep -q "fail=0 missing_golden=0" || exit 1
 for c in corpus/corpus_fn_*.jsonl; do
-  out=$(cargo run -q -p tltk-verifier -- check "$c" "golden/local_python_fn_${c##*corpus_fn_}" crates/tltk-core/data || true); echo "$out"; echo "$out" | grep -q "fail=0 missing_golden=0" || exit 1
+  # corpus_fn_plots is disclosed-diff by design (hand-rolled renderer ≠
+  # matplotlib bytes); every row must fail on PNG bytes with zero missing.
+  if [ "${c##*/}" = "corpus_fn_plots.jsonl" ]; then
+    out=$(cargo run -q -p tltk-verifier -- check "$c" "golden/local_python_fn_${c##*corpus_fn_}" crates/tltk-core/data || true); echo "$out"
+    n=$(wc -l < "$c")
+    echo "$out" | grep -q "pass=0 fail=$n missing_golden=0" || exit 1
+  else
+    out=$(cargo run -q -p tltk-verifier -- check "$c" "golden/local_python_fn_${c##*corpus_fn_}" crates/tltk-core/data || true); echo "$out"; echo "$out" | grep -q "fail=0 missing_golden=0" || exit 1
+  fi
 done
 """
 

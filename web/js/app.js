@@ -137,6 +137,30 @@ export const FUNCTIONS = [
     tier: 2
   },
   {
+    id: 'w2v_diffplot',
+    name: 'w2v_diffplot',
+    thaiName: 'พล็อตส่วนต่างเวกเตอร์คำ (Word Vector Difference Plot)',
+    desc: 'แสดงกราฟเส้นส่วนต่างของเวกเตอร์ระหว่างคำหลักกับคำเปรียบเทียบ 2 คู่ (ใส่ 3 คำคั่นด้วยเว้นวรรค: คำหลัก คำเทียบ 1 คำเทียบ 2)',
+    placeholder: 'แมว ปลา นก',
+    tier: 2
+  },
+  {
+    id: 'w2v_dimplot',
+    name: 'w2v_dimplot',
+    thaiName: 'พล็อตเวกเตอร์รายมิติ (Word Vector Dimension Plot)',
+    desc: 'แสดงกราฟเส้นค่าเวกเตอร์ 100 มิติของคำแต่ละคำจากโมเดล Word2Vec',
+    placeholder: 'แมว ปลา นก',
+    tier: 2
+  },
+  {
+    id: 'w2v_compare_color',
+    name: 'w2v_compare_color',
+    thaiName: 'เปรียบเทียบเวกเตอร์คำแบบสี (Word Vector Color Comparison)',
+    desc: 'แสดงแผนภาพจุดสีแบบ Spectral เปรียบเทียบค่าเวกเตอร์ 100 มิติของหลายคำ',
+    placeholder: 'แมว ปลา นก',
+    tier: 2
+  },
+  {
     id: 'textana',
     name: 'textana',
     thaiName: 'วิเคราะห์คุณลักษณะข้อความ (Text Analysis)',

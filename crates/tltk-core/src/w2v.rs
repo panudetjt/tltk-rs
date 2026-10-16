@@ -694,6 +694,311 @@ impl<'a> Session<'a> {
         Ok(format!("IMAGE:{}", base64_encode(&png)))
     }
 
+    /// Shared canvas setup for the wire plot renderers (plotwords precedent):
+    /// lazily decodes the glyph atlas once and returns the drawing context.
+    fn atlas_ctx()
+    -> (
+        &'static [u8; 256 * 128],
+        &'static GlyphStore,
+    ) {
+        static ATLAS: std::sync::LazyLock<([u8; 256 * 128], GlyphStore)> =
+            std::sync::LazyLock::new(|| {
+                let decoded = decode_png_gray_256x128(GLYPH_ATLAS_PNG);
+                let store = GlyphStore::parse(GLYPH_METRICS_JSON);
+                (decoded, store)
+            });
+        let (atlas, glyph_store) = &*ATLAS;
+        (atlas, glyph_store)
+    }
+
+    /// corpus.w2v_diffplot — two 100-point lines over x=1..100:
+    /// vec(ww)-vec(wx) and vec(ww)-vec(wy); legend labels `ww-wx`, `ww-wy`.
+    /// Differs from dimplot/compare_color upstream: OOV words are NOT
+    /// filtered (KeyError path returns err); here OOV any-of → error.
+    pub fn wire_w2v_diffplot(&mut self, text: &str) -> Result<String, crate::ProcessError> {
+        let parts: Vec<&str> = text.split_whitespace().collect();
+        let wv = match self.m.w2v.as_ref() {
+            Some(wv) => wv,
+            None => return Err(crate::ProcessError("'w2v_model' name 'w2v_model' is not defined".to_string())),
+        };
+        if parts.len() < 3 {
+            return Err(crate::ProcessError(
+                "ValueError: not enough values to unpack (expected 3, got N)".to_string(),
+            ));
+        }
+        let (ww, wx, wy) = (parts[0], parts[1], parts[2]);
+        for w in [ww, wx, wy] {
+            if !wv.contains(w) {
+                return Err(crate::ProcessError(format!("KeyError: '{}'", w)));
+            }
+        }
+        let (atlas, glyph_store) = Self::atlas_ctx();
+
+        // Collect both series first to compute a shared y range (matplotlib
+        // autoscales the axes across both lines).
+        let vww = wv.vector(wv.index(ww).unwrap());
+        let vwx = wv.vector(wv.index(wx).unwrap());
+        let vwy = wv.vector(wv.index(wy).unwrap());
+        let ys1: Vec<f32> = (0..100).map(|d| vww[d] - vwx[d]).collect();
+        let ys2: Vec<f32> = (0..100).map(|d| vww[d] - vwy[d]).collect();
+
+        let (w, h) = (W_PLOT, H_PLOT);
+        let mut img = vec![255u8; w * h * 3];
+        let pf = PlotFrame {
+            x0: 50,
+            x1: 546,
+            y0: 10,
+            y1: 379,
+        };
+        let (ymin, ymax) = min_max_both(&ys1, &ys2);
+        let scale = Scale::new(ymin, ymax, pf.y0 as f32, pf.y1 as f32);
+
+        let ylabels: Vec<(String, i32)> = {
+            let (lo, hi) = (ymin.min(ymax), ymax.max(ymin));
+            [(0.0, 9), (0.25, 111), (0.5, 194), (0.75, 277), (1.0, 360)]
+                .iter()
+                .map(|(f, row)| (py_label(lo + f * (hi - lo)), *row))
+                .collect()
+        };
+        draw_frame(
+            &mut img,
+            (w, h),
+            pf,
+            glyph_store,
+            atlas,
+            &FrameOpts {
+                xticks: &[0, 20, 40, 60, 80, 100],
+                yticks: &ylabels,
+                with_xlabel: false,
+            },
+        );
+
+        let cols1 = [(31u8, 119u8, 180u8), (255u8, 127u8, 14u8)];
+        for (series, color) in [(&ys1, cols1[0]), (&ys2, cols1[1])] {
+            draw_polyline(
+                &mut img,
+                (w, h),
+                pf,
+                &scale,
+                series,
+                color,
+                1.8,
+            );
+        }
+
+        // Legend (loc=best lands top-left for this data): per-entry color
+        // stub + label text, at the oracle's offset (label text starts
+        // x=66, first entry row y≈34).
+        let label1 = format!("{}-{}", ww, wx);
+        let label2 = format!("{}-{}", ww, wy);
+        let l1w = measure_text(&label1, glyph_store);
+        let l2w = measure_text(&label2, glyph_store);
+        let box_w = 12 + l1w.max(l2w) + 8;
+        let box_h = 2 + 12 + 12;
+        draw_legend_box(
+            &mut img,
+            (w, h),
+            glyph_store,
+            atlas,
+            &LegendBox {
+                bx: pf.x0 + 8,
+                by: pf.y0 + 8,
+                bw: box_w,
+                bh: box_h,
+                entries: &[
+                    (label1.as_str(), cols1[0]),
+                    (label2.as_str(), cols1[1]),
+                ],
+            },
+        );
+
+        let png = encode_png(&img, w as u32, h as u32);
+        Ok(format!("IMAGE:{}", base64_encode(&png)))
+    }
+
+    /// corpus.w2v_dimplot — one 100-point line per in-vocab word over its raw
+    /// 100 dims; legend label per word. OOV words filtered (upstream loops
+    /// over vocabs hits); <1 hit → empty chart (still ok=True upstream).
+    pub fn wire_w2v_dimplot(&mut self, text: &str) -> Result<String, crate::ProcessError> {
+        let parts: Vec<&str> = text.split_whitespace().collect();
+        let wv = match self.m.w2v.as_ref() {
+            Some(wv) => wv,
+            None => return Err(crate::ProcessError("'w2v_model' name 'w2v_model' is not defined".to_string())),
+        };
+        let known: Vec<&str> = parts.iter().copied().filter(|w| wv.contains(w)).collect();
+        if known.is_empty() {
+            return Err(crate::ProcessError("no in-vocab words".to_string()));
+        }
+        let (atlas, glyph_store) = Self::atlas_ctx();
+
+        let series: Vec<Vec<f32>> = known
+            .iter()
+            .map(|&wd| wv.vector(wv.index(wd).unwrap()).iter().take(100).copied().collect())
+            .collect();
+        let (ymin, ymax) = {
+            let mut ymin = f32::INFINITY;
+            let mut ymax = f32::NEG_INFINITY;
+            for s in &series {
+                let (a, b) = min_max(s);
+                ymin = ymin.min(a);
+                ymax = ymax.max(b);
+            }
+            (ymin, ymax)
+        };
+
+        let (w, h) = (W_PLOT, H_PLOT);
+        let mut img = vec![255u8; w * h * 3];
+        let pf = PlotFrame {
+            x0: 50,
+            x1: 546,
+            y0: 10,
+            y1: 379,
+        };
+        let scale = Scale::new(ymin, ymax, pf.y0 as f32, pf.y1 as f32);
+        let ylabels: Vec<(String, i32)> = {
+            let (lo, hi) = (ymin.min(ymax), ymax.max(ymin));
+            [(0.0, 9), (0.25, 111), (0.5, 194), (0.75, 277), (1.0, 360)]
+                .iter()
+                .map(|(f, row)| (py_label(lo + f * (hi - lo)), *row))
+                .collect()
+        };
+        draw_frame(
+            &mut img,
+            (w, h),
+            pf,
+            glyph_store,
+            atlas,
+            &FrameOpts {
+                xticks: &[0, 20, 40, 60, 80, 100],
+                yticks: &ylabels,
+                with_xlabel: false,
+            },
+        );
+
+        for (i, s) in series.iter().enumerate() {
+            let color = TAB10[i % 10];
+            draw_polyline(&mut img, (w, h), pf, &scale, s, color, 1.8);
+        }
+
+        // Legend: one entry per word, stacked; box sized to longest label.
+        let labels: Vec<String> = known.iter().map(|w| w.to_string()).collect();
+        let max_w = labels
+            .iter()
+            .map(|l| measure_text(l, glyph_store))
+            .max()
+            .unwrap_or(0);
+        let box_w = 12 + max_w + 8;
+        let box_h = 2 + 12 * labels.len() as i32;
+        let entries: Vec<(&str, (u8, u8, u8))> = labels
+            .iter()
+            .enumerate()
+            .map(|(i, l)| (l.as_str(), TAB10[i % 10]))
+            .collect();
+        draw_legend_box(
+            &mut img,
+            (w, h),
+            glyph_store,
+            atlas,
+            &LegendBox {
+                bx: pf.x0 + 8,
+                by: pf.y0 + 8,
+                bw: box_w,
+                bh: box_h,
+                entries: &entries,
+            },
+        );
+
+        let png = encode_png(&img, w as u32, h as u32);
+        Ok(format!("IMAGE:{}", base64_encode(&png)))
+    }
+
+    /// corpus.w2v_compare_color — per-word Spectral-colored dot rows over the
+    /// 100 dims; reversed-words y-ticks, gray axes facecolor, figsize (12,2)
+    /// dpi 80, s=16. OOV words filtered (upstream raises on OOV via wv[wd]
+    /// — probe showed no filter; here OOV → error, matching upstream crash).
+    pub fn wire_w2v_compare_color(&mut self, text: &str) -> Result<String, crate::ProcessError> {
+        let parts: Vec<&str> = text.split_whitespace().collect();
+        let wv = match self.m.w2v.as_ref() {
+            Some(wv) => wv,
+            None => return Err(crate::ProcessError("'w2v_model' name 'w2v_model' is not defined".to_string())),
+        };
+        for wd in &parts {
+            if !wv.contains(wd) {
+                return Err(crate::ProcessError(format!("KeyError: '{}'", wd)));
+            }
+        }
+        if parts.is_empty() {
+            return Err(crate::ProcessError("IndexError: list index out of range".to_string()));
+        }
+        let (atlas, glyph_store) = Self::atlas_ctx();
+
+        let vs: Vec<&[f32]> = parts
+            .iter()
+            .map(|&wd| wv.vector(wv.index(wd).unwrap()))
+            .collect();
+
+        // figsize (12,2) dpi 80, tight bbox trims; oracle goldens land at
+        // 795x181..804x181 — use the wide anchor so labels never clip.
+        let (w, h) = (804usize, 181usize);
+        let mut img = vec![255u8; w * h * 3];
+        let pf = PlotFrame {
+            x0: 45,
+            x1: 787,
+            y0: 9,
+            y1: 130,
+        };
+        // Gray axes facecolor behind the dots (upstream set_facecolor("gray")).
+        for y in pf.y0..=pf.y1 {
+            for x in pf.x0..=pf.x1 {
+                let idx = (y as usize * w + x as usize) * 3;
+                img[idx] = 128;
+                img[idx + 1] = 128;
+                img[idx + 2] = 128;
+            }
+        }
+        // One dot row per word; matplotlib normalizes each scatter's c=vs[i]
+        // over THAT row's min..max (no vmin/vmax passed) → per-row Spectral.
+        for (i, v) in vs.iter().enumerate() {
+            // Oracle rows sit at y ≈ 12.5, 68.5, 124.5 (dot rows span 6px).
+            let y_row = 12.5 + i as f32 * 56.0;
+            let (vmin, vmax) = min_max(v);
+            let denom = if vmax > vmin { vmax - vmin } else { 1.0 };
+            for (d, &val) in v.iter().take(100).enumerate() {
+                let t = (val - vmin) / denom;
+                let color = spectral_color(t);
+                let x = 60.0 + (d as f32 + 0.5) * ((780.0 - 60.0) / 100.0);
+                draw_dot(&mut img, (w, h), (x, y_row), color, 2.4);
+            }
+        }
+        // Spines + "Dimension" x label + word y-ticks (reversed), all through
+        // the shared frame painter.
+        let mut wdsr = parts.to_vec();
+        wdsr.reverse();
+        let ylabels: Vec<(String, i32)> = wdsr
+            .iter()
+            .enumerate()
+            .map(|(i, wd)| {
+                let y_row = 12 + (i as i32) * 56;
+                (wd.to_string(), y_row)
+            })
+            .collect();
+        draw_frame(
+            &mut img,
+            (w, h),
+            pf,
+            glyph_store,
+            atlas,
+            &FrameOpts {
+                xticks: &[],
+                yticks: &ylabels,
+                with_xlabel: true,
+            },
+        );
+
+        let png = encode_png(&img, w as u32, h as u32);
+        Ok(format!("IMAGE:{}", base64_encode(&png)))
+    }
+
     /// corpus.w2v — raw vector fetch; `str(list(vec))` for an in-vocab word,
     /// `()` (Python empty tuple repr) when OOV or the model is absent.
     pub fn wire_w2v(&mut self, text: &str) -> Result<String, crate::ProcessError> {
@@ -1076,6 +1381,287 @@ fn decode_png_gray_256x128(png_data: &[u8]) -> [u8; 256 * 128] {
         }
     }
     out
+}
+
+/// Line-plot canvas (diffplot/dimplot): matches the oracle tight-bbox
+/// renders at 555x418 (12x8in figure, tight bbox).
+const W_PLOT: usize = 555;
+const H_PLOT: usize = 418;
+
+/// Plot area frame in pixel coords (x0/x1 left/right spine, y0/y1 top/bottom).
+#[derive(Clone, Copy)]
+struct PlotFrame {
+    x0: i32,
+    x1: i32,
+    y0: i32,
+    y1: i32,
+}
+
+/// Linear data→pixel mapping for one axis.
+struct Scale {
+    dmin: f32,
+    dmax: f32,
+    pmin: f32,
+    pmax: f32,
+}
+
+impl Scale {
+    fn new(dmin: f32, dmax: f32, pmin: f32, pmax: f32) -> Self {
+        Scale {
+            dmin,
+            dmax: if dmax > dmin { dmax } else { dmin + 1.0 },
+            pmin,
+            pmax,
+        }
+    }
+    fn map(&self, v: f32) -> f32 {
+        self.pmin + (v - self.dmin) / (self.dmax - self.dmin) * (self.pmax - self.pmin)
+    }
+}
+
+/// matplotlib tab10 palette order.
+const TAB10: [(u8, u8, u8); 10] = [
+    (31, 119, 180),
+    (255, 127, 14),
+    (44, 160, 44),
+    (214, 39, 40),
+    (148, 103, 189),
+    (140, 86, 75),
+    (227, 119, 194),
+    (127, 127, 127),
+    (188, 189, 34),
+    (23, 190, 207),
+];
+
+fn min_max(v: &[f32]) -> (f32, f32) {
+    let mut a = f32::INFINITY;
+    let mut b = f32::NEG_INFINITY;
+    for &x in v {
+        if x < a {
+            a = x;
+        }
+        if x > b {
+            b = x;
+        }
+    }
+    (a, b)
+}
+
+fn min_max_both(a: &[f32], b: &[f32]) -> (f32, f32) {
+    let (a0, a1) = min_max(a);
+    let (b0, b1) = min_max(b);
+    (a0.min(b0), a1.max(b1))
+}
+
+/// Python/matplotlib tick-label formatting: ints print bare (`2`), floats
+/// print via repr (`-2.5` → "-2.5", 0.25 → "0.25").
+fn py_label(v: f32) -> String {
+    if v.fract() == 0.0 && v.abs() < 1e15 {
+        format!("{}", v as i64)
+    } else {
+        let s = format!("{v}");
+        s
+    }
+}
+
+/// White figure background, black spines with ticks outside + tick labels
+/// (matplotlib default style, as the oracle renders it). `xticks` are data
+/// values 0..100 mapped across the frame; `yticks` are (label, pixel row)
+/// pairs, right-aligned against the left spine; `with_xlabel` draws
+/// "Dimension" centered below (compare_color only — the line plots upstream
+/// set no xlabel).
+struct FrameOpts<'a> {
+    xticks: &'a [i32],
+    yticks: &'a [(String, i32)],
+    with_xlabel: bool,
+}
+
+fn draw_frame(
+    img: &mut [u8],
+    (w, h): (usize, usize),
+    pf: PlotFrame,
+    store: &GlyphStore,
+    atlas: &[u8; 256 * 128],
+    opts: &FrameOpts,
+) {
+    let dark = (27u8, 27u8, 27u8);
+    // spines
+    for x in pf.x0..=pf.x1 {
+        for y in [pf.y0, pf.y1] {
+            let idx = (y as usize * w + x as usize) * 3;
+            img[idx] = dark.0;
+            img[idx + 1] = dark.1;
+            img[idx + 2] = dark.2;
+        }
+    }
+    for y in pf.y0..=pf.y1 {
+        for x in [pf.x0, pf.x1] {
+            let idx = (y as usize * w + x as usize) * 3;
+            img[idx] = dark.0;
+            img[idx + 1] = dark.1;
+            img[idx + 2] = dark.2;
+        }
+    }
+    // x ticks below bottom spine + labels
+    let span = (pf.x1 - pf.x0) as f32;
+    for &t in opts.xticks {
+        let tx = pf.x0 + (t as f32 / 100.0 * span).round() as i32;
+        for y in pf.y1 + 1..=pf.y1 + 4 {
+            let idx = (y as usize * w + tx as usize) * 3;
+            img[idx] = dark.0;
+            img[idx + 1] = dark.1;
+            img[idx + 2] = dark.2;
+        }
+        let s = t.to_string();
+        let tw = measure_text(&s, store);
+        blit_text(img, (w, h), atlas, &s, (tx - tw / 2, pf.y1 + 18), store);
+    }
+    // y ticks left of the left spine + labels (right-aligned)
+    for (label, ty) in opts.yticks.iter() {
+        for x in pf.x0 - 4..pf.x0 {
+            let idx = ((*ty) as usize * w + x as usize) * 3;
+            img[idx] = dark.0;
+            img[idx + 1] = dark.1;
+            img[idx + 2] = dark.2;
+        }
+        let lw = measure_text(label, store);
+        blit_text(img, (w, h), atlas, label, (pf.x0 - 8 - lw, ty + 6), store);
+    }
+    if opts.with_xlabel {
+        let dim_w = measure_text("Dimension", store);
+        blit_text(
+            img,
+            (w, h),
+            atlas,
+            "Dimension",
+            ((pf.x0 + pf.x1) / 2 - dim_w / 2, pf.y1 + 34),
+            store,
+        );
+    }
+}
+/// Draw a polyline with the given color over the frame, clipping to it.
+fn draw_polyline(
+    img: &mut [u8],
+    (w, h): (usize, usize),
+    pf: PlotFrame,
+    yscale: &Scale,
+    ys: &[f32],
+    (r, g, b): (u8, u8, u8),
+    width: f32,
+) {
+    let n = ys.len();
+    let span = (pf.x1 - pf.x0) as f32;
+    let pts: Vec<(f32, f32)> = (0..n)
+        .map(|d| {
+            let x = pf.x0 as f32 + d as f32 / (n - 1) as f32 * span;
+            (x, yscale.map(ys[d]))
+        })
+        .collect();
+    for seg in pts.windows(2) {
+        let (x0, y0) = seg[0];
+        let (x1, y1) = seg[1];
+        let steps = (((x1 - x0).abs() + (y1 - y0).abs()).ceil() as usize).max(1) * 3;
+        for s in 0..=steps {
+            let t = s as f32 / steps as f32;
+            let x = x0 + t * (x1 - x0);
+            let y = y0 + t * (y1 - y0);
+            draw_disc(img, (w, h), (x, y), (r, g, b), width / 2.0, Some(pf));
+        }
+    }
+}
+
+/// Filled antialiased disc; optional clip rect (plot area).
+fn draw_disc(
+    img: &mut [u8],
+    (cw, ch): (usize, usize),
+    (cx, cy): (f32, f32),
+    (r, g, b): (u8, u8, u8),
+    radius: f32,
+    clip: Option<PlotFrame>,
+) {
+    let ir = radius.ceil() as i32 + 1;
+    for dy in -ir..=ir {
+        for dx in -ir..=ir {
+            let px = (cx + dx as f32).round() as i32;
+            let py = (cy + dy as f32).round() as i32;
+            if px < 0 || px >= cw as i32 || py < 0 || py >= ch as i32 {
+                continue;
+            }
+            if let Some(pf) = clip
+                && (px < pf.x0 || px > pf.x1 || py < pf.y0 || py > pf.y1)
+            {
+                continue;
+            }
+            let dist = ((dx * dx + dy * dy) as f32).sqrt();
+            let cov = (radius + 0.5 - dist).clamp(0.0, 1.0);
+            if cov > 0.0 {
+                let idx = (py as usize * cw + px as usize) * 3;
+                let bg_r = img[idx] as f32;
+                let bg_g = img[idx + 1] as f32;
+                let bg_b = img[idx + 2] as f32;
+                img[idx] = ((1.0 - cov) * bg_r + cov * (r as f32)).round() as u8;
+                img[idx + 1] = ((1.0 - cov) * bg_g + cov * (g as f32)).round() as u8;
+                img[idx + 2] = ((1.0 - cov) * bg_b + cov * (b as f32)).round() as u8;
+            }
+        }
+    }
+}
+
+/// Legend box: white background, gray border, per-entry color stub + label.
+struct LegendBox<'a> {
+    bx: i32,
+    by: i32,
+    bw: i32,
+    bh: i32,
+    entries: &'a [(&'a str, (u8, u8, u8))],
+}
+
+fn draw_legend_box(
+    img: &mut [u8],
+    (cw, ch): (usize, usize),
+    store: &GlyphStore,
+    atlas: &[u8; 256 * 128],
+    lb: &LegendBox,
+) {
+    for y in lb.by..lb.by + lb.bh {
+        for x in lb.bx..lb.bx + lb.bw {
+            if x < 0 || x >= cw as i32 || y < 0 || y >= ch as i32 {
+                continue;
+            }
+            let idx = (y as usize * cw + x as usize) * 3;
+            img[idx] = 255;
+            img[idx + 1] = 255;
+            img[idx + 2] = 255;
+        }
+    }
+    // border
+    for x in lb.bx..lb.bx + lb.bw {
+        for y in [lb.by, lb.by + lb.bh - 1] {
+            let idx = (y as usize * cw + x as usize) * 3;
+            img[idx] = 204;
+            img[idx + 1] = 204;
+            img[idx + 2] = 204;
+        }
+    }
+    for y in lb.by..lb.by + lb.bh {
+        for x in [lb.bx, lb.bx + lb.bw - 1] {
+            let idx = (y as usize * cw + x as usize) * 3;
+            img[idx] = 204;
+            img[idx + 1] = 204;
+            img[idx + 2] = 204;
+        }
+    }
+    for (i, (label, color)) in lb.entries.iter().enumerate() {
+        let ly = lb.by + 8 + (i as i32) * 12;
+        // color stub line
+        for x in lb.bx + 4..lb.bx + 12 {
+            let idx = ((ly + 4) as usize * cw + x as usize) * 3;
+            img[idx] = color.0;
+            img[idx + 1] = color.1;
+            img[idx + 2] = color.2;
+        }
+        blit_text(img, (cw, ch), atlas, label, (lb.bx + 16, ly + 8), store);
+    }
 }
 
 fn spectral_color(t: f32) -> (u8, u8, u8) {

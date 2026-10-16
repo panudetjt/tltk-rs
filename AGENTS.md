@@ -15,7 +15,8 @@ hand-type the commands they wrap.
 
 - Golden sets: `corpus/corpus.jsonl` × `golden/stichula.jsonl` (baseline
   **241/3/0**) and `golden/local_python.jsonl` (**228/7/9**) — the 3+7 are
-  disclosed upstream diffs (1 ner_tag CRF float flip, 2 plotwords renderer);
+  disclosed upstream diffs (1 ner_tag CRF float flip, 2 plotwords renderer,
+  + 6 plot-renderer rows in `corpus_fn_plots` — separate file, fail-by-design);
   and `corpus/corpus_extra.jsonl` × `golden/local_python_extra.jsonl`
   (**100/0/0**, must stay zero — these are python-oracle goldens; the 13
   `textana` rows are captured from the tltk **1.11** oracle, the rest from
