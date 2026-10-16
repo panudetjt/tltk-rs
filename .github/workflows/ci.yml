@@ -56,6 +56,12 @@ jobs:
           echo "$out"
           echo "$out" | grep -q "fail=0 missing_golden=0"
 
+      - name: Parity — per-function oracle goldens (chunk + tnc_tag; fail=0 required)
+        run: |
+          out=$(cargo run -q -p tltk-verifier -- check corpus/corpus_fn_chunk.jsonl golden/local_python_fn_chunk.jsonl crates/tltk-core/data)
+          echo "$out"
+          echo "$out" | grep -q "fail=0 missing_golden=0"
+
       - name: wasm arms compile (simd128 on/off)
         run: |
           cargo check -p tltk-worker --target wasm32-unknown-unknown
