@@ -31,8 +31,10 @@ jobs:
           path: ~/.cache/uv
           key: uv-${{ runner.os }}-${{ hashFiles('tools/**') }}
 
-      - name: Add wasm targets
-        run: rustup target add wasm32-unknown-unknown
+      - name: Add wasm targets + wasm-bindgen CLI
+        run: |
+          rustup target add wasm32-unknown-unknown
+          cargo install wasm-bindgen-cli --locked --version 0.2.129
 
       - name: Fetch model blobs (edu/w2v)
         run: mise run fetch-models

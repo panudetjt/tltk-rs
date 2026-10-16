@@ -15,7 +15,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install pinned toolchain (rust 1.99.1 / python 3.12 / node 22)
+      - name: Install pinned toolchain (rust 1.99.1 / python 3.12 / node 24 LTS)
         uses: jdx/mise-action@v2
 
       - uses: Swatinem/rust-cache@v2
@@ -25,8 +25,11 @@ jobs:
           path: ~/.cache/uv
           key: uv-${{ runner.os }}-${{ hashFiles('tools/**') }}
 
-      - name: Add wasm targets
-        run: rustup target add wasm32-unknown-unknown wasm32-wasip1
+      - name: Add wasm targets + clippy + wasm-bindgen CLI
+        run: |
+          rustup target add wasm32-unknown-unknown wasm32-wasip1
+          rustup component add clippy
+          cargo install wasm-bindgen-cli --locked --version 0.2.129
 
       - name: Fetch gitignored model blobs (edu/w2v) from the tltk wheel
         run: mise run fetch-models
