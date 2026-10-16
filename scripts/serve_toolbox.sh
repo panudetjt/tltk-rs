@@ -31,7 +31,7 @@ for model in "${TIER1_MODELS[@]}" "${TIER2_MODELS[@]}"; do
 done
 
 # 2. Build web glue if missing
-if [[ ! -f "static/wasm/scalar/tltk_web.js" || ! -f "static/wasm/simd/tltk_web.js" ]]; then
+if [[ ! -f "web/wasm/scalar/tltk_web.js" || ! -f "web/wasm/simd/tltk_web.js" ]]; then
     if [[ -f "scripts/build_web.sh" ]]; then
         echo "Building WebAssembly glue via scripts/build_web.sh..."
         bash scripts/build_web.sh
@@ -40,13 +40,13 @@ if [[ ! -f "static/wasm/scalar/tltk_web.js" || ! -f "static/wasm/simd/tltk_web.j
     fi
 fi
 
-# 3. Prepare data symlink / mapping under static/data
-if [[ ! -e "$REPO_ROOT/static/data" ]]; then
-    ln -sfn ../crates/tltk-core/data "$REPO_ROOT/static/data"
+# 3. Prepare data symlink / mapping under web/data
+if [[ ! -e "$REPO_ROOT/web/data" ]]; then
+    ln -sfn ../crates/tltk-core/data "$REPO_ROOT/web/data"
 fi
 
 # 4. Print URL and start static server
 echo "Serving TLTK toolbox at http://localhost:${PORT}/"
 echo "Press Ctrl+C to stop"
 
-exec python3 -m http.server "$PORT" --directory "$REPO_ROOT/static"
+exec python3 -m http.server "$PORT" --directory "$REPO_ROOT/web"

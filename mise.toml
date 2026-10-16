@@ -1,8 +1,64 @@
-# Toolchain pins for tltk-rs. Rust has no LTS channel — every 6-week stable
-# rolls; pin the exact latest stable for reproducible builds. Python/Node/uv
-# serve scripts/ and tools/ (script deps are PEP 723 inline, no global site).
+# Toolchain pins for tltk-rs — single source of truth for the environment.
+# Rust has no LTS channel (a stable rolls every 6 weeks); pin the exact latest.
+# Node 24 = current active LTS. Python 3.12: no official LTS exists — 3.12 is
+# the Ubuntu 24.04 LTS default and the newest with scipy<1.13 wheels (needed by
+# the converter's gensim pin); scripts with other needs declare PEP 723 inline
+# and uv fetches the right interpreter itself.
 [tools]
 rust = "1.99.1"
 python = "3.12"
-node = "22"
+node = "24"
 uv = "0.13.1"
+
+# ---- tasks: every generated/runnable artifact goes through here ------------
+[tasks.fetch-models]
+description = "download tltk==1.10 + TNCc5 w2v, convert edu/w2v blobs"
+run = "bash scripts/fetch_models.sh"
+
+[tasks.build-web]
+description = "build web/wasm/{scalar,simd} via wasm-bindgen"
+run = "bash scripts/build_web.sh"
+
+[tasks.serve]
+description = "serve the toolbox at http://localhost:8080"
+run = "bash scripts/serve_toolbox.sh"
+
+[tasks.gate]
+description = "clippy zero + workspace tests"
+run = "cargo clippy --workspace --all-targets -- -D warnings && cargo test --workspace"
+
+[tasks.parity]
+description = "the three parity checks (stichula / local / extra)"
+run = """
+cargo run -q -p tltk-verifier -- check corpus/corpus.jsonl golden/stichula.jsonl crates/tltk-core/data && \
+cargo run -q -p tltk-verifier -- check corpus/corpus.jsonl golden/local_python.jsonl crates/tltk-core/data; \
+out=$(cargo run -q -p tltk-verifier -- check corpus/corpus_extra.jsonl golden/local_python_extra.jsonl crates/tltk-core/data); \
+echo "$out"; echo "$out" | grep -q "fail=0 missing_golden=0"
+"""
+
+[tasks.wasm-parity]
+description = "wasm32-WASI lane under wasmtime (auto-downloads)"
+run = "bash scripts/wasm_parity.sh"
+
+[tasks.node-parity]
+description = "parity through the shipped browser wasm, both flavors"
+run = """
+node scripts/node_parity.mjs --wasm-dir web/wasm/scalar --corpus corpus/corpus.jsonl --golden golden/stichula.jsonl --expect-fails 3 && \
+node scripts/node_parity.mjs --wasm-dir web/wasm/simd --corpus corpus/corpus.jsonl --golden golden/stichula.jsonl --expect-fails 3
+"""
+
+[tasks.bench]
+description = "release bench, JSON to stdout (compare with --compare)"
+run = "cargo run --release -q -p tltk-verifier -- bench corpus/corpus.jsonl crates/tltk-core/data --json"
+
+[tasks.mem]
+description = "memory profile (VmHWM phases)"
+run = "cargo run --release -q -p tltk-verifier -- mem corpus/corpus.jsonl crates/tltk-core/data"
+
+[tasks.gen-atlas]
+description = "regenerate the Thai glyph atlas (needs a TH Sarabun New font)"
+run = "uv run tools/plotgen/gen_atlas.py"
+
+[tasks.oracle-setup]
+description = "era-correct py3.9 segment-oracle env (uv-managed)"
+run = "bash scripts/setup_segment_oracle.sh"

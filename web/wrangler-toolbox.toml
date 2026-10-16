@@ -1,4 +1,4 @@
-# static/wrangler-toolbox.toml
+# web/wrangler-toolbox.toml
 # Cloudflare static-only deployment configuration for the TLTK Web Toolbox.
 # Deploys as pure static assets (no worker script or serverless backend needed).
 

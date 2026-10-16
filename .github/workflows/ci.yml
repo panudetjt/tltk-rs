@@ -29,7 +29,7 @@ jobs:
         run: rustup target add wasm32-unknown-unknown wasm32-wasip1
 
       - name: Fetch gitignored model blobs (edu/w2v) from the tltk wheel
-        run: bash scripts/fetch_models.sh
+        run: mise run fetch-models
 
       - name: Clippy (zero warnings)
         run: cargo clippy --workspace --all-targets -- -D warnings
@@ -56,9 +56,8 @@ jobs:
 
       - name: Web build + node parity (both flavors)
         run: |
-          bash scripts/build_web.sh
-          node scripts/node_parity.mjs --wasm-dir static/wasm/scalar --corpus corpus/corpus.jsonl --golden golden/stichula.jsonl
-          node scripts/node_parity.mjs --wasm-dir static/wasm/simd --corpus corpus/corpus.jsonl --golden golden/stichula.jsonl
+          mise run build-web
+          mise run node-parity
 
       - name: wasm32-WASI parity lane (wasmtime; auto-downloads)
-        run: bash scripts/wasm_parity.sh
+        run: mise run wasm-parity

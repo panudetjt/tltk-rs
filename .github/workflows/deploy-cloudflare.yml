@@ -5,7 +5,7 @@ on:
     branches: [main]
     paths:
       - "crates/**"
-      - "static/**"
+      - "web/**"
       - "scripts/**"
       - "tools/**"
       - ".github/workflows/deploy-cloudflare.yml"
@@ -35,24 +35,24 @@ jobs:
         run: rustup target add wasm32-unknown-unknown
 
       - name: Fetch model blobs (edu/w2v)
-        run: bash scripts/fetch_models.sh
+        run: mise run fetch-models
 
       - name: Build web artifacts (scalar + simd128)
-        run: bash scripts/build_web.sh
+        run: mise run build-web
 
       - name: Stage model data for static serving
         run: |
-          mkdir -p static/data
-          cp crates/tltk-core/data/*.bin.gz static/data/
-          cp crates/tltk-core/data/sylrule.txt static/data/
-          cp crates/tltk-core/data/thaisyl.txt static/data/
-          ls -la static/data/
+          mkdir -p web/data
+          cp crates/tltk-core/data/*.bin.gz web/data/
+          cp crates/tltk-core/data/sylrule.txt web/data/
+          cp crates/tltk-core/data/thaisyl.txt web/data/
+          ls -la web/data/
 
       # A deploy that fails parity is not a deploy.
       - name: Parity gate on the shipped wasm (simd flavor)
         run: |
-          node scripts/node_parity.mjs --wasm-dir static/wasm/simd --corpus corpus/corpus_extra.jsonl --golden golden/local_python_extra.jsonl
-          out=$(node scripts/node_parity.mjs --wasm-dir static/wasm/simd --corpus corpus/corpus.jsonl --golden golden/stichula.jsonl)
+          node scripts/node_parity.mjs --wasm-dir web/wasm/simd --corpus corpus/corpus_extra.jsonl --golden golden/local_python_extra.jsonl
+          out=$(node scripts/node_parity.mjs --wasm-dir web/wasm/simd --corpus corpus/corpus.jsonl --golden golden/stichula.jsonl)
           echo "$out"; echo "$out" | grep -q "pass=241 fail=3 missing=0"
 
       - name: Deploy static toolbox to Cloudflare
@@ -60,6 +60,6 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          workingDirectory: static
+          workingDirectory: web
           wranglerVersion: "4"
           command: deploy --config wrangler-toolbox.toml

@@ -11,9 +11,9 @@ import { fileURLToPath } from 'node:url';
 import { TltkManager } from './loader.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const staticDir = path.resolve(__dirname, '..');
-const wasmDir = path.resolve(staticDir, 'wasm');
-const dataDir = path.resolve(staticDir, '..', 'crates', 'tltk-core', 'data');
+const webDir = path.resolve(__dirname, '..');
+const wasmDir = path.resolve(webDir, 'wasm');
+const dataDir = path.resolve(webDir, '..', 'crates', 'tltk-core', 'data');
 
 console.log('=== TLTK Loader Smoke Test (AC3) ===\n');
 

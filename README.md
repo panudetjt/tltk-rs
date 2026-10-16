@@ -150,7 +150,7 @@ The script checks for required model files (including gitignored `edu.bin.gz` an
 
 Deploy to any static web host (Cloudflare Pages / Workers Static Assets, Netlify, Vercel, GitHub Pages, or S3/R2). No server-side worker script or container is required.
 
-Example Cloudflare Workers static assets configuration (`static/wrangler-toolbox.toml`):
+Example Cloudflare Workers static assets configuration (`web/wrangler-toolbox.toml`):
 
 ```toml
 name = "tltk-toolbox"
@@ -172,7 +172,7 @@ npx wrangler pages deploy static
 ### Browser support & runtime SIMD selection
 
 - **Runtime probe**: On first page load, an inlined ~29-byte probe module evaluates `WebAssembly.validate` for 128-bit SIMD (`simd128`) capability.
-- **Dynamic dual-build loading**: SIMD-capable browsers dynamically load `static/wasm/simd/tltk_web.js` for accelerated dot-product vector operations, while other runtimes seamlessly fall back to `static/wasm/scalar/tltk_web.js`.
+- **Dynamic dual-build loading**: SIMD-capable browsers dynamically load `web/wasm/simd/tltk_web.js` for accelerated dot-product vector operations, while other runtimes seamlessly fall back to `web/wasm/scalar/tltk_web.js`.
 - **Cached probing**: The detection result is stored in `localStorage` to avoid redundant validation on future visits.
 
 ### First-load sizes & tiered model loading
@@ -197,17 +197,20 @@ with distributions.
 
 ## Run on a new machine
 
-Toolchains are pinned by [mise](https://mise.jdx.dev) (`rust 1.99.1 / python 3.12 / node 22`):
+Toolchains are pinned by [mise](https://mise.jdx.dev) (`rust 1.99.1 / python 3.12 / node 24 LTS / uv`),
+and every entry point is a mise task — `mise.toml` is the single source of truth
+for the environment and for producing/running every artifact (`mise tasks` to list):
 
 ```bash
-mise install          # installs the pinned toolchain
-bash scripts/fetch_models.sh   # downloads tltk==1.10 from PyPI, converts edu/w2v blobs (~1st run only)
-bash scripts/build_web.sh      # builds static/wasm/{scalar,simd}
-bash scripts/serve_toolbox.sh  # serves the toolbox at http://localhost:8080
+mise install             # installs the pinned toolchain
+mise run fetch-models    # tltk==1.10 from PyPI + TNCc5 w2v -> edu/w2v blobs (1st run only)
+mise run build-web       # builds web/wasm/{scalar,simd}
+mise run serve           # serves the toolbox at http://localhost:8080
 ```
 
-Gates: `cargo test --workspace`, the three `tltk-verifier check` parity runs,
-`scripts/wasm_parity.sh` (auto-downloads wasmtime on first run).
+Gates: `mise run gate` (clippy + tests), `mise run parity` (the three golden
+sets), `mise run node-parity` (shipped browser wasm, both flavors),
+`mise run wasm-parity` (wasm32-WASI under wasmtime; auto-downloads on first run).
 
 ## CI/CD (GitHub Actions)
 

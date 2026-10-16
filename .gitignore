@@ -7,4 +7,4 @@ golden/raw/
 # big models: regenerate with tools/convert/convert.py (see README)
 crates/tltk-core/data/edu.bin.gz
 crates/tltk-core/data/w2v.bin.gz
-static/data/
+web/data/
