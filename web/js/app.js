@@ -312,7 +312,8 @@ export const FUNCTIONS = [
     thaiName: 'ความลึกของคำ (Tree Depth at Word)',
     desc: 'คืนความลึกของต้นไม้ย่อยที่เริ่มจากคำที่ระบุ (ใส่ id ของคำในช่อง cutoff, ค่าเริ่มต้น 0 = ราก)',
     placeholder: '{"sentence":"...","words":[{"id":0,"form":"root","pos":"TOP","head":null,"deprel":null},{"id":1,"form":"กิน","pos":"VERB","head":0,"deprel":"root"}]}',
-    tier: 1
+    tier: 1,
+    cutoff: '0'
   },
   {
     id: 'tree_max_depth',
@@ -321,7 +322,6 @@ export const FUNCTIONS = [
     desc: 'คืนความลึกสูงสุดของต้นไม้ dependency ทั้งต้น',
     placeholder: '{"sentence":"...","words":[{"id":0,"form":"root","pos":"TOP","head":null,"deprel":null},{"id":1,"form":"กิน","pos":"VERB","head":0,"deprel":"root"}]}',
     tier: 1
-  }
   },
   {
     id: 'w2v',
@@ -442,7 +442,10 @@ function handleProgress({ phase, fileIndex, totalFiles, fileName, percent }) {
 async function runProcess() {
   const fnId = functionSelect.value;
   const text = inputText.value.trim();
-  const cutoff = cutoffSelect ? cutoffSelect.value : 'medium';
+  // cards may pin a fixed cutoff (e.g. get_tree_depth's word id — the shared
+  // select only offers low/medium/high)
+  const fn = FUNCTION_MAP.get(fnId);
+  const cutoff = fn?.cutoff ?? (cutoffSelect ? cutoffSelect.value : 'medium');
 
   if (!text) {
     showError('กรุณาใส่ข้อความนำเข้าก่อนกดประมวลผล');

@@ -57,6 +57,10 @@ node scripts/node_parity.mjs --wasm-dir web/wasm/scalar --corpus corpus/corpus.j
 node scripts/node_parity.mjs --wasm-dir web/wasm/simd --corpus corpus/corpus.jsonl --golden golden/stichula.jsonl --expect-fails 3
 """
 
+[tasks.web-e2e]
+description = "real-browser e2e loop validator (playwright; runs every function in the UI)"
+run = "bash scripts/web_e2e.sh"
+
 [tasks.bench]
 description = "release bench of tltk-core over the corpus (JSON to stdout)"
 run = "cargo run --release -q -p tltk-verifier -- bench corpus/corpus.jsonl crates/tltk-core/data --json"

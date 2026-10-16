@@ -1,9 +1,9 @@
 # AGENTS.md — tltk-rs
 
-Rust rewrite of TLTK (Thai NLP toolkit) — **38 wire functions**: the 16
+Rust rewrite of TLTK (Thai NLP toolkit) — **41 wire functions**: the 16
 validator functions **byte-identical to tltk 1.10**, `textana` at **tltk 1.11
 semantics** (1.11's only functional change is inside TextAna: LdvTTR ×100),
-and 21 more of upstream's inference surface ported per `PORTING-GAPS.md`
+and 24 more of upstream's inference surface ported per `PORTING-GAPS.md`
 (pipelines, tree helpers, translit variants, dict/spell/text utils, w2v
 extras, RF text classifier — byte-identical to the Python oracle except the
 disclosed-diff plot renderers). The verifier corpus decides parity, not

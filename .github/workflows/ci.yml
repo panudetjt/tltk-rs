@@ -84,3 +84,31 @@ jobs:
 
       - name: wasm32-WASI parity lane (wasmtime; auto-downloads)
         run: mise run wasm-parity
+
+  web-e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install pinned toolchain (rust 1.99.1 / node 24 LTS)
+        uses: jdx/mise-action@v2
+
+      - name: Build web engine (wasm, both flavors)
+        run: mise run build-web
+
+      - name: Module-syntax gate (the "no options" incident — browser parses these as ES modules)
+        run: |
+          set -e
+          for f in web/js/*.js; do
+            cp "$f" /tmp/check.mjs
+            node --check /tmp/check.mjs
+          done
+          echo "module syntax OK"
+
+      - name: Install pinned playwright + chromium
+        run: |
+          cd web/e2e && npm install --no-fund --no-audit
+          npx playwright install --with-deps chromium
+
+      - name: E2E loop — every function in a real browser
+        run: node scripts/web_e2e.mjs --timeout 180000

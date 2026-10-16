@@ -10,3 +10,4 @@ crates/tltk-core/data/w2v.bin.gz
 web/data/
 static/wasm/
 web/wasm/
+web/e2e/node_modules/
