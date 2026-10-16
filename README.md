@@ -103,6 +103,18 @@ python3 tools/convert/convert.py <tltk-package-dir> crates/tltk-core/data \
     --ner-model tools/convert/ner.crfsuite
 ```
 
+## wasm parity lane
+
+Run parity verification under wasm32-WASI (`wasm32-wasip1`) using `wasmtime`:
+
+```bash
+bash scripts/wasm_parity.sh
+```
+
+- **What it proves**: The full valifier — all 16 functions incl. w2v — byte-identical inside wasm32-WASI.
+- **What it does NOT prove**: The deployed worker target is `wasm32-unknown-unknown` with its own bindings; that crate is compile-checked per round and now also simd128-armed — the runtime lane uses `wasip1` because it needs std fs.
+- **How to run it**: Run `bash scripts/wasm_parity.sh` (or `./scripts/wasm_parity.sh`). It compiles `tltk-valifier` for `wasm32-wasip1`, runs all three golden sets (`stichula`, `local`, `extra`) and `selftest` under `wasmtime`, verifies output numbers match expected parity baselines, and exits 0 only when all pass.
+
 ## Deploy the worker
 
 ```bash
