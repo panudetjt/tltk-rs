@@ -1,0 +1,12 @@
+{"function": "th2ipa_all", "text": "แมวกินปลา", "cutoff": "medium", "expected": "[('แม~วกิน~ปลา', 'mɛː1.wa4.kin1.pa+.laː8'), ('แม~วกิน~ปลา', 'mɛː1.wa4.kin1.plaː1'), ('แมว~กิน~ปลา', 'ma4.wɛː1.kin1.pa+.laː8'), ('แมว~กิน~ปลา', 'ma4.wɛː1.kin1.plaː1'), ('แมว~กิน~ปลา', 'ma4.wɛː1.kin1.na4.pa+.laː8'), ('แมว~กิน~ปลา', 'ma4.wɛː1.kin1.na4.plaː1'), ('แมว~กิน~ปลา', 'mɛːw1.kin1.pa+.laː8'), ('แมว~กิน~ปลา', 'mɛːw1.kin1.plaː1'), ('แมว~กิน~ปลา', 'mɛːw1.kin1.na4.pa+.laː8'), ('แมว~กิน~ปลา', 'mɛːw1.kin1.na4.plaː1'), ('แม~วกิ~นป~ลา', 'mɛː1.wa4.ki2.nop4.laː1'), ('แมว~กิ~นป~ลา', 'ma4.wɛː1.ki2.nop4.laː1'), ('แมว~กิ~นป~ลา', 'mɛːw1.ki2.nop4.laː1')]", "ok": true}
+{"function": "th2ipa_all", "text": "สวัสดี", "cutoff": "medium", "expected": "[('สวัส~ดี', 'sa2.wat2.diː1'), ('สวัส~ดี', 'swat8.diː1')]", "ok": true}
+{"function": "th2ipa_all", "text": "catแมว", "cutoff": "medium", "expected": "[('', '')]", "ok": true}
+{"function": "th2ipa_all", "text": "cat", "cutoff": "medium", "expected": "[('cat', 'cat')]", "ok": true}
+{"function": "th2ipa_all", "text": "123", "cutoff": "medium", "expected": "[('123', '123')]", "ok": true}
+{"function": "th2ipa_all", "text": "", "cutoff": "medium", "expected": "[]", "ok": true}
+{"function": "sylparse_all", "text": "แมวกินปลา", "cutoff": "medium", "expected": "[('แม~วกิน~ปลา', \"mxx0~wa3'kin0~pa+'laa8\"), ('แม~วกิน~ปลา', \"mxx0~wa3'kin0~plaa0\"), ('แมว~กิน~ปลา', \"ma3'wxx0~kin0~pa+'laa8\"), ('แมว~กิน~ปลา', \"ma3'wxx0~kin0~plaa0\"), ('แมว~กิน~ปลา', \"ma3'wxx0~kin0'na3~pa+'laa8\"), ('แมว~กิน~ปลา', \"ma3'wxx0~kin0'na3~plaa0\"), ('แมว~กิน~ปลา', \"mxxw0~kin0~pa+'laa8\"), ('แมว~กิน~ปลา', 'mxxw0~kin0~plaa0'), ('แมว~กิน~ปลา', \"mxxw0~kin0'na3~pa+'laa8\"), ('แมว~กิน~ปลา', \"mxxw0~kin0'na3~plaa0\"), ('แม~วกิ~นป~ลา', \"mxx0~wa3'ki1~nop3~laa0\"), ('แมว~กิ~นป~ลา', \"ma3'wxx0~ki1~nop3~laa0\"), ('แมว~กิ~นป~ลา', 'mxxw0~ki1~nop3~laa0')]", "ok": true}
+{"function": "sylparse_all", "text": "แมว", "cutoff": "medium", "expected": "[('แมว', \"ma3'wxx0\"), ('แมว', 'mxxw0')]", "ok": true}
+{"function": "sylparse_all", "text": "สวัสดี", "cutoff": "medium", "expected": "[('สวัส~ดี', \"sa1'wat1~dii0\"), ('สวัส~ดี', 'swat8~dii0')]", "ok": true}
+{"function": "sylparse_all", "text": "catแมว", "cutoff": "medium", "expected": "[]", "ok": true}
+{"function": "sylparse_all", "text": "123", "cutoff": "medium", "expected": "[('1~2~3', 'nUN1~sOON4~saam4')]", "ok": true}
+{"function": "sylparse_all", "text": "", "cutoff": "medium", "expected": "[]", "ok": true}

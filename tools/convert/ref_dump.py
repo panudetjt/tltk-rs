@@ -127,6 +127,10 @@ elif mode == "corpus":
                 else:
                     r = "ความคล้ายระหว่าง '%s' กับ '%s' = %.4f" % (
                         parts[0], parts[1], corpus.similarity(parts[0], parts[1]))
+            elif fn == "th2ipa_all":
+                r = str(nlp.th2ipa_all(text))
+            elif fn == "sylparse_all":
+                r = str(nlp.sylparse_all(text))
             else:
                 continue
             ok = True
