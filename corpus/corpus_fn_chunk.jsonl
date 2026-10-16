@@ -1,0 +1,10 @@
+{"function": "chunk", "text": "แมวกินปลาทะเล"}
+{"function": "chunk", "text": "นายสมชาย ใจดี เดินทางไปทำงานที่กรุงเทพฯ"}
+{"function": "chunk", "text": "เด็กๆ กำลังวิ่งเล่นในสนามหญ้าอย่างสนุกสนาน ขณะที่คุณพ่อคุณแม่นั่งดูอยู่ใต้ต้นไม้ใหญ่"}
+{"function": "chunk", "text": "123 456"}
+{"function": "chunk", "text": "ทดสอบระบบ 123 test\nบรรทัดที่สอง 456 end"}
+{"function": "tnc_tag", "text": "แมวกินปลา"}
+{"function": "tnc_tag", "text": "นายสมชาย ใจดี"}
+{"function": "tnc_tag", "text": "ทดสอบ 123 test\nบรรทัดที่สอง 456"}
+{"function": "tnc_tag", "text": "hello world 2026"}
+{"function": "tnc_tag", "text": ""}

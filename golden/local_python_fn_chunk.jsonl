@@ -1,0 +1,10 @@
+{"function": "chunk", "text": "แมวกินปลาทะเล", "cutoff": "medium", "expected": "", "ok": true}
+{"function": "chunk", "text": "นายสมชาย ใจดี เดินทางไปทำงานที่กรุงเทพฯ", "cutoff": "medium", "expected": "<NEp>นาย/NOUN|สม/PROPN|ชาย/NOUN|</NEp><s/>/PUNCT|ใจดี/ADV|<u/>", "ok": true}
+{"function": "chunk", "text": "เด็กๆ กำลังวิ่งเล่นในสนามหญ้าอย่างสนุกสนาน ขณะที่คุณพ่อคุณแม่นั่งดูอยู่ใต้ต้นไม้ใหญ่", "cutoff": "medium", "expected": "เด็กๆ/NOUN|<s/><s/>/SYM|กำลัง/AUX|วิ่ง/VERB|เล่น/VERB|ใน/ADP|สนามหญ้า/NOUN|อย่าง/PART|สนุกสนาน/ADV|<u/>ขณะที่/SCONJ|คุณ/NOUN|พ่อคุณ/NOUN|แม่/NOUN|นั่ง/VERB|ดู/VERB|อยู่/ADV|ใต้/ADP|ต้นไม้/NOUN|ใหญ่/ADJ|<u/>", "ok": true}
+{"function": "chunk", "text": "123 456", "cutoff": "medium", "expected": "123<s/>456/NUM|<u/>", "ok": true}
+{"function": "chunk", "text": "ทดสอบระบบ 123 test\nบรรทัดที่สอง 456 end", "cutoff": "medium", "expected": "ทดสอบ/NOUN|ระบบ/NOUN|<u/>123<s/>test/NUM|<u/>บรรทัด/NOUN|ที่/ADP|สอง/NUM|<u/>456<s/>end/NUM|<u/>", "ok": true}
+{"function": "tnc_tag", "text": "แมวกินปลา", "cutoff": "medium", "expected": "<w tran=\"mxxw0kin0plaa0\" POS=\"NOUN\">แมวกินปลา</w><s/>\n", "ok": true}
+{"function": "tnc_tag", "text": "นายสมชาย ใจดี", "cutoff": "medium", "expected": "<w tran=\"naaj0som4chaaj0\" POS=\"NOUN\">นายสมชาย</w><s/><w tran=\"caj0dii0\" POS=\"CCONJ\">ใจดี</w><s/>\n", "ok": true}
+{"function": "tnc_tag", "text": "ทดสอบ 123 test\nบรรทัดที่สอง 456", "cutoff": "medium", "expected": "<w tran=\"thot3sOOp1\" POS=\"NOUN\">ทดสอบ</w><s/><w tran=\"123\" POS=\"NUM\">123</w><s/><w tran=\"test\" POS=\"SYM\">test</w><s/><w tran=\"ban0that3thii2sOON4\" POS=\"NOUN\">บรรทัดที่สอง</w><s/><w tran=\"456\" POS=\"NUM\">456</w><s/>\n", "ok": true}
+{"function": "tnc_tag", "text": "hello world 2026", "cutoff": "medium", "expected": "<w tran=\"hello\" POS=\"SYM\">hello</w><s/><w tran=\"world\" POS=\"SYM\">world</w><s/><w tran=\"2026\" POS=\"NUM\">2026</w><s/>\n", "ok": true}
+{"function": "tnc_tag", "text": "", "cutoff": "medium", "expected": "\n", "ok": true}

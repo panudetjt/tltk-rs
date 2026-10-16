@@ -82,6 +82,10 @@ elif mode == "corpus":
                 r = nlp.ner_tag(text)
             elif fn == "segment":
                 r = nlp.segment(text)
+            elif fn == "chunk":
+                r = nlp.chunk(text)
+            elif fn == "tnc_tag":
+                r = nlp.TNC_tag(text)
             elif fn == "textana":
                 # tltk 1.11 TextAna (LdvTTR x100); JSON in the Rust wire format:
                 # sorted keys, compact separators — see crates/tltk-core/src/textana.rs
