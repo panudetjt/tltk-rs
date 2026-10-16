@@ -729,6 +729,7 @@ pub(crate) fn compute_textana(sess: &mut Session, alltext: &str) -> Result<TextA
     }
     // tltk 1.11: LdvTTR = DesTotT * 100 / DesTotW (1.10 had * 1000)
     let ldv_ttr = ((des_tot_t * 100) as f64) / f.des_tot_w as f64;
+    let ldv_ttr_1000 = ((des_tot_t * 1000) as f64) / f.des_tot_w as f64;
 
     let totw = f.des_tot_w as f64;
     let ratio = |c: i64| -> String { py_float_repr(((c * 1000) as f64) / totw) };
@@ -781,7 +782,7 @@ pub(crate) fn compute_textana(sess: &mut Session, alltext: &str) -> Result<TextA
     features.insert("DesTotW", f.des_tot_w as f64);
     features.insert("DesWrdL", match des_wrd_l { PyNum::Int(i) => i as f64, PyNum::Float(f) => f });
     features.insert("DesWrdLd", des_wrd_ld);
-    features.insert("LdvTTR", ldv_ttr);
+    features.insert("LdvTTR", ldv_ttr_1000); // 1.10 semantics for textclass/txt2feat
     features.insert("SynDepth", syn_depth);
 
     let ratio_f = |c: i64| -> f64 { ((c * 1000) as f64) / totw };

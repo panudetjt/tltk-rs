@@ -155,7 +155,6 @@ pub fn text_class(sess: &mut Session, text: &str, cutoff: &str) -> Result<String
         "all" => "all",
         _ => "level",
     };
-
     let level_pred = if classifier == "level" || classifier == "all" {
         let mut x = [0.0f64; 64];
         let n = tc_model.level.feature_names.len();
@@ -206,7 +205,6 @@ pub fn txt2feat(sess: &mut Session, text: &str, cutoff: &str) -> Result<String, 
         out.push(']');
         return Ok(out);
     }
-
     let ana = textana::compute_textana(sess, text)?;
     let mut out = String::with_capacity(2048);
     out.push('[');
@@ -219,4 +217,56 @@ pub fn txt2feat(sess: &mut Session, text: &str, cutoff: &str) -> Result<String, 
     }
     out.push(']');
     Ok(out)
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::Tltk;
+
+    #[test]
+    fn test_textclass_probed_oracle_parity() {
+        let tltk = Tltk::embedded();
+        let mut sess = tltk.session();
+
+        let cases: &[(&str, &str, &str)] = &[
+            ("แมวกินปลา\nหมูกินข้าว", "level", "{\"level\":\"L1\"}"),
+            ("แมวกินปลา\nหมูกินข้าว", "genre", "{\"genre\":\"Newspaper\"}"),
+            ("แมวกินปลา\nหมูกินข้าว", "all", "{\"genre\":\"Newspaper\",\"level\":\"L1\"}"),
+            ("นายสมชายเดินทางไปกรุงเทพมหานคร\nเมื่อวานนี้", "level", "{\"level\":\"L1\"}"),
+            ("นายสมชายเดินทางไปกรุงเทพมหานคร\nเมื่อวานนี้", "genre", "{\"genre\":\"Newspaper\"}"),
+            ("นายสมชายเดินทางไปกรุงเทพมหานคร\nเมื่อวานนี้", "all", "{\"genre\":\"Newspaper\",\"level\":\"L1\"}"),
+            ("การ์ดใบนั้นมีคำอวยพรเขียนไว้สวยงาม\nเด็ก ๆ ชอบอ่านมาก\nไม่มีใครโต้แย้ง", "level", "{\"level\":\"L1\"}"),
+            ("การ์ดใบนั้นมีคำอวยพรเขียนไว้สวยงาม\nเด็ก ๆ ชอบอ่านมาก\nไม่มีใครโต้แย้ง", "genre", "{\"genre\":\"Newspaper\"}"),
+            ("การ์ดใบนั้นมีคำอวยพรเขียนไว้สวยงาม\nเด็ก ๆ ชอบอ่านมาก\nไม่มีใครโต้แย้ง", "all", "{\"genre\":\"Newspaper\",\"level\":\"L1\"}"),
+            ("ฉันกินข้าวแล้ว\nเธอกินข้าวหรือยัง", "level", "{\"level\":\"L1\"}"),
+            ("ฉันกินข้าวแล้ว\nเธอกินข้าวหรือยัง", "genre", "{\"genre\":\"Essay\"}"),
+            ("ฉันกินข้าวแล้ว\nเธอกินข้าวหรือยัง", "all", "{\"genre\":\"Essay\",\"level\":\"L1\"}"),
+            ("ความสะดวกสบายของประชาชนในเขตเมือง\nความสะดวกสบายของประชาชนในเขตชนบท\nการพัฒนาคุณภาพชีวิตที่ดีกว่าเดิมเป็นเป้าหมายสำคัญของประเทศ", "level", "{\"level\":\"L1\"}"),
+            ("ความสะดวกสบายของประชาชนในเขตเมือง\nความสะดวกสบายของประชาชนในเขตชนบท\nการพัฒนาคุณภาพชีวิตที่ดีกว่าเดิมเป็นเป้าหมายสำคัญของประเทศ", "genre", "{\"genre\":\"Newspaper\"}"),
+            ("ความสะดวกสบายของประชาชนในเขตเมือง\nความสะดวกสบายของประชาชนในเขตชนบท\nการพัฒนาคุณภาพชีวิตที่ดีกว่าเดิมเป็นเป้าหมายสำคัญของประเทศ", "all", "{\"genre\":\"Newspaper\",\"level\":\"L1\"}"),
+            ("สวัสดีครับ ผมชื่อไทย ยินดีที่ได้รู้จัก\nHello world ทดสอบ", "level", "{\"level\":\"L1\"}"),
+            ("สวัสดีครับ ผมชื่อไทย ยินดีที่ได้รู้จัก\nHello world ทดสอบ", "genre", "{\"genre\":\"Newspaper\"}"),
+            ("สวัสดีครับ ผมชื่อไทย ยินดีที่ได้รู้จัก\nHello world ทดสอบ", "all", "{\"genre\":\"Newspaper\",\"level\":\"L1\"}"),
+            ("เขาไม่ไป และเธอก็ไม่ไป\nแต่เราสองคนไป", "level", "{\"level\":\"L1\"}"),
+            ("เขาไม่ไป และเธอก็ไม่ไป\nแต่เราสองคนไป", "genre", "{\"genre\":\"Non-academic\"}"),
+            ("เขาไม่ไป และเธอก็ไม่ไป\nแต่เราสองคนไป", "all", "{\"genre\":\"Non-academic\",\"level\":\"L1\"}"),
+            ("วันนี้เป็นวันดี\nท้องฟ้าแจ่มใสมาก", "level", "{\"level\":\"L1\"}"),
+            ("วันนี้เป็นวันดี\nท้องฟ้าแจ่มใสมาก", "genre", "{\"genre\":\"Newspaper\"}"),
+            ("วันนี้เป็นวันดี\nท้องฟ้าแจ่มใสมาก", "all", "{\"genre\":\"Newspaper\",\"level\":\"L1\"}"),
+        ];
+
+        for (text, cutoff, expected) in cases {
+            let got = sess.process("text_class", text, cutoff).unwrap();
+            assert_eq!(&got, expected, "mismatch on {:?} cutoff={}", text, cutoff);
+        }
+    }
+
+    #[test]
+    fn test_txt2feat_name() {
+        let tltk = Tltk::embedded();
+        let mut sess = tltk.session();
+        let got = sess.process("txt2feat", "", "name").unwrap();
+        assert!(got.starts_with("[\"CrfCNL\""));
+        assert!(got.ends_with("\"WrdVERB\"]"));
+    }
 }
