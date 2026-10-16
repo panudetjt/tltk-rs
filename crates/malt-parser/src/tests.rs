@@ -55,7 +55,7 @@ fn fixture_json() -> Vec<u8> {
   "decision_models": [
     { "name": "odm0",
       "feature_map": { "next_index": 5, "entries": [
-        ["0", 1], ["1", 2], ["281474976710657", 3], ["562949953421313", 4], ["281474976710658", 5]
+        ["281474976710657", 1], ["562949953421313", 2], ["562949953421314", 3], ["844424930131969", 4], ["281474976710659", 5]
       ] },
       "liblinear": { "solver": "MCSVM_CS", "nr_class": 2, "labels": [1, 3],
                      "nr_feature": 5, "bias": 0.0,
@@ -152,7 +152,12 @@ fn graph_invariants() {
 fn feature_evaluation_each_kind() {
     let model = fixture_model();
     let fm = FeatureModel::new(&model).unwrap();
-    // tokens: [a/NOUN, b/VERB, c/NOUN]
+    // Features are sorted + blank-stripped like Java's TreeSet:
+    //   1 InputColumn(POSTAG,Stack[0])
+    //   2 Merge(InputColumn(POSTAG,Stack[0]),InputColumn(POSTAG,Input[0]))
+    //   3 Merge3(InputColumn(POSTAG,Stack[1]),InputColumn(POSTAG,Stack[0]),InputColumn(POSTAG,Input[0]))
+    //   4 OutputColumn(DEPREL,Stack[0])
+    // tokens: [a/NOUN, b/VERB, c/NOUN]; initial state stack=[0] input top=3
     let g = Graph::new(&[
         ("a".into(), "NOUN".into()),
         ("b".into(), "VERB".into()),
@@ -161,17 +166,14 @@ fn feature_evaluation_each_kind() {
     let cfg = Config::new(3, true, false);
     let values = fm.evaluate(&model, &g, &cfg);
 
-    // pos 0: POSTAG(Stack[0]=root) -> #null# = 0
+    // pos1: POSTAG(Stack[0]=root) -> #null# = 0
     assert_eq!(values[0], Some((0, "#null#".to_string())));
-    // pos 1: Merge(#null#, NOUN) -> not all null -> "…#null#~NOUN" — wait:
-    // Merge(null, NOUN): first is null but not BOTH -> merged "#null#~NOUN",
-    // which is NOT in MERGE2 table -> omitted (None).
+    // pos2: Merge(#null#, POSTAG(Input[0]=c)=NOUN) -> "#null#~NOUN" not in table -> omitted
     assert_eq!(values[1], None);
-    // pos 2: DEPREL(Stack[0]=root) -> ROOT_NODE null -> 0/#null#
-    assert_eq!(values[2], Some((0, "#null#".to_string())));
-    // pos 3: Merge3(Stack[1], Stack[0], Input[0]) = (null,null,NOUN) ->
-    // not all null -> "#null#~#null#~NOUN" not in table -> None
-    assert_eq!(values[3], None);
+    // pos3: Merge3(#null#,#null#,NOUN) -> not all null -> not in table -> omitted
+    assert_eq!(values[2], None);
+    // pos4: DEPREL(Stack[0]=root) -> ROOT_NODE null -> 0/#null#
+    assert_eq!(values[3], Some((0, "#null#".to_string())));
 
     // Now advance one SHIFT: stack=[0,1], input top = token 2 (VERB).
     let mut cfg = Config::new(3, true, false);
@@ -182,32 +184,32 @@ fn feature_evaluation_each_kind() {
     ]);
     apply(&Action::shift(), &mut cfg, &mut g).unwrap();
     let values = fm.evaluate(&model, &g, &cfg);
-    // pos 0: POSTAG(Stack[0]=a) = NOUN = 1
+    // pos1: POSTAG(Stack[0]=a) = NOUN = 1
     assert_eq!(values[0], Some((1, "NOUN".to_string())));
-    // pos 1: Merge(NOUN, POSTAG(Input[0]=b)=VERB) -> "NOUN~VERB" = 2
+    // pos2: Merge(NOUN, POSTAG(Input[0]=b)=VERB) -> "NOUN~VERB" = 2
     assert_eq!(values[1], Some((2, "NOUN~VERB".to_string())));
-    // pos 2: DEPREL(a): no head yet -> 0/#null#
-    assert_eq!(values[2], Some((0, "#null#".to_string())));
-    // pos 3: Merge3(Stack[1]=root #null#, NOUN, VERB) -> not all null ->
-    // "#null#~NOUN~VERB" not in table -> None
-    assert_eq!(values[3], None);
+    // pos3: Merge3(Stack[1]=root #null#, NOUN, VERB) -> not in table -> omitted
+    assert_eq!(values[2], None);
+    // pos4: DEPREL(a): no head yet -> 0/#null#
+    assert_eq!(values[3], Some((0, "#null#".to_string())));
 }
 
 #[test]
 fn packed_keys_and_vector_order() {
     let model = fixture_model();
+    // Positions are 1-based on the wire (pos0 below = feature position 1).
     let codes = vec![
-        Some((1, "NOUN".to_string())),    // pos0 -> key 1 -> idx 2
-        Some((1, "NOUN~NOUN".to_string())), // pos1 -> key (1<<48)|1 -> idx 3
-        None,                              // omitted entirely
-        Some((9, "x".to_string())),        // pos3 code 9: map miss -> omitted
+        Some((1, "NOUN".to_string())),      // pos1 code1 -> key (1<<48)|1 -> idx 1
+        Some((1, "NOUN~NOUN".to_string())), // pos2 code1 -> key (2<<48)|1 -> idx 2
+        None,                               // omitted entirely
+        Some((9, "x".to_string())),         // pos4 code 9: map miss -> omitted
     ];
     let nodes = model.build_feature_nodes(&codes);
     // Built in position order; value 1.0; misses omitted.
     assert_eq!(nodes.len(), 2);
-    assert_eq!(nodes[0].index, 2);
+    assert_eq!(nodes[0].index, 1);
     assert_eq!(nodes[0].value, 1.0);
-    assert_eq!(nodes[1].index, 3);
+    assert_eq!(nodes[1].index, 2);
 }
 
 /// Hand-computed dot products, bit-exact.
@@ -229,7 +231,7 @@ fn scoring_bit_exact_dot_product() {
     // exact-decision-value check via direct recomputation over 1-based rows
     let mut dec = [0.0f64; 2];
     for n in &nodes {
-        for &(col, w) in &dm.w[n.index as usize] {
+        for &(col, w) in &dm.w[(n.index - 1) as usize] {
             dec[col as usize] += w * n.value;
         }
     }

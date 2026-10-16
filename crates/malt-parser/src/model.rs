@@ -150,9 +150,11 @@ impl MaltModel {
         for (key, index) in &dm.feature_map.entries {
             feature_map.insert(key.parse::<u64>().expect("valid decimal key"), *index);
         }
-        let mut w = vec![Vec::new(); dm.liblinear.w.len() + 1];
+        // Java's `w` is 0-based (`t = index - 1`); the blob carries it
+        // verbatim, row for liblinear index i at w[i-1].
+        let mut w = vec![Vec::new(); dm.liblinear.w.len()];
         for (i, row) in dm.liblinear.w.iter().enumerate() {
-            w[i + 1] = row.clone();
+            w[i] = row.clone();
         }
         DecisionModel {
             feature_map,
@@ -172,7 +174,9 @@ impl MaltModel {
         let mut nodes = Vec::new();
         for (pos, value) in codes.iter().enumerate() {
             let Some((code, _symbol)) = value else { continue };
-            let key = ((pos as u64) << 48) | (*code as u64);
+            // Feature positions are 1-based on the wire (Lib.predict iterates
+            // i = 1..size; FeatureMap.addIndex packs that i).
+            let key = (((pos + 1) as u64) << 48) | (*code as u64);
             if let Some(&index) = dm.feature_map.get(&key) {
                 nodes.push(FeatureNode { index, value: 1.0 });
             }

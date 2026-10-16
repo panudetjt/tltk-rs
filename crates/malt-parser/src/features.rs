@@ -72,8 +72,17 @@ pub struct FeatureModel {
 
 impl FeatureModel {
     pub fn new(model: &MaltModel) -> Result<FeatureModel, String> {
-        let features = model
+        // Java's SpecificationSubModel stores specs in a TreeSet<String>
+        // after stripping ALL blanks — the wire order is that sorted order,
+        // not the XML order. Position numbering follows it.
+        let mut specs: Vec<String> = model
             .feature_strings()
+            .iter()
+            .map(|s| s.replace(' ', ""))
+            .collect();
+        specs.sort();
+        specs.dedup();
+        let features = specs
             .iter()
             .map(|s| parse_feature(s))
             .collect::<Result<Vec<_>, _>>()?;

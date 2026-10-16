@@ -17,9 +17,8 @@ pub fn predict(model: &DecisionModel, x: &[FeatureNode]) -> Vec<i32> {
 
     for node in x {
         if node.index <= n {
-            // Our `w` is 1-based (row 0 unused); Java's is 0-based with
-            // `t = index - 1` — same row.
-            if let Some(row) = model.w.get(node.index as usize) {
+            // `w` is 0-based like Java's (`t = index - 1`).
+            if let Some(row) = model.w.get((node.index - 1) as usize) {
                 for &(col, weight) in row {
                     if (col as usize) < nr_class {
                         dec_values[col as usize] += weight * node.value;
