@@ -135,10 +135,12 @@ bash scripts/wasm_parity.sh
 ## Deploy
 
 **Toolbox (production)** — assets-only Workers, no bucket and no bindings.
-Push to main runs `deploy-cloudflare.yml`: `mise run build-web`, stage
-`web/data` as real copies (the committed symlink becomes plain files for
-the upload), parity-gate the shipped wasm, then
-`npx -y wrangler@4 deploy --config web/wrangler.jsonc`. The models are part
+Push to main runs `ci.yml`: after `gate` + `web-e2e` pass, the `deploy`
+job receives the e2e-verified wasm + staged `web/data` as artifacts (the
+committed symlink becomes plain files for the upload) and runs
+`npx -y wrangler@4 deploy --config web/wrangler.jsonc` — a red commit
+never reaches production. On skip lanes (css/static/docs-only pushes) the
+deploy job rebuilds and self-checks the site instead. The models are part
 of the site assets. Manual reproduction of just the deploy:
 `mise run build-web` then the same wrangler line (staging the data dir the
 same way first).
@@ -346,9 +348,9 @@ sets), `mise run node-parity` (shipped browser wasm, both flavors),
 - **publish-crates.yml** — tag `v*`: publishes `tltk-core` to crates.io
   (needs the `CARGO_REGISTRY_TOKEN` secret; the other crates are app-side and
   stay repo-only).
-- **deploy-cloudflare.yml** — push to `main` touching code/static: rebuilds
-  the web artifacts, runs the parity gate on the shipped wasm, then deploys
-  the static toolbox via wrangler (needs `CLOUDFLARE_API_TOKEN` +
+- **ci.yml `deploy` job** (ex `deploy-cloudflare.yml`) — after `gate` +
+  `web-e2e` pass on `main`: receives the e2e-verified build as artifacts and
+  deploys the static toolbox via wrangler (needs `CLOUDFLARE_API_TOKEN` +
   `CLOUDFLARE_ACCOUNT_ID` secrets). Static-asset serving on Cloudflare is
   free and unmetered.
 

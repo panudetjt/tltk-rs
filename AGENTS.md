@@ -118,9 +118,14 @@ watch it: the pin lives in shell scripts, not a manifest.
 
 ## Shipping
 
-- crates.io: pushing a `v*` tag publishes `tltk-core` (needs the
-  `CARGO_REGISTRY_TOKEN` secret; other crates are app-side, repo-only).
-- Toolbox: push to main → `deploy-cloudflare.yml` (needs CF secrets);
-  deploy config is `web/wrangler.jsonc` (`$schema`-validated).
+- crates.io: pushing a `v*` tag publishes `malt-parser` then `tltk-core`
+  (order matters — core's package verification resolves its malt-parser dep
+  from the registry index, so the workflow waits for the index to show the
+  version; needs the `CARGO_REGISTRY_TOKEN` secret; verifier/worker/web are
+  app-side, repo-only).
+- Toolbox: push to main → `ci.yml`; the `deploy` job ships to Cloudflare
+  only after `gate` + `web-e2e` pass for the same commit (needs-gated — a
+  red commit never reaches production). Deploy config is
+  `web/wrangler.jsonc` (`$schema`-validated); CF secrets required.
 - `LICENSE` (MIT) + `THIRD_PARTY_LICENSES.md` (TLTK BSD-3 notice) must
   travel with distributions.

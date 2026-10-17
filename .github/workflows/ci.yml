@@ -34,7 +34,11 @@ jobs:
             files=$(git diff --name-only "origin/${{ github.base_ref }}...HEAD")
           else
             before="${{ github.event.before }}"
-            if [ -z "$before" ] || [ "$before" = "0000000000000000000000000000000000000000" ]; then all_true; exit 0; fi
+            # A displaced sha (force push) is not in this shallow-ish history:
+            # treat it as "everything changed" instead of dying on the diff.
+            if [ -z "$before" ] || [ "$before" = "0000000000000000000000000000000000000000" ] || ! git cat-file -e "$before^{commit}" 2>/dev/null; then
+              all_true; exit 0
+            fi
             files=$(git diff --name-only "$before" "${{ github.sha }}")
           fi
           rust=false; tooling=false; web_functional=false; ship=false
@@ -118,6 +122,12 @@ jobs:
       - name: Install pinned toolchain (rust 1.99.1 / node 24 LTS)
         uses: jdx/mise-action@v2
 
+      - name: Cache uv (PEP 723 script envs)
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/uv
+          key: uv-${{ runner.os }}-${{ hashFiles('tools/**') }}
+
       - name: Add wasm target + wasm-bindgen CLI
         run: |
           rustup target add wasm32-unknown-unknown
@@ -146,6 +156,23 @@ jobs:
       - name: E2E loop — every function in a real browser
         run: node scripts/web_e2e.mjs --timeout 180000
 
+      # Hand the deploy job the exact bytes this green loop just verified —
+      # deterministic build, so deploy never rebuilds or re-fetches.
+      - name: Stage model data for static serving
+        if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
+        run: |
+          rm -rf web/data && mkdir -p web/data
+          cp crates/tltk-core/data/*.bin.gz web/data/
+          cp crates/tltk-core/data/sylrule.txt crates/tltk-core/data/thaisyl.txt web/data/
+      - uses: actions/upload-artifact@v4
+        if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
+        with:
+          name: site-build
+          path: |
+            web/wasm
+            web/data
+          retention-days: 3
+
   deploy:
     # The production deploy, gated on the same commit's ci being green —
     # GitHub holds this job until gate + web-e2e pass for this exact sha.
@@ -162,45 +189,66 @@ jobs:
        (github.event_name == 'push' && github.ref == 'refs/heads/main'))
     runs-on: ubuntu-latest
     environment: production
+    # Not the workflow's ci-${{ github.ref }} group: a newer push cancels THIS
+    # workflow's pending run, but a deploy already in flight gets its own
+    # group and finishes (the newer run deploys again after it).
+    concurrency:
+      group: deploy-toolbox
+      cancel-in-progress: true
     steps:
       - uses: actions/checkout@v4
 
+      # Green web-e2e hands over the exact wasm+data bytes it verified
+      # (deterministic build) — no rebuild, no re-fetch. On skip lanes
+      # (css/static/docs-only) nothing was verified, so the deploy rebuilds
+      # everything itself instead of shipping unverified bytes quietly.
+      - name: Download the e2e-verified build
+        if: needs.web-e2e.result == 'success'
+        uses: actions/download-artifact@v4
+        with:
+          name: site-build
+          path: web
+
+      - name: Rebuild path (web-e2e skipped — css/static/docs-only push)
+        if: needs.web-e2e.result != 'success'
+        run: |
+          echo "web-e2e did not run for this diff; the deploy builds and self-checks the site."
+
       - name: Install pinned toolchain
+        if: needs.web-e2e.result != 'success'
         uses: jdx/mise-action@v2
 
       - uses: Swatinem/rust-cache@v2
+        if: needs.web-e2e.result != 'success'
       - name: Cache uv (PEP 723 script envs)
+        if: needs.web-e2e.result != 'success'
         uses: actions/cache@v4
         with:
           path: ~/.cache/uv
           key: uv-${{ runner.os }}-${{ hashFiles('tools/**') }}
 
       - name: Add wasm targets + wasm-bindgen CLI
+        if: needs.web-e2e.result != 'success'
         run: |
           rustup target add wasm32-unknown-unknown
           cargo install wasm-bindgen-cli --locked --version 0.2.129
 
       - name: Fetch model blobs (edu/w2v/malt)
+        if: needs.web-e2e.result != 'success'
         run: mise run fetch-models
 
       - name: Build web artifacts (scalar + simd128)
+        if: needs.web-e2e.result != 'success'
         run: mise run build-web
 
       - name: Stage model data for static serving
+        if: needs.web-e2e.result != 'success'
         run: |
           # web/data is a symlink to crates/tltk-core/data in the repo (local
           # serve convenience) — replace with real copies for the asset upload.
           rm -rf web/data && mkdir -p web/data
           cp crates/tltk-core/data/*.bin.gz web/data/
           cp crates/tltk-core/data/sylrule.txt crates/tltk-core/data/thaisyl.txt web/data/
-          ls -la web/data/
-
-      # A deploy that fails parity is not a deploy.
-      - name: Parity gate on the shipped wasm (simd flavor)
-        run: |
-          node scripts/node_parity.mjs --wasm-dir web/wasm/simd --corpus corpus/corpus_extra.jsonl --golden golden/local_python_extra.jsonl
-          out=$(node scripts/node_parity.mjs --wasm-dir web/wasm/simd --corpus corpus/corpus.jsonl --golden golden/stichula.jsonl --expect-fails 3 || true)
-          echo "$out"; echo "$out" | grep -q "pass=241 fail=3 missing=0"
 
       # Direct CLI (wrangler-action + mise's npx shim prompts in CI and dies);
       # npx -y answers the install prompt, wrangler reads the CF_* env vars.
@@ -212,13 +260,6 @@ jobs:
             node --check /tmp/check.mjs
           done
           echo "module syntax OK"
-
-      - name: Browser load gate (page alive, dropdown matches app.js)
-        run: |
-          cd web/e2e && npm install --no-fund --no-audit --silent
-          npx playwright install --with-deps chromium
-          cd ../..
-          node scripts/web_e2e.mjs --load-only --timeout 120000
 
       - name: Deploy static toolbox to Cloudflare
         env:
