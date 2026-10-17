@@ -14,7 +14,7 @@
 //! - Feature model (`features.rs`): `core/syntaxgraph/feature/
 //!   {InputColumnFeature,OutputColumnFeature,DGraphAddressFunction}.java`,
 //!   `parser/algorithm/nivre/NivreAddressFunction.java` and
-//!   `core/feature/map/{MergeFeature,Merge3Feature}.java`. The 23-feature
+//!   `core/feature/map/{MergeFeature,Merge3Feature}.java`. The feature
 //!   spec is parsed from `feature_strings` (verbatim wire names such as
 //!   `InputColumn(POSTAG, Stack[0])`); `feature_spec_xml` is carried in the
 //!   blob but not parsed — the strings are the same model flattened and the
