@@ -65,7 +65,10 @@ if [ ! -f "$DATA_DIR/malt.bin.gz" ]; then
       unzip -q -o "$WORK_DIR/maltparser-1.9.2.zip" -d "$(dirname "$MALTPARSER_DIR")"
     fi
     echo "==> Converting thamalt.mco -> malt.bin.gz (deterministic; needs JDK)"
-    MALTPARSER_PATH="$MALTPARSER_DIR" python3 "$REPO_ROOT/tools/convert/convert.py" malt
+    # The mco comes from the wheel extracted above — a fresh runner has no
+    # ~/.cache/tltk-rs tree (learned on the first CI run of this branch).
+    MALT_MCO_PATH="$TLTK_DIR/thamalt.mco" MALTPARSER_PATH="$MALTPARSER_DIR" \
+      python3 "$REPO_ROOT/tools/convert/convert.py" malt
   else
     echo "[fetch-models] java/javac not found — skipping malt.bin.gz (malt_parser/malt_parser_wordlist will error until it is generated)"
   fi
