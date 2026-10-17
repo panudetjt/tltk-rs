@@ -40,24 +40,33 @@ git tag -a "$TAG" -m "tltk-rs $TAG"
 git push -q origin main "$TAG"
 
 # 3. Wait for the crates.io publish workflow. gh registers the tag's run a
-# few seconds after the push — poll for the run id instead of racing it, and
+# few seconds after the push — poll for THIS tag's run by commit sha instead
+# of racing it (limit-1 grabs the previous release's green run while the new
+# one is still registering, which is exactly what happened on v0.1.3), and
 # take the conclusion from the API, never from watch's exit status.
 echo "==> waiting for publish-crates workflow…"
 RUN_ID=""
-for _ in $(seq 1 12); do
-  RUN_ID=$(gh run list -R panudetjt/tltk-rs --workflow publish-crates.yml --limit 1 --json databaseId -q '.[0].databaseId' || true)
+TAG_SHA="$(git rev-parse "$TAG^{commit}")"
+for _ in $(seq 1 24); do
+  RUN_ID=$(gh run list -R panudetjt/tltk-rs --workflow publish-crates.yml \
+    --limit 5 --json databaseId,headSha \
+    -q ".[] | select(.headSha == \"$TAG_SHA\") | .databaseId" 2>/dev/null | head -1 || true)
   [ -n "$RUN_ID" ] && break
   sleep 5
 done
-[ -n "$RUN_ID" ] || { echo "ERROR: publish-crates run not found" >&2; exit 1; }
+[ -n "$RUN_ID" ] || { echo "ERROR: publish-crates run for $TAG not found" >&2; exit 1; }
 gh run watch "$RUN_ID" -R panudetjt/tltk-rs >/dev/null || true
 CONCLUSION=$(gh run view "$RUN_ID" -R panudetjt/tltk-rs --json conclusion -q .conclusion)
 [ "$CONCLUSION" = "success" ] || { echo "ERROR: publish-crates concluded: $CONCLUSION" >&2; exit 1; }
 echo "  crates.io publish green"
 # conclusion=success is not the receipt — v0.1.2 concluded green with
 # malt-parser skipped by its guard. Assert both versions actually sit on the
-# sparse index before declaring the release.
+# sparse index (CDN-fronted; a fresh publish can trail by seconds).
 for spec in "ma/lt/malt-parser" "tl/tk/tltk-core"; do
+  for _ in $(seq 1 12); do
+    curl -sf "https://index.crates.io/$spec" | grep -q "\"vers\":\"$VERSION\"" && break
+    sleep 5
+  done
   curl -sf "https://index.crates.io/$spec" | grep -q "\"vers\":\"$VERSION\"" \
     || { echo "ERROR: $spec missing $VERSION on the registry index" >&2; exit 1; }
 done
