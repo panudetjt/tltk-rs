@@ -27,12 +27,13 @@ description = "serve the toolbox at http://localhost:8080"
 run = "bash scripts/serve_toolbox.sh"
 
 [tasks.gate]
-description = "clippy zero + workspace tests + script lint+format (ruff) + bash/node syntax"
+description = "clippy zero + workspace tests + script lint+format (ruff) + bash/node syntax + exec-bit audit"
 run = """
 cargo clippy --workspace --all-targets -- -D warnings && \
 cargo test --workspace && \
 ruff check scripts && \
 ruff format --check scripts && \
+python3 scripts/check_exec_bits.py && \
 for f in scripts/*.sh; do bash -n "$f"; done && \
 for f in scripts/*.mjs; do node --check "$f"; done
 """
@@ -74,6 +75,10 @@ bash scripts/setup_segment_oracle.sh --check >/dev/null 2>&1 || bash scripts/set
 [tasks.bench-report]
 description = "reproducible 4-lane perf+mem report (python/native/wasm, ROUNDS=3) -> target/bench/<stamp>"
 run = "bash scripts/bench_report.sh"
+
+[tasks.ci-green]
+description = "the sanctioned CI verification: wait + assert conclusion=success for a commit (default HEAD)"
+run = "bash scripts/ci_green.sh"
 
 [tasks.bench-wasm]
 description = "bench the shipped browser wasm under node, both flavors"

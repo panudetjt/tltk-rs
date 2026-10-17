@@ -44,12 +44,14 @@ hand-type the commands they wrap.
 - Perf work: `mise run bench-report` (4 lanes — python oracle, native rust,
   shipped wasm simd128 + scalar under Node — plus memory; artifacts with
   recorded environments under `target/bench/<stamp>/`); sides: `mise run bench`
-  / `mise run bench-python` / `mise run bench-wasm` / `mise run mem`. Every
-  bench artifact carries its system environment block (wasm lanes add the
-  sha256 of the measured tltk_web.wasm) — keep it that way. A number without a
-  same-box interleaved A/B is a measurement of the box, not the change. Cite
-  only numbers measured at a **pinned revision** — canonical runs happen in a
-  worktree at a known commit, and the artifact's `git` field is the receipt.
+  / `mise run bench-python` / `mise run bench-wasm` / `mise run mem`.
+- Every bench artifact carries its system environment block (wasm lanes add
+  the sha256 of the measured tltk_web.wasm) — keep it that way.
+- A number without a same-box interleaved A/B is a measurement of the box,
+  not the change.
+- Cite only numbers measured at a **pinned revision** — canonical runs happen
+  in a worktree at a known commit, and the artifact's `git` field is the
+  receipt.
 
 ## Gotchas
 
@@ -77,6 +79,11 @@ hand-type the commands they wrap.
   tree reaches the commit. Keep-both conflict seams (2026-10-16/17: a missing
   comma ×2 and a stray `}` that blanked the production dropdown) all came
   from plain merges committed before any check ran.
+- Filesystem executability probes lie on some dev boxes (ruff's EXE001 never
+  fires under WSL2) — the gate's `scripts/check_exec_bits.py` audits the git
+  index instead: a shebang means 100755 in the index. Verify CI with
+  `mise run ci-green` — its exit status comes from the run's API conclusion,
+  never from piped `gh run watch` output.
 
 ## Upstream
 
