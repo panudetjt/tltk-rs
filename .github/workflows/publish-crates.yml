@@ -24,7 +24,11 @@ jobs:
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
         run: |
-          MP_VERSION=$(cargo pkgid -p malt-parser | sed 's/.*#//')
+          # manifest truth, not the lockfile: cargo pkgid reads the lock, and
+          # a lock lagging the manifest bump reads as "already published"
+          # (that is how v0.1.2 concluded green with malt-parser skipped)
+          MP_VERSION=$(cargo metadata --no-deps --format-version 1 \
+            | python3 -c 'import json,sys; print(next(p["version"] for p in json.load(sys.stdin)["packages"] if p["name"]=="malt-parser"))')
           if curl -sf -A "tltk-rs-release (GitHub Actions)" \
               "https://crates.io/api/v1/crates/malt-parser/$MP_VERSION" \
               | grep -q "\"num\":\"$MP_VERSION\""; then

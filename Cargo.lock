@@ -318,7 +318,7 @@ checksum = "47d9d19d1d6efa0109d2f65ff4c85cddd50bd572e5a00127ab10987290bcefae"
 
 [[package]]
 name = "malt-parser"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "flate2",
  "serde",
@@ -618,7 +618,7 @@ dependencies = [
 
 [[package]]
 name = "tltk-core"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "flate2",
  "malt-parser",
@@ -629,7 +629,7 @@ dependencies = [
 
 [[package]]
 name = "tltk-verifier"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "serde",
  "serde_json",
@@ -638,7 +638,7 @@ dependencies = [
 
 [[package]]
 name = "tltk-web"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "js-sys",
  "tltk-core",
@@ -647,7 +647,7 @@ dependencies = [
 
 [[package]]
 name = "tltk-worker"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "once_cell",
  "serde",

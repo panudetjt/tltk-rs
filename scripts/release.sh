@@ -28,7 +28,11 @@ git rev-parse -q --verify "refs/tags/$TAG" >/dev/null && { echo "ERROR: $TAG alr
 # (re-releasing the current version) must not fail the tree — skip the commit.
 sed -i "s/^version = \"[^\"]*\"$/version = \"$VERSION\"/" Cargo.toml
 grep -q "^version = \"$VERSION\"" Cargo.toml || { echo "ERROR: version bump failed" >&2; exit 1; }
-git add Cargo.toml
+# Sync the lockfile's member versions with the manifest: the publish
+# workflow's already-published guard reads the lock (cargo pkgid), and a
+# stale lock is how v0.1.2 concluded green with malt-parser skipped.
+cargo update -w -q
+git add Cargo.toml Cargo.lock
 git diff --cached --quiet || git commit -q -m "chore: release $TAG"
 
 # 2. Tag + push (the v* tag triggers publish-crates.yml)
@@ -50,6 +54,14 @@ gh run watch "$RUN_ID" -R panudetjt/tltk-rs >/dev/null || true
 CONCLUSION=$(gh run view "$RUN_ID" -R panudetjt/tltk-rs --json conclusion -q .conclusion)
 [ "$CONCLUSION" = "success" ] || { echo "ERROR: publish-crates concluded: $CONCLUSION" >&2; exit 1; }
 echo "  crates.io publish green"
+# conclusion=success is not the receipt — v0.1.2 concluded green with
+# malt-parser skipped by its guard. Assert both versions actually sit on the
+# sparse index before declaring the release.
+for spec in "ma/lt/malt-parser" "tl/tk/tltk-core"; do
+  curl -sf "https://index.crates.io/$spec" | grep -q "\"vers\":\"$VERSION\"" \
+    || { echo "ERROR: $spec missing $VERSION on the registry index" >&2; exit 1; }
+done
+echo "  both crates visible on the registry index"
 
 # 4. GitHub Release with a grouped conventional-commit changelog
 PREV_TAG="$(git describe --tags --abbrev=0 "$TAG^" 2>/dev/null || true)"
