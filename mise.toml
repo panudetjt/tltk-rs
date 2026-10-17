@@ -44,7 +44,7 @@ run = "bash scripts/parity_fn.sh"
 
 [tasks.parity-fn]
 description = "parity for one fn corpus: mise run parity-fn -- <name> (e.g. malt; non-plots fn corpora only)"
-file = "scripts/parity_fn.sh"
+file = "scripts/parity_fn_one.sh"
 
 [tasks.wasm-parity]
 description = "wasm32-WASI lane under wasmtime (auto-downloads)"
