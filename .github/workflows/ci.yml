@@ -11,7 +11,46 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  changes:
+    # Path triage for the skip matrix below. Safe defaults: weird pushes
+    # (first push, force push) and workflow_dispatch count as "everything";
+    # only docs-only diffs skip the whole loop.
+    runs-on: ubuntu-latest
+    outputs:
+      rust: ${{ steps.triage.outputs.rust }}
+      tooling: ${{ steps.triage.outputs.tooling }}
+      web_functional: ${{ steps.triage.outputs.web_functional }}
+      ship: ${{ steps.triage.outputs.ship }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: triage
+        run: |
+          set -euo pipefail
+          all_true() { echo "rust=true" >> "$GITHUB_OUTPUT"; echo "tooling=true" >> "$GITHUB_OUTPUT"; echo "web_functional=true" >> "$GITHUB_OUTPUT"; echo "ship=true" >> "$GITHUB_OUTPUT"; }
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then all_true; exit 0; fi
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            files=$(git diff --name-only "origin/${{ github.base_ref }}...HEAD")
+          else
+            before="${{ github.event.before }}"
+            if [ -z "$before" ] || [ "$before" = "0000000000000000000000000000000000000000" ]; then all_true; exit 0; fi
+            files=$(git diff --name-only "$before" "${{ github.sha }}")
+          fi
+          rust=false; tooling=false; web_functional=false; ship=false
+          echo "$files" | grep -qE '^(crates/|Cargo\.toml$|Cargo\.lock$|corpus/|golden/)' && rust=true || true
+          echo "$files" | grep -qE '^(scripts/|tools/|\.github/workflows/)' && tooling=true || true
+          echo "$files" | grep -qE '^(web/js/|web/index\.html$|web/e2e/|web/sw\.js$)' && web_functional=true || true
+          # ship = anything except docs-only diffs (unknown paths ship — safe default)
+          [ -z "$(echo "$files" | grep -vE '^(docs/|\.scratch/|AGENTS\.md$|CLAUDE\.md$|README\.md$|LICENSE$|THIRD_PARTY_LICENSES\.md$|PORTING-GAPS\.md$|\.gitignore$)' )" ] || ship=true
+          {
+            echo "rust=$rust"; echo "tooling=$tooling"
+            echo "web_functional=$web_functional"; echo "ship=$ship"
+          } >> "$GITHUB_OUTPUT"
+
   gate:
+    needs: [changes]
+    if: needs.changes.outputs.rust == 'true' || needs.changes.outputs.tooling == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -67,6 +106,11 @@ jobs:
         run: mise run wasm-parity
 
   web-e2e:
+    needs: [changes]
+    if: >-
+      needs.changes.outputs.rust == 'true' ||
+      needs.changes.outputs.tooling == 'true' ||
+      needs.changes.outputs.web_functional == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -108,10 +152,14 @@ jobs:
     # Replaces the old parallel deploy-cloudflare.yml, which raced ci and
     # shipped a build from a red commit (observed on fb771dd: ci failure,
     # deploy success). Manual redeploy: gh workflow run ci.yml.
-    needs: [gate, web-e2e]
+    needs: [changes, gate, web-e2e]
     if: >-
-      github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'push' && github.ref == 'refs/heads/main')
+      always() &&
+      needs.changes.outputs.ship == 'true' &&
+      !contains(needs.*.result, 'failure') &&
+      !contains(needs.*.result, 'cancelled') &&
+      (github.event_name == 'workflow_dispatch' ||
+       (github.event_name == 'push' && github.ref == 'refs/heads/main'))
     runs-on: ubuntu-latest
     environment: production
     steps:
