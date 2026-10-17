@@ -150,12 +150,24 @@ impl MaltModel {
         for (key, index) in &dm.feature_map.entries {
             feature_map.insert(key.parse::<u64>().expect("valid decimal key"), *index);
         }
-        // Java's `w` is 0-based (`t = index - 1`); the blob carries it
-        // verbatim, row for liblinear index i at w[i-1].
-        let mut w = vec![Vec::new(); dm.liblinear.w.len()];
-        for (i, row) in dm.liblinear.w.iter().enumerate() {
-            w[i] = row.clone();
-        }
+        // liblinear's `Model.w` is class-major `double[nr_class][n]` and the
+        // schema-v1 contract carries it that way; scoring iterates it
+        // feature-major (`w[index-1]`, cols = class). Canonicalize both
+        // shapes here — mathematically identical (per-class accumulations
+        // keep their feature order either way), and older dev blobs were
+        // dumped transposed.
+        let nr_class = dm.liblinear.labels.len();
+        let w = if dm.liblinear.w.len() == nr_class {
+            let mut wt: Vec<Vec<(u32, f64)>> = vec![Vec::new(); dm.liblinear.nr_feature as usize];
+            for (c, row) in dm.liblinear.w.iter().enumerate() {
+                for &(col, v) in row {
+                    wt[col as usize].push((c as u32, v));
+                }
+            }
+            wt
+        } else {
+            dm.liblinear.w.clone()
+        };
         DecisionModel {
             feature_map,
             labels: dm.liblinear.labels.clone(),

@@ -318,3 +318,28 @@ fn legality_rules() {
 // Keep serde derive types referenced (they are used via deserialization).
 #[allow(dead_code)]
 fn _type_witness(_: SymbolTableJson, _: SymbolJson, _: FeatureMapJson, _: LiblinearJson, _: DecisionModelJson) {}
+
+/// The schema-v1 contract (and liblinear itself) carries `w` class-major
+/// (`double[nr_class][n]`); the fixture uses the feature-major shape. Both
+/// must decode to the same canonical model and score identically.
+#[test]
+fn class_major_w_canonicalizes_to_feature_major() {
+    let plain: serde_json::Value = serde_json::from_reader(flate2::read::GzDecoder::new(
+        std::io::Cursor::new(fixture_json()),
+    ))
+    .unwrap();
+    let mut v = plain.clone();
+    *v.pointer_mut("/decision_models/0/liblinear/w").unwrap() = serde_json::json!([
+        [[0, 1.5], [2, 0.25], [4, 2.0]],
+        [[1, 1.0], [3, 2.0]]
+    ]);
+    let mut gz = flate2::write::GzEncoder::new(Vec::new(), flate2::Compression::default());
+    serde_json::to_writer(&mut gz, &v).unwrap();
+    let class_major = MaltModel::decode(&gz.finish().unwrap()).expect("class-major decodes");
+    let a = fixture_model().decision_model();
+    let b = class_major.decision_model();
+    assert_eq!(a.labels, b.labels);
+    assert_eq!(a.w, b.w);
+    let nodes = vec![FeatureNode { index: 1, value: 1.0 }, FeatureNode { index: 3, value: 1.0 }];
+    assert_eq!(predict(&a, &nodes), predict(&b, &nodes));
+}
