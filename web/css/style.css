@@ -165,13 +165,16 @@ body {
 
 .form-grid {
   display: grid;
-  grid-template-columns: 1fr;
+  /* minmax(0, …), not bare 1fr: the function <select>'s longest option string
+     floors an auto track at its min-content (~620px) and blows the page out
+     horizontally on phones */
+  grid-template-columns: minmax(0, 1fr);
   gap: 16px;
 }
 
 @media (min-width: 640px) {
   .form-grid:has(#cutoffGroup:not(.hidden)) {
-    grid-template-columns: 2fr 1fr;
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
   }
 }
 
@@ -179,6 +182,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  min-width: 0;
 }
 
 .form-label {
@@ -206,6 +210,9 @@ body {
 .form-control {
   font-family: inherit;
   font-size: 0.95rem;
+  /* width:100% + min-width:0 — a select must never size to its longest option */
+  width: 100%;
+  min-width: 0;
   padding: 8px 12px;
   border: 1px solid var(--border-color);
   border-radius: var(--radius);
@@ -235,6 +242,8 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 2px 12px;
 }
 
 .action-links {
@@ -251,6 +260,7 @@ body {
   cursor: pointer;
   padding: 0;
   text-decoration: underline;
+  white-space: nowrap;
 }
 
 .link-btn:hover {
