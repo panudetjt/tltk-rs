@@ -17,7 +17,7 @@ The binary payload is a gzipped UTF-8 JSON document (`schema v1`).
   "format_version": 1,
   "model_name": "thamalt",
   "maltparser_version": "1.9.2",
-  "source_mco_sha256": "443cff6b2ea4ad21074e2dbe655079a4ecfcda4f4c2c1143ae880ea7747833a0",
+  "source_mco_sha256": "f15ec776f1614e2428c386db4404ba94f9b7e573960cb29aa7ce76fc423d7e02",
   "options": {
     "2planar_reduceonswitch": "false",
     "covington_allow_root": "true",
@@ -175,7 +175,7 @@ The binary payload is a gzipped UTF-8 JSON document (`schema v1`).
   "format_version": 1,
   "model_name": "thamalt",
   "maltparser_version": "1.9.2",
-  "source_mco_sha256": "443cff6b2ea4ad21074e2dbe655079a4ecfcda4f4c2c1143ae880ea7747833a0",
+  "source_mco_sha256": "f15ec776f1614e2428c386db4404ba94f9b7e573960cb29aa7ce76fc423d7e02",
   "options": {
     "2planar_reduceonswitch": "false",
     "covington_allow_root": "true",
@@ -246,3 +246,7 @@ The binary payload is a gzipped UTF-8 JSON document (`schema v1`).
   ]
 }
 ```
+
+## Note on `bias` rows
+
+The dumper enumerates `w` rows bounded by `nr_feature`. For a model trained with `bias >= 1`, liblinear appends one extra weight column (the bias feature); such a row would be silently dropped here. `thamalt` has `bias = 0.0` so the shipped blob is unaffected — revisit the dumper before reusing it on a bias-trained model.

@@ -31,6 +31,9 @@ Files produced (into crates/tltk-core/data/):
 
 Requires: venv with numpy, scikit-learn, nltk, gensim, python-crfsuite.
 Usage: convert.py <tltk-package-dir> <out-dir> [--w2v <path>] [--ner-model <crfsuite-file>]
+       convert.py malt [out-dir]   # thamalt.mco -> <out-dir>/malt.bin.gz (deterministic;
+                                   # default out-dir crates/tltk-core/data; needs JDK +
+                                   # $MALTPARSER_PATH, default ~/.cache/tltk-rs/maltparser-1.9.2)
 """
 import bz2
 import gzip
@@ -101,7 +104,7 @@ def conv_malt(out_dir: str, mco_path: str = None) -> None:
     if mco_path is None:
         mco_path = os.environ.get(
             "MALT_MCO_PATH",
-            os.path.expanduser("~/.cache/tltk-rs/tltk-1.10-pkg/tltk/thamalt.mco"),
+            os.path.expanduser("~/.cache/tltk-rs/tltk-1.11-pkg/tltk/thamalt.mco"),
         )
     if not os.path.exists(mco_path):
         raise FileNotFoundError(f"mco file not found: {mco_path}")
