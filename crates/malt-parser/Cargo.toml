@@ -1,5 +1,7 @@
 [package]
 name = "malt-parser"
+description = "JVM-free Rust port of MaltParser 1.9.2's inference engine (arc-eager + MCSVM) — bit-exact parsing from a precompiled malt.bin blob"
+repository.workspace = true
 version.workspace = true
 edition.workspace = true
 license.workspace = true

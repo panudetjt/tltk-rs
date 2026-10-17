@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# Release tltk-rs: bump version -> tag -> push (CI publishes tltk-core to
-# crates.io) -> GitHub Release with a conventional-commit changelog.
+# Release tltk-rs: bump version -> tag -> push (CI publishes the library
+# crates — malt-parser, then tltk-core — to crates.io) -> GitHub Release with
+# a conventional-commit changelog.
 #
 # Usage: bash scripts/release.sh <version>     e.g. 0.1.0
 set -euo pipefail
@@ -59,5 +60,6 @@ gh release create "$TAG" -R panudetjt/tltk-rs --title "tltk-rs $TAG" --notes "##
 $NOTES
 
 **crates.io**: https://crates.io/crates/tltk-core/$VERSION
+**crates.io**: https://crates.io/crates/malt-parser/$VERSION
 **toolbox**: https://tltk.panudet.dev/"
 echo "==> released $TAG (tag pushed, crates published, GitHub release created)"
