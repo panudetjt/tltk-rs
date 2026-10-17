@@ -4,6 +4,7 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -100,3 +101,79 @@ jobs:
 
       - name: E2E loop — every function in a real browser
         run: node scripts/web_e2e.mjs --timeout 180000
+
+  deploy:
+    # The production deploy, gated on the same commit's ci being green —
+    # GitHub holds this job until gate + web-e2e pass for this exact sha.
+    # Replaces the old parallel deploy-cloudflare.yml, which raced ci and
+    # shipped a build from a red commit (observed on fb771dd: ci failure,
+    # deploy success). Manual redeploy: gh workflow run ci.yml.
+    needs: [gate, web-e2e]
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install pinned toolchain
+        uses: jdx/mise-action@v2
+
+      - uses: Swatinem/rust-cache@v2
+      - name: Cache uv (PEP 723 script envs)
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/uv
+          key: uv-${{ runner.os }}-${{ hashFiles('tools/**') }}
+
+      - name: Add wasm targets + wasm-bindgen CLI
+        run: |
+          rustup target add wasm32-unknown-unknown
+          cargo install wasm-bindgen-cli --locked --version 0.2.129
+
+      - name: Fetch model blobs (edu/w2v/malt)
+        run: mise run fetch-models
+
+      - name: Build web artifacts (scalar + simd128)
+        run: mise run build-web
+
+      - name: Stage model data for static serving
+        run: |
+          # web/data is a symlink to crates/tltk-core/data in the repo (local
+          # serve convenience) — replace with real copies for the asset upload.
+          rm -rf web/data && mkdir -p web/data
+          cp crates/tltk-core/data/*.bin.gz web/data/
+          cp crates/tltk-core/data/sylrule.txt crates/tltk-core/data/thaisyl.txt web/data/
+          ls -la web/data/
+
+      # A deploy that fails parity is not a deploy.
+      - name: Parity gate on the shipped wasm (simd flavor)
+        run: |
+          node scripts/node_parity.mjs --wasm-dir web/wasm/simd --corpus corpus/corpus_extra.jsonl --golden golden/local_python_extra.jsonl
+          out=$(node scripts/node_parity.mjs --wasm-dir web/wasm/simd --corpus corpus/corpus.jsonl --golden golden/stichula.jsonl --expect-fails 3 || true)
+          echo "$out"; echo "$out" | grep -q "pass=241 fail=3 missing=0"
+
+      # Direct CLI (wrangler-action + mise's npx shim prompts in CI and dies);
+      # npx -y answers the install prompt, wrangler reads the CF_* env vars.
+      - name: Module-syntax gate (the browser parses web/js as ES modules — 2026-10-17 "no options" incident)
+        run: |
+          set -e
+          for f in web/js/*.js; do
+            cp "$f" /tmp/check.mjs
+            node --check /tmp/check.mjs
+          done
+          echo "module syntax OK"
+
+      - name: Browser load gate (page alive, dropdown matches app.js)
+        run: |
+          cd web/e2e && npm install --no-fund --no-audit --silent
+          npx playwright install --with-deps chromium
+          cd ../..
+          node scripts/web_e2e.mjs --load-only --timeout 120000
+
+      - name: Deploy static toolbox to Cloudflare
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx -y wrangler@4 deploy --config web/wrangler.jsonc
