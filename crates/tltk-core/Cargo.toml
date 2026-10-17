@@ -1,6 +1,8 @@
 [package]
 name = "tltk-core"
 description = "Rust rewrite of TLTK (Thai Language Toolkit) inference primitives — modelless, deterministic"
+readme = "README.md"
+repository.workspace = true
 version.workspace = true
 edition.workspace = true
 license.workspace = true

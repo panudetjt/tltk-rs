@@ -27,13 +27,14 @@ description = "serve the toolbox at http://localhost:8080"
 run = "bash scripts/serve_toolbox.sh"
 
 [tasks.gate]
-description = "clippy zero + workspace tests + script lint+format (ruff) + bash/node syntax + exec-bit audit"
+description = "clippy zero + workspace tests + script lint+format (ruff) + bash/node syntax + exec-bit + bundled-license audits"
 run = """
 cargo clippy --workspace --all-targets -- -D warnings && \
 cargo test --workspace && \
 ruff check scripts && \
 ruff format --check scripts && \
 python3 scripts/check_exec_bits.py && \
+python3 scripts/check_bundled_licenses.py && \
 for f in scripts/*.sh; do bash -n "$f"; done && \
 for f in scripts/*.mjs; do node --check "$f"; done
 """
