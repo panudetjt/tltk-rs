@@ -36,6 +36,7 @@ async fn router(req: Request, env: Env) -> Result<Response> {
                 "textana","text_class","txt2feat",
                 "chunk","tnc_tag",
                 "dg_print","dg_save","print_dtree","scan_dtree","get_tree_depth","tree_max_depth",
+                "malt_parser","malt_parser_wordlist",
                 "th2ipa_all","sylparse_all",
                 "wrd_len","match_engtext","known","edits2","check_thaidict","reset_thaidict","read_thaidict",
                 "w2v","w2v_diffplot","w2v_dimplot","w2v_compare_color","compound"

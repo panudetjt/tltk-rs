@@ -36,7 +36,7 @@ Status legend:
 |---|---|
 | wire (16) | `word_segment`, `syl_segment`, `spell_variants`, `pos_tag`, `segment`, `ner_tag`, `g2p`, `th2ipa`, `th2roman`, `th2read`, `spoonerism`, `textana`, `text_class`, `txt2feat`, `th2ipa_all`, `sylparse_all` |
 | internal (7) | `initial` (→ `Models::load`), `spell_candidates` (`spell.rs:53`), `pos_tag_wordlist` (folded into `pos.rs::pos_tag`), `ner` (`ner.rs:133`), `SylAna` + `WordAna` (`textana.rs`), `TranformData*` (`textclass.rs`) |
-| MISSING (10) | see below — 7 BLOCKED-DATA (TNC.3g), 2 BLOCKED-JVM (MaltParser), 1 derivable (`TextAna2json`) |
+| MISSING (8) | see below — 7 BLOCKED-DATA (TNC.3g), 1 derivable (`TextAna2json`) — MaltParser shipped 2026-10-17 (`malt.rs` + the `malt-parser` crate) |
 
 ### 1a. Segmentation variants — BLOCKED-DATA
 
@@ -74,13 +74,13 @@ Data status: the word-tier lexicon (`word.pklz` → WT01) and the two RF classif
 (`chklevel_rf.pklz` + `chkgenre_rf.pklz` → `textclass.bin.gz` TC01) are
 **converted, decoded and in use** (`Models::wordtier`, `Models::textclass`). `thamalt.mco` is not converted.
 
-### 1c. Pipelines & parsing — tree helpers ported, MaltParser MISSING
+### 1c. Pipelines & parsing — tree helpers + MaltParser ✅ (engine = the `malt-parser` crate, JVM-free)
 
 | upstream | notes |
 |---|---|
 | ~~`chunk(txt)`~~ | ✅ wire (one-shot sylseg → EDU → wordseg → POS → NER). |
 | ~~`TNC_tag`~~ | ✅ wire (XML tagging transcription + POS for corpus prep). |
-| `MaltParser`, `MaltParser_wordlist` | UD dependency parsing, model `thamalt.mco`. **BLOCKED-JVM (2026-10-16):** upstream itself shells out to Java — `from nltk.parse import malt` + `mp = malt.MaltParser(parser_dirname=Maltparser_Path, ...)`; without the MaltParser jar installed upstream PRINTS an install instruction and `sys.exit()`s, i.e. there is no self-contained Python behaviour to mirror. A faithful port means embedding a JVM or reimplementing MaltParser's transition-based parser bit-for-bit against JVM floats — excluded like the training tooling (§2c). `thamalt.mco` ships in the wheel, so the model file is not the blocker; the engine is. |
+| ~~`MaltParser`, `MaltParser_wordlist`~~ | ✅ wire 2026-10-17 (`malt.rs`). Engine = the separate `crates/malt-parser` crate: MaltParser 1.9.2 inference only (nivreeager arc-eager + SWAP-free, MCSVM_CS liblinear, CoNLL-X in-process), ported from jhamalt/maltparser (BSD-3). `thamalt.mco` → `malt.bin.gz` via `tools/convert/convert.py malt` (Java dumper using MaltParser's own classes; deterministic, sha `fca802e0…`). Goldens: `corpus_fn_malt.jsonl` × `local_python_fn_malt.jsonl` (45 rows, oracle = Java engine via nltk, byte-identical incl. the nltk-DependencyGraph words order — defaultdict first-mention order, see malt.rs module doc). Engine verify: 8/8 sentences bit-exact vs the JVM; wire parity 45/45. |
 | ~~`print_dtree`, `dg_print`, `dg_save`, `scan_dtree`, `get_tree_depth`, `tree_max_depth`~~ | ✅ wire (`dtree.rs`) — consume the parse-RESULT dict (`dg_save` shape), NOT MaltParser; oracle goldens from nltk `DependencyGraph` via `ref_dump`. Cycle edge cases: `RecursionError` mirrored; pure-cycle `print_dtree` prints nothing upstream (nothing reachable from node 0). |
 
 ### 1d. Transliteration variants — wire
@@ -159,7 +159,7 @@ runtime inference; they stay in Python even under an expanded scope.
 | `thdict`, `sylseg.3g`, `sylform_var.pklz`, `sylrule.lts`+`thaisyl.txt`, `PhSTrigram.sts`, `pos_tagger.pklz`, `ner_tagger.pklz`, `sent_segment.pklz`, `word.pklz`→WT01, `TNCc5model3.bin` | current 17 | ✅ converted |
 | `wordtier.bin.gz` (WT01) | TextAna/WordAna tier features | ✅ in use (`textana`) |
 | `chklevel_rf.pklz`, `chkgenre_rf.pklz` | `TextClass`, `txt2feat` | ✅ converted into `textclass.bin.gz` (TC01) |
-| `thamalt.mco` | `MaltParser` | ❌ needs parser port + converter |
+| `thamalt.mco` | `MaltParser` | ✅ converted (`malt.bin.gz`, gitignored; `convert.py malt` / `mise run fetch-models` regenerate) |
 | TNC3g n-grams | corpus.py word n-grams | ❌ separate upstream download, no converter |
 
 ---
@@ -201,7 +201,7 @@ single session) — and extend its dispatch when the corpus gains a function.
 5. ~~`TextAna`~~ — ✅ done 2026-10-16 (defaults surface, 1.11 semantics); `TextAna2json` remains trivial.
 6. `word_segment_mm` / `word_segment_nbest` — new charts; note the wire currently has no way to select the method.
 7. ~~`TextClass`~~ — ✅ done 2026-10-16 (sklearn-RF converter + `textclass.rs`).
-8. `MaltParser` — biggest lift; candidate to keep out of scope.
+8. ~~`MaltParser` — biggest lift; candidate to keep out of scope.~~ ✅ done 2026-10-17 (engine crate + wire + 45-row corpus, JVM-free).
 
 Expanding the wire surface touches, per function:
 `convert.py` (if new model) → `model.rs` loader → core module →

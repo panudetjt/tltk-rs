@@ -1,6 +1,8 @@
 //! Blob schema v1 (`malt.bin.gz` = gzip(JSON)) — decode contract owned by
 //! the converter task; this module is strictly the reader side.
 
+use std::io::Read;
+
 use serde::Deserialize;
 
 use crate::symbol::SymbolTables;
@@ -102,13 +104,17 @@ pub struct DecisionModel {
 }
 
 impl MaltModel {
-    /// Decode a gzip(JSON) blob. Strict on `format`/`format_version`;
-    /// unknown extra keys are ignored (serde default).
+    /// Decode a blob: gzip(JSON) (the `.bin.gz` file on disk) or raw JSON
+    /// bytes (loaders that gunzip before handing payloads over). Strict on
+    /// `format`/`format_version`; unknown extra keys are ignored (serde default).
     pub fn decode(bytes: &[u8]) -> Result<MaltModel, ParseError> {
-        let json: MaltModel = serde_json::from_reader(
-            flate2::read::GzDecoder::new(std::io::Cursor::new(bytes)),
-        )
-        .map_err(|e| ParseError::Decode(format!("blob decode failed: {e}")))?;
+        let raw: &[u8] = if bytes.len() >= 2 && bytes[0] == 0x1f && bytes[1] == 0x8b {
+            &try_gunzip(bytes)?
+        } else {
+            bytes
+        };
+        let json: MaltModel = serde_json::from_reader(std::io::Cursor::new(raw))
+            .map_err(|e| ParseError::Decode(format!("blob decode failed: {e}")))?;
 
         if json.format != "tltk-malt" {
             return Err(ParseError::Decode(format!(
@@ -250,4 +256,12 @@ impl MaltModel {
     pub fn tables(&self) -> &SymbolTables {
         &self.tables
     }
+}
+
+fn try_gunzip(data: &[u8]) -> Result<Vec<u8>, ParseError> {
+    let mut out = Vec::new();
+    flate2::read::GzDecoder::new(std::io::Cursor::new(data))
+        .read_to_end(&mut out)
+        .map_err(|e| ParseError::Decode(format!("gunzip failed: {e}")))?;
+    Ok(out)
 }

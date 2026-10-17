@@ -51,6 +51,26 @@ fi
 echo "==> Converting (first run resolves deps; cached afterwards)"
 uv run --quiet tools/convert/convert.py "$TLTK_DIR" "$WORK_DIR/out" "${W2V_ARG[@]}"
 
+# MaltParser engine blob: NOT in the wheel — regenerate deterministically
+# from the wheel's thamalt.mco via the official maltparser-1.9.2 dist
+# (BSD-3, maltparser.org) + a JDK. Skipped gracefully: malt_parser /
+# malt_parser_wordlist error with a clear message when the blob is absent.
+if [ ! -f "$DATA_DIR/malt.bin.gz" ]; then
+  if command -v java >/dev/null 2>&1 && command -v javac >/dev/null 2>&1; then
+    MALTPARSER_DIR="${MALTPARSER_PATH:-$HOME/.cache/tltk-rs/maltparser-1.9.2}"
+    if [ ! -f "$MALTPARSER_DIR/maltparser-1.9.2.jar" ]; then
+      echo "==> Fetching maltparser-1.9.2 dist (BSD-3) into $MALTPARSER_DIR"
+      mkdir -p "$(dirname "$MALTPARSER_DIR")"
+      curl -fsSL -o "$WORK_DIR/maltparser-1.9.2.zip" https://maltparser.org/dist/maltparser-1.9.2.zip
+      unzip -q -o "$WORK_DIR/maltparser-1.9.2.zip" -d "$(dirname "$MALTPARSER_DIR")"
+    fi
+    echo "==> Converting thamalt.mco -> malt.bin.gz (deterministic; needs JDK)"
+    MALTPARSER_PATH="$MALTPARSER_DIR" python3 "$REPO_ROOT/tools/convert/convert.py" malt
+  else
+    echo "[fetch-models] java/javac not found — skipping malt.bin.gz (malt_parser/malt_parser_wordlist will error until it is generated)"
+  fi
+fi
+
 for blob in edu.bin.gz w2v.bin.gz; do
     [ -f "$WORK_DIR/out/$blob" ] || { echo "ERROR: converter produced no $blob" >&2; exit 1; }
     cp "$WORK_DIR/out/$blob" "$DATA_DIR/$blob"

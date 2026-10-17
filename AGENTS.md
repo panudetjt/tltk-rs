@@ -1,9 +1,9 @@
 # AGENTS.md — tltk-rs
 
-Rust rewrite of TLTK (Thai NLP toolkit) — **41 wire functions**, port surface
+Rust rewrite of TLTK (Thai NLP toolkit) — **43 wire functions**, port surface
 **tltk 1.11** (repinned 2026-10-17; 1.11's only functional change vs 1.10 is
 TextAna's LdvTTR ×1000 → ×100): the 16 validator functions **byte-identical
-to the stichula validator / Python oracle**, and 25 more of upstream's
+to the stichula validator / Python oracle**, and 27 more of upstream's
 inference surface ported per `PORTING-GAPS.md` (pipelines, tree helpers,
 translit variants, dict/spell/text utils, w2v extras, RF text classifier —
 byte-identical to the Python oracle except the disclosed-diff plot
@@ -101,8 +101,9 @@ regen = `tools/convert/ref_dump.py` corpus mode under the era venv, one
 process in corpus order). As of 2026-10:
 nothing functional in 1.11 remains unported; the only upstream names still
 absent are data/JVM-blocked (TNC.3g n-grams + mm/nbest segmenters,
-MaltParser, similar_edu — PORTING-GAPS.md §1a/§1c/§2a/§2b carries the
-evidence).
+similar_edu — PORTING-GAPS.md §1a/§2a/§2b carries the evidence;
+MaltParser shipped 2026-10-17 as the `malt-parser` crate + `malt_parser`
+wire functions, no JVM).
 Upstream truth for behaviour questions and any port: the Python oracle at
 `~/.cache/tltk-rs/tltk-1.11-pkg/tltk/` (`nlp.py` + `corpus.py` are the
 entire upstream API; `mise run oracle-setup` creates the era-correct env).

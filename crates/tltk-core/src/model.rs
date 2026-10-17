@@ -1000,6 +1000,8 @@ pub struct Models {
     pub w2v: Option<W2v>,
     pub ner: Option<NerModel>,
     pub textclass: Option<TextClassModel>,
+    /// MaltParser engine model (malt.bin.gz) — optional tier-2, like edu/w2v.
+    pub malt: Option<malt_parser::MaltModel>,
     /// PRON patterns from sylrule.txt + thaisyl.txt (order preserved), compiled.
     pub pron: Vec<PronPattern>,
 }
@@ -1042,6 +1044,7 @@ impl Models {
         let w2v = g("w2v.bin").map(|d| W2v::decode(d)).transpose()?;
         let ner = g("ner.bin").map(|d| NerModel::decode(d)).transpose()?;
         let textclass = g("textclass.bin").map(|d| TextClassModel::decode(d)).transpose()?;
+        let malt = g("malt.bin").map(|d| malt_parser::MaltModel::decode(d).map_err(|e| e.to_string())).transpose()?;
         let sylrule = blob(blobs, "sylrule.txt").ok_or_else(|| "sylrule.txt missing".to_string())?;
         let thaisyl = blob(blobs, "thaisyl.txt").ok_or_else(|| "thaisyl.txt missing".to_string())?;
         let sylrule_str = std::str::from_utf8(sylrule).map_err(|e| format!("sylrule.txt invalid utf-8: {}", e))?;
@@ -1064,7 +1067,7 @@ impl Models {
             };
             pron.push(PronPattern { pattern, codes, re, n_groups, re_full });
         }
-        Ok(Models { thdict, sylseg, sylvar, phs, pos, wordtier, edu, w2v, ner, textclass, pron })
+        Ok(Models { thdict, sylseg, sylvar, phs, pos, wordtier, edu, w2v, ner, textclass, malt, pron })
     }
 
     /// `blobs`: gunzipped model payloads keyed by file name ("thdict.bin", ...).
@@ -1095,7 +1098,7 @@ impl Models {
                 k.trim_end_matches(".gz").to_string()
             } else if k.ends_with(".bin") {
                 k.clone()
-            } else if k == "edu" || k == "w2v" || k == "ner" || k == "textclass" {
+            } else if k == "edu" || k == "w2v" || k == "ner" || k == "textclass" || k == "malt" {
                 format!("{}.bin", k)
             } else {
                 continue;
@@ -1118,6 +1121,9 @@ impl Models {
         }
         if let Some(d) = gz.get("textclass.bin") {
             self.textclass = Some(TextClassModel::decode(d)?);
+        }
+        if let Some(d) = gz.get("malt.bin") {
+            self.malt = Some(malt_parser::MaltModel::decode(d).map_err(|e| e.to_string())?);
         }
         Ok(())
     }

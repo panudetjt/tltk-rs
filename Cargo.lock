@@ -621,6 +621,7 @@ name = "tltk-core"
 version = "0.1.0"
 dependencies = [
  "flate2",
+ "malt-parser",
  "regex",
  "serde",
  "serde_json",

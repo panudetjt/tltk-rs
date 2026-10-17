@@ -275,6 +275,22 @@ export const FUNCTIONS = [
   }
 ,
   {
+    id: 'malt_parser',
+    name: 'malt_parser',
+    thaiName: 'UD dependency parse (MaltParser)',
+    desc: 'แยกคำ + POS แล้ว parse ด้วย MaltParser (thamalt, Nivre arc-eager + liblinear) คืน dict รูป dg_save — port จาก Java เป็น Rust ไม่ต้องใช้ JVM',
+    placeholder: 'เขานั่งดูหนังอยู่ที่บ้าน',
+    tier: 2
+  },
+  {
+    id: 'malt_parser_wordlist',
+    name: 'malt_parser_wordlist',
+    thaiName: 'UD dependency parse จากรายการคำ (MaltParser wordlist)',
+    desc: 'รับรายการคำ (บรรทัดละคำ) tag POS ตรง ๆ แล้ว parse ด้วย MaltParser คืน dict รูป dg_save',
+    placeholder: 'เขา\nนั่ง\nดู\nหนัง',
+    tier: 2
+  },
+  {
     id: 'dg_print',
     name: 'dg_print',
     thaiName: 'พิมพ์ความสัมพันธ์การพึ่งพา (Dependency Relations)',

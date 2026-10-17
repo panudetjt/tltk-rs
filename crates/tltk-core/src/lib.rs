@@ -11,6 +11,7 @@ pub mod dtree;
 pub mod chunk;
 pub mod edu;
 pub mod g2p;
+pub mod malt;
 pub mod model;
 pub mod ner;
 pub mod pos;
@@ -113,6 +114,8 @@ impl<'a> Session<'a> {
             "tree_max_depth" => dtree::tree_max_depth(self, text),
             "text_class" => textclass::text_class(self, text, cutoff),
             "txt2feat" => textclass::txt2feat(self, text, cutoff),
+            "malt_parser" => malt::malt_parser(self, text),
+            "malt_parser_wordlist" => malt::malt_parser_wordlist(self, text),
             "chunk" => Ok(self.chunk(text)),
             "tnc_tag" => self.tnc_tag(text),
             "th2ipa_all" => Ok(self.th2ipa_all(text)),

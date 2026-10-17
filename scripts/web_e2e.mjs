@@ -138,6 +138,8 @@ const INPUT_OVERRIDES = {
   textana: SMOKE_TEXT,
   text_class: SMOKE_TEXT,
   txt2feat: SMOKE_TEXT,
+  malt_parser: 'เขานั่งดูหนังอยู่ที่บ้าน',
+  malt_parser_wordlist: 'เขา\nนั่ง\nดู\nหนัง',
   w2v_diffplot: 'กิน นอน เดิน',
   w2v_dimplot: 'แมว ปลา',
   w2v_compare_color: 'แมว ปลา นก',

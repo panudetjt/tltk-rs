@@ -26,10 +26,12 @@ export const TIER1_FILES = [
   'thaisyl.txt'
 ];
 
-// Tier-2: 2 large files (discourse segmentation and word2vec embeddings)
+// Tier-2: large files (discourse segmentation, word2vec embeddings, the
+// MaltParser engine model)
 export const TIER2_FILES = [
   'edu.bin.gz',
-  'w2v.bin.gz'
+  'w2v.bin.gz',
+  'malt.bin.gz'
 ];
 
 // Functions requiring Tier-2 models
@@ -39,14 +41,16 @@ export const TIER2_FUNCTIONS = new Set([
   'outofgroup',
   'analogy',
   'plotwords',
-  'segment'
+  'segment',
+  'malt_parser',
+  'malt_parser_wordlist'
 ]);
 
 /**
  * Version note: Model assets default to 'data/<filename>'.
  * A query string such as '?v=8f42992' can be appended for immutable cache-busting.
  */
-const DEFAULT_VERSION = '69e25a3';
+const DEFAULT_VERSION = '288d0cb';
 
 /** Asset URL in the same versioned form getAssetUrl produces (SW prefetch). */
 export function assetUrl(filename) {

@@ -20,7 +20,7 @@ corpus.jsonl ──▶ scripts/capture_stichula.py ──▶ golden/stichula.jso
 
 | path | what |
 |---|---|
-| `crates/tltk-core/` | the library: all 41 wire functions, no network, no async |
+| `crates/tltk-core/` | the library: all 43 wire functions, no network, no async |
 | `crates/tltk-worker/` | Cloudflare Worker (workers-rs) — thin HTTP shell over the core |
 | `crates/tltk-verifier/` | parity harness (`run` / `check` / `selftest`) |
 | `tools/convert/` | Python scripts: pickle → portable binary models, local oracle |
@@ -35,7 +35,7 @@ which never touches HTTP so it can also be used as a plain library.
 
 `POST /process` with `{"text": "...", "function": "...", "cutoff": "medium"}` →
 `{"success": true, "function": ..., "input": ..., "result": "..."}` (or
-`success: false` + `error`). 41 functions: the 16 validator names
+`success: false` + `error`). 43 functions: the 16 validator names
 (`th2ipa`, `th2roman`, `word_segment`, `syl_segment`, `segment`, `g2p`,
 `th2read`, `spell_variants`, `spoonerism`, `pos_tag`, `ner_tag`,
 `similar_words`, `similarity`, `outofgroup`, `analogy`, `plotwords`) plus
