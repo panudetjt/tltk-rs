@@ -146,7 +146,7 @@ impl MaltModel {
         let values = feature_model.evaluate(self, graph, config);
         let nodes = self.build_feature_nodes(&values);
         let dm = self.decision_model();
-        let ranked = predict(&dm, &nodes);
+        let ranked = predict(dm, &nodes);
         Action::from_decisions(self, &ranked)
     }
 }

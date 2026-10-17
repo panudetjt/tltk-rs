@@ -44,6 +44,8 @@ pub struct MaltModel {
     pub allow_reduce: bool,
     #[serde(skip)]
     pub root_label_code: i32,
+    #[serde(skip)]
+    decision: DecisionModel,
 }
 
 #[derive(Debug, Deserialize)]
@@ -88,6 +90,7 @@ pub struct LiblinearJson {
 }
 
 /// A compiled decision model: packed-key lookup + scoring data.
+#[derive(Debug, Default, Clone)]
 pub struct DecisionModel {
     /// packed key -> 1-based liblinear index
     pub feature_map: std::collections::HashMap<u64, i32>,
@@ -137,27 +140,32 @@ impl MaltModel {
             .tables
             .code_of("DEPREL", root_symbol)
             .map_err(|e| ParseError::Decode(format!("root label: {e}")))?;
+        model.decision = model.build_decision_model()?;
         Ok(model)
     }
 
-    pub fn feature_strings(&self) -> &[String] {
-        &self.feature_strings
-    }
-
-    pub fn decision_model(&self) -> DecisionModel {
+    /// One-time compile of the decision model: packed-key map, canonical
+    /// feature-major `w`, and a decode-time check that every decision-table
+    /// symbol parses — a corrupt blob must surface as `ParseError::Decode`
+    /// here, never as a mid-parse panic.
+    fn build_decision_model(&self) -> Result<DecisionModel, ParseError> {
         let dm = &self.decision_models[0];
         let mut feature_map = std::collections::HashMap::with_capacity(dm.feature_map.entries.len());
         for (key, index) in &dm.feature_map.entries {
-            feature_map.insert(key.parse::<u64>().expect("valid decimal key"), *index);
+            let key = key
+                .parse::<u64>()
+                .map_err(|e| ParseError::Decode(format!("feature-map key {key:?}: {e}")))?;
+            feature_map.insert(key, *index);
         }
-        // liblinear's `Model.w` is class-major `double[nr_class][n]` and the
-        // schema-v1 contract carries it that way; scoring iterates it
-        // feature-major (`w[index-1]`, cols = class). Canonicalize both
-        // shapes here — mathematically identical (per-class accumulations
-        // keep their feature order either way), and older dev blobs were
-        // dumped transposed.
+        // The shipped .moo serializes `w` verbatim as the nr_class×nr_feature
+        // array (62×13282 for thamalt — verified by reflection on the real
+        // file); the schema-v1 contract carries that shape. Scoring wants
+        // per-feature rows over classes, so canonicalize; per-class
+        // accumulations keep their feature order under either input layout,
+        // which is what bit-exactness needs (verified 8/8 against the Java
+        // engine on both shapes). Older dev blobs were dumped transposed.
         let nr_class = dm.liblinear.labels.len();
-        let w = if dm.liblinear.w.len() == nr_class {
+        let mut w: Vec<Vec<(u32, f64)>> = if dm.liblinear.w.len() == nr_class {
             let mut wt: Vec<Vec<(u32, f64)>> = vec![Vec::new(); dm.liblinear.nr_feature as usize];
             for (c, row) in dm.liblinear.w.iter().enumerate() {
                 for &(col, v) in row {
@@ -168,13 +176,41 @@ impl MaltModel {
         } else {
             dm.liblinear.w.clone()
         };
-        DecisionModel {
+        for row in &mut w {
+            row.sort_by_key(|&(c, _)| c);
+        }
+        let decision_table = self
+            .symbol_tables
+            .iter()
+            .find(|t| t.name == "T.TRANS+A.DEPREL")
+            .ok_or_else(|| ParseError::Decode("missing decision table T.TRANS+A.DEPREL".into()))?;
+        for s in &decision_table.symbols {
+            // Combined symbols are `TRANS~DEPREL` (classitem_separator `~`);
+            // the transition is the part before it. `SH` carries none.
+            let trans = s.symbol.split('~').next().unwrap_or("");
+            if Transition::from_symbol_checked(trans).is_none() {
+                return Err(ParseError::Decode(format!(
+                    "decision table symbol {:?} does not name a transition",
+                    s.symbol
+                )));
+            }
+        }
+        Ok(DecisionModel {
             feature_map,
             labels: dm.liblinear.labels.clone(),
             bias: dm.liblinear.bias,
             nr_feature: dm.liblinear.nr_feature,
             w,
-        }
+        })
+    }
+
+    /// Compiled once at decode; cheap accessor.
+    pub fn decision_model(&self) -> &DecisionModel {
+        &self.decision
+    }
+
+    pub fn feature_strings(&self) -> &[String] {
+        &self.feature_strings
     }
 
     /// `LWClassifier.predict`: for feature position i (1-based), look up

@@ -225,7 +225,7 @@ fn scoring_bit_exact_dot_product() {
         FeatureNode { index: 2, value: 1.0 },
         FeatureNode { index: 3, value: 1.0 },
     ];
-    let ranked = predict(&dm, &nodes);
+    let ranked = predict(dm, &nodes);
     assert_eq!(ranked, vec![3, 1]);
 
     // exact-decision-value check via direct recomputation over 1-based rows
@@ -250,7 +250,7 @@ fn scoring_bit_exact_dot_product() {
 fn scoring_first_argmax_wins_ties() {
     let model = fixture_model();
     let dm = model.decision_model();
-    let ranked = predict(&dm, &[]);
+    let ranked = predict(dm, &[]);
     assert_eq!(ranked.first(), Some(&1));
 }
 
@@ -336,10 +336,11 @@ fn class_major_w_canonicalizes_to_feature_major() {
     let mut gz = flate2::write::GzEncoder::new(Vec::new(), flate2::Compression::default());
     serde_json::to_writer(&mut gz, &v).unwrap();
     let class_major = MaltModel::decode(&gz.finish().unwrap()).expect("class-major decodes");
-    let a = fixture_model().decision_model();
+    let fm = fixture_model();
+    let a = fm.decision_model();
     let b = class_major.decision_model();
     assert_eq!(a.labels, b.labels);
     assert_eq!(a.w, b.w);
     let nodes = vec![FeatureNode { index: 1, value: 1.0 }, FeatureNode { index: 3, value: 1.0 }];
-    assert_eq!(predict(&a, &nodes), predict(&b, &nodes));
+    assert_eq!(predict(a, &nodes), predict(b, &nodes));
 }

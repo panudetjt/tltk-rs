@@ -16,14 +16,22 @@ pub enum Transition {
 }
 
 impl Transition {
+    /// Total for symbols validated at decode time (`from_symbol_checked`);
+    /// a decoded model's decision table cannot contain anything else.
     pub fn from_symbol(s: &str) -> Transition {
+        Self::from_symbol_checked(s).expect("validated decision-table symbol")
+    }
+
+    /// None for a symbol that does not name a transition — the decode-time
+    /// validation path turns this into `ParseError::Decode` instead of a panic.
+    pub fn from_symbol_checked(s: &str) -> Option<Transition> {
         match s {
-            "SH" | "SHIFT" => Transition::Shift,
-            "RE" | "REDUCE" => Transition::Reduce,
-            "RA" | "RIGHTARC" => Transition::RightArc,
-            "LA" | "LEFTARC" => Transition::LeftArc,
-            "USH" | "UNSHIFT" => Transition::Unshift,
-            other => panic!("unknown transition symbol {other}"),
+            "SH" | "SHIFT" => Some(Transition::Shift),
+            "RE" | "REDUCE" => Some(Transition::Reduce),
+            "RA" | "RIGHTARC" => Some(Transition::RightArc),
+            "LA" | "LEFTARC" => Some(Transition::LeftArc),
+            "USH" | "UNSHIFT" => Some(Transition::Unshift),
+            _ => None,
         }
     }
 }
