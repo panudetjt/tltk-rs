@@ -42,6 +42,10 @@ for f in scripts/*.mjs; do node --check "$f"; done
 description = "baselines + per-function goldens (scripts/parity_fn.sh is the single source; CI runs the same one)"
 run = "bash scripts/parity_fn.sh"
 
+[tasks.parity-fn]
+description = "parity for one fn corpus: mise run parity-fn -- <name> (e.g. malt; non-plots fn corpora only)"
+file = "scripts/parity_fn.sh"
+
 [tasks.wasm-parity]
 description = "wasm32-WASI lane under wasmtime (auto-downloads)"
 run = "bash scripts/wasm_parity.sh"

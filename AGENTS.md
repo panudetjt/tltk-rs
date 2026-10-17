@@ -64,6 +64,9 @@ hand-type the commands they wrap.
   `wasm-parity` runs the wasip1 lane and auto-downloads wasmtime.
 - Edition 2024: SIMD code in `w2v.rs` keeps inner `unsafe {}` blocks
   (`unsafe_op_in_unsafe_fn` is a hard error now).
+- Landing a new `corpus/corpus_fn_*.jsonl` keeps `mise run parity` red until its wire
+  lands (the fn loop asserts fail=0 on every fn corpus) — land a corpus together
+  with its wire, never alone. Check one fn corpus with `mise run parity-fn -- <name>`.
 - `mise run build-web` changes engine bytes — bump `DEFAULT_VERSION` in
   `web/js/loader.js` (content hash) in the same change, or returning browsers
   serve the stale engine from the SW cache.
