@@ -24,19 +24,31 @@ git fetch -q origin main
 [ "$(git rev-parse main)" = "$(git rev-parse origin/main)" ] || { echo "ERROR: main is ahead/behind origin — sync first" >&2; exit 1; }
 git rev-parse -q --verify "refs/tags/$TAG" >/dev/null && { echo "ERROR: $TAG already exists" >&2; exit 1; }
 
-# 1. Bump the workspace version (member crates inherit it)
+# 1. Bump the workspace version (member crates inherit it). A no-op bump
+# (re-releasing the current version) must not fail the tree — skip the commit.
 sed -i "s/^version = \"[^\"]*\"$/version = \"$VERSION\"/" Cargo.toml
 grep -q "^version = \"$VERSION\"" Cargo.toml || { echo "ERROR: version bump failed" >&2; exit 1; }
-git add Cargo.toml && git commit -q -m "chore: release $TAG"
+git add Cargo.toml
+git diff --cached --quiet || git commit -q -m "chore: release $TAG"
 
 # 2. Tag + push (the v* tag triggers publish-crates.yml)
 git tag -a "$TAG" -m "tltk-rs $TAG"
 git push -q origin main "$TAG"
 
-# 3. Wait for the crates.io publish workflow
+# 3. Wait for the crates.io publish workflow. gh registers the tag's run a
+# few seconds after the push — poll for the run id instead of racing it, and
+# take the conclusion from the API, never from watch's exit status.
 echo "==> waiting for publish-crates workflow…"
-RUN_ID=$(gh run list -R panudetjt/tltk-rs --workflow publish-crates.yml --limit 1 --json databaseId -q '.[0].databaseId')
-gh run watch "$RUN_ID" -R panudetjt/tltk-rs --exit-status >/dev/null
+RUN_ID=""
+for _ in $(seq 1 12); do
+  RUN_ID=$(gh run list -R panudetjt/tltk-rs --workflow publish-crates.yml --limit 1 --json databaseId -q '.[0].databaseId' || true)
+  [ -n "$RUN_ID" ] && break
+  sleep 5
+done
+[ -n "$RUN_ID" ] || { echo "ERROR: publish-crates run not found" >&2; exit 1; }
+gh run watch "$RUN_ID" -R panudetjt/tltk-rs >/dev/null || true
+CONCLUSION=$(gh run view "$RUN_ID" -R panudetjt/tltk-rs --json conclusion -q .conclusion)
+[ "$CONCLUSION" = "success" ] || { echo "ERROR: publish-crates concluded: $CONCLUSION" >&2; exit 1; }
 echo "  crates.io publish green"
 
 # 4. GitHub Release with a grouped conventional-commit changelog
