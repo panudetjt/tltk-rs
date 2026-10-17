@@ -16,6 +16,11 @@ from tltk import nlp  # noqa: E402
 import nltk  # noqa: E402
 from nltk.parse.dependencygraph import DependencyGraph  # noqa: E402
 
+MALTPARSER_PATH = os.environ.get(
+    "MALTPARSER_PATH", os.path.expanduser("~/.cache/tltk-rs/maltparser-1.9.2")
+)
+nlp.Maltparser_Path = MALTPARSER_PATH
+
 mode = sys.argv[2]
 
 if mode == "probe":
@@ -213,6 +218,11 @@ elif mode == "corpus":
                 parts = text.split()[:2]
                 c = corpus.compound(parts[0], parts[1]) if len(parts) >= 2 else []
                 r = str(c)
+            elif fn == "malt_parser":
+                r = json.dumps(nlp.MaltParser(text), ensure_ascii=False, separators=(",", ":"))
+            elif fn == "malt_parser_wordlist":
+                wlst = text.split("\n")
+                r = json.dumps(nlp.MaltParser_wordlist(wlst), ensure_ascii=False, separators=(",", ":"))
             else:
                 continue
             ok = True

@@ -31,6 +31,9 @@ Files produced (into crates/tltk-core/data/):
 
 Requires: venv with numpy, scikit-learn, nltk, gensim, python-crfsuite.
 Usage: convert.py <tltk-package-dir> <out-dir> [--w2v <path>] [--ner-model <crfsuite-file>]
+       convert.py malt [out-dir]   # thamalt.mco -> <out-dir>/malt.bin.gz (deterministic;
+                                   # default out-dir crates/tltk-core/data; needs JDK +
+                                   # $MALTPARSER_PATH, default ~/.cache/tltk-rs/maltparser-1.9.2)
 """
 import bz2
 import gzip
@@ -90,6 +93,51 @@ def gz(path: str, data: bytes) -> None:
     with open(path, "wb") as f:
         f.write(gzip.compress(data, compresslevel=6, mtime=0))
     print(f"  {os.path.basename(path):18s} raw={len(data)/1e6:8.3f}MB  gz={os.path.getsize(path)/1e6:8.3f}MB")
+
+
+# ---------------------------------------------------------------- malt
+def conv_malt(out_dir: str, mco_path: str = None) -> None:
+    import hashlib
+    import subprocess
+    import tempfile
+
+    if mco_path is None:
+        mco_path = os.environ.get(
+            "MALT_MCO_PATH",
+            os.path.expanduser("~/.cache/tltk-rs/tltk-1.11-pkg/tltk/thamalt.mco"),
+        )
+    if not os.path.exists(mco_path):
+        raise FileNotFoundError(f"mco file not found: {mco_path}")
+
+    with open(mco_path, "rb") as f:
+        mco_sha256 = hashlib.sha256(f.read()).hexdigest()
+
+    malt_dist = os.environ.get(
+        "MALTPARSER_PATH",
+        os.path.expanduser("~/.cache/tltk-rs/maltparser-1.9.2"),
+    )
+    malt_jar = os.path.join(malt_dist, "maltparser-1.9.2.jar")
+    liblinear_jar = os.path.join(malt_dist, "lib", "liblinear-1.8.jar")
+    if not os.path.exists(malt_jar):
+        raise FileNotFoundError(f"maltparser jar not found: {malt_jar}")
+
+    dumper_src = os.path.join(os.path.dirname(__file__), "malt_dumper", "DumpMco.java")
+    if not os.path.exists(dumper_src):
+        raise FileNotFoundError(f"DumpMco.java not found: {dumper_src}")
+
+    cp = f"{malt_jar}:{liblinear_jar}"
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        subprocess.run(["javac", "-cp", cp, "-d", tmp_dir, dumper_src], check=True)
+        res = subprocess.run(
+            ["java", "-cp", f"{tmp_dir}:{cp}", "DumpMco", mco_path, mco_sha256],
+            stdout=subprocess.PIPE,
+            check=True,
+        )
+        data = res.stdout
+
+    out_file = os.path.join(out_dir, "malt.bin.gz")
+    os.makedirs(out_dir, exist_ok=True)
+    gz(out_file, data)
 
 
 # ---------------------------------------------------------------- thdict
@@ -503,6 +551,15 @@ _WORDTIER_INDEX.update({k: (len(WORDTIER_STR_FIELDS) + i, "f") for i, k in enume
 
 
 def main():
+    if len(sys.argv) >= 2 and sys.argv[1] == "malt":
+        repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+        out_dir = (
+            os.path.abspath(sys.argv[2])
+            if len(sys.argv) >= 3
+            else os.path.join(repo_root, "crates", "tltk-core", "data")
+        )
+        conv_malt(out_dir)
+        return
     if len(sys.argv) < 3:
         print(__doc__)
         sys.exit(1)
