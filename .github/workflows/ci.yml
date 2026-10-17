@@ -40,10 +40,11 @@ jobs:
       - name: Tests (incl. SIMD bit-exactness + oracle tests)
         run: cargo test --workspace
 
-      - name: Script lint+format (ruff, opinionated defaults) + bash/node syntax
+      - name: Script lint+format (ruff, mise-pinned) + bash/node syntax
         run: |
-          uvx ruff check scripts
-          uvx ruff format --check scripts
+          ruff --version
+          ruff check scripts
+          ruff format --check scripts
           for f in scripts/*.sh; do bash -n "$f"; done
           for f in scripts/*.mjs; do node --check "$f"; done
 

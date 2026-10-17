@@ -9,6 +9,9 @@ rust = "1.99.1"
 python = "3.12"
 node = "24"
 uv = "0.13.1"
+# pinned because `uvx ruff` resolves latest per machine/time — the gate must
+# lint with the same binary everywhere (the EXE001 local/CI divergence proved it)
+ruff = "0.17.1"
 
 # ---- tasks: every generated/runnable artifact goes through here ------------
 [tasks.fetch-models]
@@ -28,8 +31,8 @@ description = "clippy zero + workspace tests + script lint+format (ruff) + bash/
 run = """
 cargo clippy --workspace --all-targets -- -D warnings && \
 cargo test --workspace && \
-uvx ruff check scripts && \
-uvx ruff format --check scripts && \
+ruff check scripts && \
+ruff format --check scripts && \
 for f in scripts/*.sh; do bash -n "$f"; done && \
 for f in scripts/*.mjs; do node --check "$f"; done
 """
