@@ -56,11 +56,13 @@
 //!   single `odm0` model (decode enforces exactly one).
 use crate::features::FeatureModel;
 use crate::graph::Graph;
-#[cfg(test)]
-mod tests;
-use crate::model::MaltModel;
 use crate::scoring::predict;
 use crate::transition::{apply, is_permissible, legal_default, Action, Config};
+
+#[cfg(test)]
+mod tests;
+
+pub use crate::model::MaltModel;
 
 pub mod features;
 pub mod graph;
