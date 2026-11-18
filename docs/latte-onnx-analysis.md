@@ -375,20 +375,26 @@ Output is compact JSON, one object per reading, best first:
 the reading order and the plain-first guarantee are contractual. Ranking is by
 descending score with the plain `latte_segment` reading forced to index 0 even
 on an exact score tie; the remaining ties keep dynamic-program insertion order
-(upstream's stable sort). Candidate pieces are the union of the lexicon **and**
-the word spans produced by all three units — not only the requested one.
-Whitespace is a hard boundary in every reading, and runs of ASCII letters /
-decimal digits stay whole. The lattice search reads at most **10,000
-non-whitespace characters** (whitespace is free); a longer input errors instead
-of allocating. The web UI is stricter than the wire on purpose: it caps n at 10
-and the n-best path at 2,000 non-whitespace characters, refusing with a
-user-facing Thai error before the wasm call so a browser tab cannot freeze
-(plain `latte_segment`, n = 1, keeps the wire's unlimited behaviour). The worker
-wire keeps the full 10,000-character cap — the wheel's own limit — and a maximal
-API request is an accepted CPU cost, documented rather than silently lowered
-(lowering it would diverge from the wheel). Empty or whitespace-only n-best
-input returns the characters themselves as one certain reading (probability
-`1.0`), exactly like the wheel.
+(upstream's stable sort). Plain-first is a **tie-only** rule, and no non-tie
+reorder can exist: a reading's score decomposes into independent per-position
+terms (`log_start` where a word starts, `log_inside` otherwise), and the plain
+`latte_segment` reading picks the larger term at every position (`logit >= 0`),
+so it is always top-scored. Only an exact score tie can reorder — e.g. a logit
+exactly `0.0`, which the f32 model does not produce on the probed corpus — and
+the stable `(path != best, -score)` sort forces the plain reading first.
+Candidate pieces are the union of the lexicon **and** the word spans produced
+by all three units — not only the requested one. Whitespace is a hard boundary
+in every reading, and runs of ASCII letters / decimal digits stay whole. The
+lattice search reads at most **10,000 non-whitespace characters** (whitespace
+is free); a longer input errors instead of allocating. The web UI is stricter
+than the wire on purpose: it caps the LATTE card at 2,000 non-whitespace
+characters for every n (and n at 10), refusing with a user-facing Thai error
+before the wasm call so a browser tab cannot freeze. The worker wire keeps the
+full 10,000-character cap — the wheel's own limit — and a maximal API request
+is an accepted CPU cost, documented rather than silently lowered (lowering it
+would diverge from the wheel). Empty or whitespace-only n-best input returns
+the characters themselves as one certain reading (probability `1.0`), exactly
+like the wheel.
 
 **`latte_segment_opts(text, cutoff)`.** `text` is a compact JSON envelope and
 `cutoff` is **ignored** — the wire name, not a leading `{`, disambiguates JSON
@@ -403,9 +409,15 @@ strings) is required.
 | `keep_whitespace` | bool | `true` | `false` drops whitespace-only tokens |
 | `user_words` | array of strings | `[]` | ≤ 1000 raw entries; per-call hints |
 
-Unknown keys and wrong types are rejected before any allocation, and every text
-is subject to the same 10,000 non-whitespace cap. Output is always a JSON array
-of token arrays, one per input text (also for the single-`text` form), mirroring
+The envelope is validated **while it is read**, by bounded visitors: unknown or
+duplicate keys fail, the 101st text (or 1001st user word) errors immediately, no
+free-form JSON tree is materialised, and every check finishes before inference.
+Every text is subject to the same 10,000 non-whitespace cap. Deviation from the
+spec's wording: the reader is `serde_json` with a visitor (strict,
+128-depth-limited, flat schema) rather than a hand-rolled non-recursive parser;
+the caps are enforced by the visitors, so there is no unbounded materialisation
+or attacker-controlled recursion. Output is always a JSON array of token
+arrays, one per input text (also for the single-`text` form), mirroring
 `tokenize_batch`:
 
 ```json

@@ -200,6 +200,44 @@ async function checkLatteNbest(page, args, results, problems) {
     const guardErr = ((await page.locator('#errorMessage').textContent()) ?? '').trim();
     if (!guardErr) throw new Error('n=11 was not rejected with a user-facing error');
 
+    // UI guard: the LATTE card is capped at 2000 non-whitespace characters for
+    // every n, so a 2001-character input must error before the wasm call.
+    await nInput.fill('3');
+    await page.locator('#inputText').fill('ก'.repeat(2001));
+    const prevCapMsg = ((await page.locator('#errorMessage').textContent()) ?? '').trim();
+    await page.locator('#runBtn').dispatchEvent('click');
+    await page.waitForFunction(
+      ({ prevText }) => {
+        const stats = document.getElementById('execStats').textContent;
+        const msg = document.getElementById('errorMessage')?.textContent ?? '';
+        return stats === 'เกิดข้อผิดพลาด' && msg !== prevText && msg.includes('2000');
+      },
+      { prevText: prevCapMsg },
+      { timeout: args.timeout },
+    );
+    const capErr = ((await page.locator('#errorMessage').textContent()) ?? '').trim();
+    if (!capErr.includes('2000')) {
+      throw new Error(`2001-character input was not rejected by the 2000-character UI cap: ${capErr.slice(0, 80)}`);
+    }
+
+    // n = 1 routes to plain `latte_segment`: the JSON token array in the text
+    // output, with no readings rows and no readings view.
+    await nInput.fill('1');
+    await page.locator('#inputText').fill('ตากลม');
+    prev = await page.locator('#execStats').textContent();
+    await page.locator('#runBtn').dispatchEvent('click');
+    await waitForStats(page, prev, /ประมวลผลสำเร็จ/, args.timeout);
+    const readingRows = await page.locator('#readingsList > *').count();
+    if (readingRows !== 0) throw new Error(`n=1 left ${readingRows} readings row(s) rendered`);
+    const readingsHidden = await page
+      .locator('#readingsOutputWrapper')
+      .evaluate((el) => el.classList.contains('hidden'));
+    if (!readingsHidden) throw new Error('n=1 left the readings view visible');
+    const plainOut = ((await page.locator('#outputText').textContent()) ?? '').trim();
+    if (!plainOut.startsWith('[')) {
+      throw new Error(`n=1 did not route to latte_segment JSON: ${plainOut.slice(0, 80)}`);
+    }
+
     row.ok = true;
     row.note = `${readings.length} readings, best ${readings[0].tokens.join('|')} ${readings[0].prob}`;
   } catch (e) {

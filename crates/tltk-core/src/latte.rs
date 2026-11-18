@@ -27,6 +27,9 @@ const HASH_MUL: u64 = 0x9E37_79B9_7F4A_7C15;
 const HIDDEN: usize = 128;
 const UNITS: [&str; 3] = ["long", "short", "minimal"];
 const UNNESTED_MINIMAL: &str = "minimal";
+/// `UNITS` is coarse to fine, so index 1 is `short`; that order is
+/// load-bearing — the nested-unit `max` fold in `unit_logit` depends on it.
+const SHORT_UNIT: usize = 1;
 const NOISE_CLASS: i16 = 12;
 
 const EMB_BYTES: &[u8] = include_bytes!("../data/latte_weights.bin.gz");
@@ -430,17 +433,22 @@ fn forward(m: &Model, codes: &[u32], overlay: &LexOverlay) -> Vec<[f32; 3]> {
     logits
 }
 
+/// The logit one unit ranks a position by: `minimal` follows its own
+/// convention, the nested units take the max over their coarser units.
+fn unit_logit(l: &[f32; 3], unit_idx: usize) -> f32 {
+    if UNITS[unit_idx] == UNNESTED_MINIMAL {
+        l[unit_idx]
+    } else {
+        l[..=unit_idx].iter().copied().fold(f32::MIN, f32::max)
+    }
+}
+
 /// Word starts of one unit, from the logits `forward` returned for the same
-/// line: `minimal` follows its own convention, the nested units take the max
-/// of their coarser units; Thai orthography rules some starts out.
+/// line; Thai orthography rules some starts out.
 fn unit_starts(codes: &[u32], logits: &[[f32; 3]], unit_idx: usize) -> Vec<bool> {
     let mut starts = vec![true; codes.len()];
     for (t, start) in starts.iter_mut().enumerate() {
-        let sel = if UNITS[unit_idx] == UNNESTED_MINIMAL {
-            logits[t][unit_idx]
-        } else {
-            logits[t][..=unit_idx].iter().copied().fold(f32::MIN, f32::max)
-        };
+        let sel = unit_logit(&logits[t], unit_idx);
         let allowed = !no_start(codes[t]) && (t == 0 || !leading(codes[t - 1]));
         *start = t == 0 || (sel >= 0.0 && allowed);
     }
@@ -458,7 +466,7 @@ fn line_starts(m: &Model, line: &str, unit_idx: usize, overlay: &LexOverlay) -> 
 /// (`long`/`short`/`minimal`; unknown defaults to `short`).
 pub fn latte_segment(_sess: &mut Session, text: &str, unit: &str) -> Result<String, ProcessError> {
     let m = &*MODEL;
-    let unit_idx = UNITS.iter().position(|u| *u == unit).unwrap_or(1);
+    let unit_idx = UNITS.iter().position(|u| *u == unit).unwrap_or(SHORT_UNIT);
     let mut all_tokens: Vec<String> = Vec::new();
     for (li, raw_line) in text.split('\n').enumerate() {
         if li > 0 { all_tokens.push("\n".to_string()); }
@@ -539,7 +547,7 @@ fn softplus(x: f32) -> f32 {
 /// `"medium"` mean unit `short` and `n = 10`.
 fn nbest_options(cutoff: &str) -> Result<(usize, usize), ProcessError> {
     if cutoff.is_empty() || cutoff == "medium" {
-        return Ok((1, 10));
+        return Ok((SHORT_UNIT, 10));
     }
     let (unit, n) = match cutoff.split_once(':') {
         Some((unit, n)) => (unit, Some(n)),
@@ -550,6 +558,11 @@ fn nbest_options(cutoff: &str) -> Result<(usize, usize), ProcessError> {
         .position(|u| *u == unit)
         .ok_or_else(|| ProcessError("invalid unit".to_string()))?;
     let n = match n {
+        // `<n>` is a base-10 integer: ASCII digits only. Rust's `usize` parser
+        // alone would also accept a leading `+`.
+        Some(s) if !s.bytes().all(|b| b.is_ascii_digit()) => {
+            return Err(ProcessError("n must be between 1 and 100".to_string()));
+        }
         Some(s) => s
             .parse::<usize>()
             .map_err(|_| ProcessError("n must be between 1 and 100".to_string()))?,
@@ -687,16 +700,7 @@ pub fn latte_nbest(text: &str, cutoff: &str) -> Result<String, ProcessError> {
     let codes: Vec<u32> = line.iter().map(|&c| c as u32).collect();
     let size = codes.len();
     let logits = forward(m, &codes, &NO_USER_WORDS);
-    let sel: Vec<f32> = logits
-        .iter()
-        .map(|l| {
-            if UNITS[unit_idx] == UNNESTED_MINIMAL {
-                l[unit_idx]
-            } else {
-                l[..=unit_idx].iter().copied().fold(f32::MIN, f32::max)
-            }
-        })
-        .collect();
+    let sel: Vec<f32> = logits.iter().map(|l| unit_logit(l, unit_idx)).collect();
     // whitespace between two characters: always a cut, never inside a piece
     let mut gap = vec![false; size];
     for i in 1..size {
@@ -969,7 +973,7 @@ fn parse_segment_options(
         _ => return Err(invalid_options()),
     };
     let unit_idx = match opts.unit.as_deref() {
-        None => 1, // short
+        None => SHORT_UNIT,
         Some(unit) => UNITS
             .iter()
             .position(|u| *u == unit)
@@ -1200,6 +1204,20 @@ mod tests {
             err(latte_nbest("ตากลม", "short:3:4")),
             "n must be between 1 and 100"
         );
+        // `<n>` is a base-10 integer: a sign, a non-ASCII digit or an empty
+        // value is not one (Rust's usize parser alone would take `+5`)
+        assert_eq!(
+            err(latte_nbest("ตากลม", "short:+5")),
+            "n must be between 1 and 100"
+        );
+        assert_eq!(
+            err(latte_nbest("ตากลม", "short:٥")),
+            "n must be between 1 and 100"
+        );
+        assert_eq!(
+            err(latte_nbest("ตากลม", "short:")),
+            "n must be between 1 and 100"
+        );
         assert_eq!(
             err(latte_nbest(&"ก".repeat(10_001), "short")),
             "text too long (max 10000 non-whitespace characters)"
@@ -1229,6 +1247,11 @@ mod tests {
         assert_eq!(
             latte_nbest("ตากลม", "").unwrap(),
             latte_nbest("ตากลม", "short").unwrap()
+        );
+        // leading zeros are base-10 digits, so they name the same n
+        assert_eq!(
+            latte_nbest("ตากลม", "short:05").unwrap(),
+            latte_nbest("ตากลม", "short:5").unwrap()
         );
     }
 

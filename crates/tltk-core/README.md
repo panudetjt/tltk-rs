@@ -4,7 +4,7 @@ Rust port of [TLTK](https://pypi.org/project/tltk/) (Thai Language Toolkit,
 Chulalongkorn University) — the inference core behind
 [tltk-rs](https://github.com/panudetjt/tltk-rs). No network, no async, no
 global mutable state beyond session counters: a `Tltk` carries converted
-model blobs, a `Session` runs the 43 wire functions over plain strings and
+model blobs, a `Session` runs the 46 wire functions over plain strings and
 returns JSON-rendered results, byte-identical to the source of truth
 ([port surface: tltk 1.11](https://github.com/panudetjt/tltk-rs/blob/main/PORTING-GAPS.md)).
 
@@ -17,7 +17,7 @@ returns JSON-rendered results, byte-identical to the source of truth
 let mut tltk = tltk_core::Tltk::embedded();
 let seg = tltk.process("word_segment", "ฉันกินข้าว", "medium")?;
 
-// Full 43-function surface: edu-segmentation, w2v similarity and dependency
+// Full 46-function surface: edu-segmentation, w2v similarity and dependency
 // parsing need the large external blobs (edu/w2v/malt .bin.gz), loaded from a
 // directory of converted models (see "Models" below).
 let models = tltk_core::Models::load_dir(std::path::Path::new("data"))?;
