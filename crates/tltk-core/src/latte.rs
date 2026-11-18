@@ -16,7 +16,7 @@
 //!
 //! Goldens are captured from the iApp wheel, never from this code.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::LazyLock;
 
 use crate::{ProcessError, Session};
@@ -316,15 +316,15 @@ fn same_run(a: char, b: char) -> bool {
     a.is_ascii_alphabetic() && b.is_ascii_alphabetic()
 }
 
-/// Runs one whitespace-free line through the network, returning word starts.
-fn line_starts(m: &Model, line: &str, unit_idx: usize) -> Vec<bool> {
-    let codes: Vec<u32> = line.chars().map(|c| c as u32).collect();
+/// One whitespace-free line through the network: for every character, the
+/// logits of all three units (coarse to fine: `long`, `short`, `minimal`).
+fn forward(m: &Model, codes: &[u32]) -> Vec<[f32; 3]> {
     let w = codes.len();
     if w == 0 { return Vec::new(); }
 
     let emb = f32v!(m, "emb");
     let lex_table = f32v!(m, "lex_table");
-    let bits = lex_bits(m, &codes);
+    let bits = lex_bits(m, codes);
     let mut x = vec![0.0f32; w * 96];
     for (i, &code) in codes.iter().enumerate() {
         let cls = m.chars.get(code as usize).copied().unwrap_or(NOISE_CLASS) as usize;
@@ -359,26 +359,41 @@ fn line_starts(m: &Model, line: &str, unit_idx: usize) -> Vec<bool> {
     let ozp = i8v!(m, "out_w_zero_point")[0] as i32;
     let out_b = f32v!(m, "out_b");
     let wscale = scalarf!(m, "out_w_scale");
-    let mut starts = vec![true; w];
-    for t in 0..w {
-        let mut logits = [0.0f32; 3];
-        for g in 0..3 {
+    let mut logits = vec![[0.0f32; 3]; w];
+    for (t, slot) in logits.iter_mut().enumerate() {
+        for (g, l) in slot.iter_mut().enumerate() {
             let mut acc: i32 = 0;
             for i in 0..256 {
                 acc += (q[t * 256 + i] as i32 - zp) * (ow[i * 3 + g] as i32 - ozp);
             }
-            logits[g] = (acc as f32) * (scale * wscale) + out_b[g];
+            *l = (acc as f32) * (scale * wscale) + out_b[g];
         }
+    }
+    logits
+}
+
+/// Word starts of one unit, from the logits `forward` returned for the same
+/// line: `minimal` follows its own convention, the nested units take the max
+/// of their coarser units; Thai orthography rules some starts out.
+fn unit_starts(codes: &[u32], logits: &[[f32; 3]], unit_idx: usize) -> Vec<bool> {
+    let mut starts = vec![true; codes.len()];
+    for (t, start) in starts.iter_mut().enumerate() {
         let sel = if UNITS[unit_idx] == UNNESTED_MINIMAL {
-            logits[unit_idx]
+            logits[t][unit_idx]
         } else {
-            logits[..=unit_idx].iter().copied().fold(f32::MIN, f32::max)
+            logits[t][..=unit_idx].iter().copied().fold(f32::MIN, f32::max)
         };
-        let code = codes[t];
-        let allowed = !no_start(code) && (t == 0 || !leading(codes[t - 1]));
-        starts[t] = t == 0 || (sel >= 0.0 && allowed);
+        let allowed = !no_start(codes[t]) && (t == 0 || !leading(codes[t - 1]));
+        *start = t == 0 || (sel >= 0.0 && allowed);
     }
     starts
+}
+
+/// Runs one whitespace-free line through the network, returning word starts.
+fn line_starts(m: &Model, line: &str, unit_idx: usize) -> Vec<bool> {
+    let codes: Vec<u32> = line.chars().map(|c| c as u32).collect();
+    let logits = forward(m, &codes);
+    unit_starts(&codes, &logits, unit_idx)
 }
 
 /// Wire entry: `latte_segment(text, cutoff)` where `cutoff` is the unit
@@ -446,3 +461,400 @@ fn codes_to_str(codes: &[u32]) -> String {
     codes.iter().filter_map(|&c| char::from_u32(c)).collect()
 }
 
+// ---------------------------------------------------------------- n-best readings
+
+const MAX_NBEST_CHARS: usize = 10_000;
+const MAX_NBEST: usize = 100;
+
+#[derive(serde::Serialize)]
+struct Reading {
+    tokens: Vec<String>,
+    probability: f64,
+}
+
+/// `ln(1 + e^x)` in f32, stable for large `|x|`: numpy's `logaddexp(0.0, x)`.
+fn softplus(x: f32) -> f32 {
+    x.max(0.0) + (-x.abs()).exp().ln_1p()
+}
+
+/// Parses the n-best `cutoff`: `<unit>` or `<unit>:<n>`, where `""` and
+/// `"medium"` mean unit `short` and `n = 10`.
+fn nbest_options(cutoff: &str) -> Result<(usize, usize), ProcessError> {
+    if cutoff.is_empty() || cutoff == "medium" {
+        return Ok((1, 10));
+    }
+    let (unit, n) = match cutoff.split_once(':') {
+        Some((unit, n)) => (unit, Some(n)),
+        None => (cutoff, None),
+    };
+    let unit_idx = UNITS
+        .iter()
+        .position(|u| *u == unit)
+        .ok_or_else(|| ProcessError("invalid unit".to_string()))?;
+    let n = match n {
+        Some(s) => s
+            .parse::<usize>()
+            .map_err(|_| ProcessError("n must be between 1 and 100".to_string()))?,
+        None => 10,
+    };
+    if !(1..=MAX_NBEST).contains(&n) {
+        return Err(ProcessError("n must be between 1 and 100".to_string()));
+    }
+    Ok((unit_idx, n))
+}
+
+/// `(start, end)` of every dictionary word in a whitespace-free line.
+fn lattice(m: &Model, codes: &[u32]) -> HashSet<(usize, usize)> {
+    let mut spans = HashSet::new();
+    for (len, table) in &m.lex {
+        let len = *len;
+        if len > codes.len() {
+            break;
+        }
+        for i in 0..=codes.len() - len {
+            let mut h = codes[i] as u64;
+            for j in 1..len {
+                h = h.wrapping_mul(HASH_MUL).wrapping_add(codes[i + j] as u64);
+            }
+            if table.binary_search(&h).is_ok() {
+                spans.insert((i, i + len));
+            }
+        }
+    }
+    spans
+}
+
+/// Token spans (codepoint indices) of `text` for one unit, mirroring upstream
+/// `tokenize(text, keep_whitespace=True, unit)`: one model call per `\n` line,
+/// every whitespace character is a token of its own and cuts inside a run of
+/// ASCII letters or decimal digits are dropped.
+fn tokenize_spans(m: &Model, text: &str, unit_idx: usize) -> Vec<(usize, usize)> {
+    let chars: Vec<char> = text.chars().collect();
+    let n = chars.len();
+    let mut cut = vec![false; n + 1];
+    let mut start = 0usize;
+    for line in text.split('\n') {
+        let mut idx: Vec<usize> = Vec::new();
+        for (j, ch) in line.chars().enumerate() {
+            if !ch.is_whitespace() {
+                idx.push(start + j);
+            }
+        }
+        if !idx.is_empty() {
+            let codes: Vec<u32> = idx.iter().map(|&j| chars[j] as u32).collect();
+            let logits = forward(m, &codes);
+            let starts = unit_starts(&codes, &logits, unit_idx);
+            for (s, &word_start) in starts.iter().enumerate().skip(1) {
+                if word_start {
+                    cut[idx[s]] = true;
+                }
+            }
+        }
+        start += line.chars().count() + 1;
+    }
+    for j in 0..n {
+        if chars[j].is_whitespace() {
+            cut[j] = true;
+            cut[j + 1] = true;
+        }
+    }
+    let mut bounds = Vec::with_capacity(n + 2);
+    bounds.push(0usize);
+    for j in 1..n {
+        if cut[j] && !same_run(chars[j - 1], chars[j]) {
+            bounds.push(j);
+        }
+    }
+    bounds.push(n);
+    bounds
+        .windows(2)
+        .map(|w| (w[0], w[1]))
+        .filter(|(a, b)| b > a)
+        .collect()
+}
+
+/// The word ends of one n-best reading, first to last; readings are linked
+/// nodes (`(end, previous)`) shared through `pool`, so memory grows with
+/// `size x n`, not `size^2 x n`.
+fn unroll(mut node: Option<u32>, pool: &[(u32, Option<u32>)]) -> Vec<usize> {
+    let mut ends = Vec::new();
+    while let Some(i) = node {
+        let (end, prev) = pool[i as usize];
+        ends.push(end as usize);
+        node = prev;
+    }
+    ends.reverse();
+    ends
+}
+
+/// Wire entry: `latte_nbest(text, cutoff)` — the `n` most probable readings of
+/// `text`, best first, as `[{"tokens":["..."],"probability":<number>}, ...]`.
+///
+/// `cutoff` is `<unit>` or `<unit>:<n>` (`long`/`short`/`minimal`, `n` in
+/// 1..=100); `""` and `"medium"` mean unit `short` and `n = 10`. The whole text
+/// is one whitespace-free line (no windowing); candidates are the lexicon
+/// words plus the word spans of all three units, and whitespace is a hard
+/// boundary in every reading. This mirrors the wheel's
+/// `_runtime.py::tokenize_nbest`; goldens come from the wheel, never from here.
+pub fn latte_nbest(text: &str, cutoff: &str) -> Result<String, ProcessError> {
+    let (unit_idx, n) = nbest_options(cutoff)?;
+    let chars: Vec<char> = text.chars().collect();
+    let keep: Vec<usize> = chars
+        .iter()
+        .enumerate()
+        .filter(|(_, c)| !c.is_whitespace())
+        .map(|(j, _)| j)
+        .collect();
+    if keep.is_empty() {
+        // upstream returns the characters themselves as one sure reading
+        let reading = Reading {
+            tokens: chars.iter().map(|c| c.to_string()).collect(),
+            probability: 1.0,
+        };
+        return serde_json::to_string(&[reading]).map_err(|e| ProcessError(e.to_string()));
+    }
+    if keep.len() > MAX_NBEST_CHARS {
+        return Err(ProcessError(
+            "text too long (max 10000 non-whitespace characters)".to_string(),
+        ));
+    }
+
+    let m = &*MODEL;
+    let line: Vec<char> = keep.iter().map(|&j| chars[j]).collect();
+    let codes: Vec<u32> = line.iter().map(|&c| c as u32).collect();
+    let size = codes.len();
+    let logits = forward(m, &codes);
+    let sel: Vec<f32> = logits
+        .iter()
+        .map(|l| {
+            if UNITS[unit_idx] == UNNESTED_MINIMAL {
+                l[unit_idx]
+            } else {
+                l[..=unit_idx].iter().copied().fold(f32::MIN, f32::max)
+            }
+        })
+        .collect();
+    // whitespace between two characters: always a cut, never inside a piece
+    let mut gap = vec![false; size];
+    for i in 1..size {
+        gap[i] = keep[i] - keep[i - 1] > 1;
+    }
+    let mut log_start = vec![f32::NEG_INFINITY; size];
+    let mut log_inside = vec![0.0f32; size];
+    for i in 0..size {
+        let free = !no_start(codes[i])
+            && (i == 0 || (!leading(codes[i - 1]) && !same_run(line[i - 1], line[i])));
+        if free {
+            log_start[i] = -softplus(-sel[i]);
+            log_inside[i] = -softplus(sel[i]);
+        }
+        if gap[i] {
+            log_start[i] = 0.0;
+            log_inside[i] = 0.0;
+        }
+    }
+    let mut inside = vec![0.0f32; size + 1];
+    for i in 0..size {
+        inside[i + 1] = inside[i] + log_inside[i];
+    }
+    let mut gaps = vec![0i64; size + 1];
+    for i in 0..size {
+        gaps[i + 1] = gaps[i] + i64::from(gap[i]);
+    }
+
+    let mut pieces = lattice(m, &codes);
+    // text codepoint -> index in the whitespace-free line
+    let mut where_: Vec<usize> = vec![0; chars.len() + 1];
+    for (j, ch) in chars.iter().enumerate() {
+        where_[j + 1] = where_[j] + usize::from(!ch.is_whitespace());
+    }
+    let mut best: Option<Vec<usize>> = None;
+    for v in 0..UNITS.len() {
+        let mut bounds = vec![0usize];
+        for (a, b) in tokenize_spans(m, text, v) {
+            if chars[a..b].iter().all(|c| c.is_whitespace()) {
+                continue;
+            }
+            pieces.insert((where_[a], where_[b]));
+            bounds.push(where_[b]);
+        }
+        if v == unit_idx {
+            best = Some(bounds);
+        }
+    }
+    let mut ending: HashMap<usize, Vec<usize>> = HashMap::new();
+    for &(a, b) in &pieces {
+        ending.entry(b).or_default().push(a);
+    }
+    for ends in ending.values_mut() {
+        ends.sort_unstable();
+    }
+
+    // paths[b]: the <= n best scores to end a word at b, each with its node
+    let mut pool: Vec<(u32, Option<u32>)> = vec![(0, None)];
+    let mut paths: Vec<Vec<(f32, u32)>> = vec![Vec::new(); size + 1];
+    paths[0].push((0.0, 0));
+    for b in 1..=size {
+        let mut found: Vec<(f32, u32)> = Vec::new();
+        if let Some(ends) = ending.get(&b) {
+            for &a in ends {
+                if gaps[b] > gaps[a + 1] {
+                    continue;
+                }
+                let score =
+                    (if a == 0 { 0.0 } else { log_start[a] }) + inside[b] - inside[a + 1];
+                if !score.is_finite() {
+                    continue;
+                }
+                for &(s, node) in &paths[a] {
+                    pool.push((b as u32, Some(node)));
+                    found.push((s + score, (pool.len() - 1) as u32));
+                }
+            }
+        }
+        if !found.is_empty() {
+            found.sort_by(|x, y| y.0.total_cmp(&x.0));
+            found.truncate(n);
+            paths[b] = found;
+        }
+    }
+    let mut ranked: Vec<(f32, Vec<usize>)> = paths[size]
+        .iter()
+        .map(|&(s, node)| (s, unroll(Some(node), &pool)))
+        .collect();
+    if let Some(best) = best.as_ref() {
+        // the plain `latte_segment` reading first, also on exact score ties
+        ranked.sort_by(|x, y| {
+            (x.1 != *best)
+                .cmp(&(y.1 != *best))
+                .then_with(|| y.0.total_cmp(&x.0))
+        });
+    }
+
+    let space: Vec<usize> = (0..chars.len())
+        .filter(|&j| chars[j].is_whitespace())
+        .collect();
+    let mut out: Vec<Reading> = Vec::with_capacity(ranked.len());
+    for (score, path) in ranked.iter().take(n) {
+        let mut cut: Vec<usize> = path[1..path.len().saturating_sub(1)]
+            .iter()
+            .map(|&p| keep[p])
+            .collect();
+        for &j in &space {
+            cut.push(j);
+            cut.push(j + 1);
+        }
+        cut.retain(|&j| j > 0 && j < chars.len());
+        cut.sort_unstable();
+        cut.dedup();
+        let mut marks = Vec::with_capacity(cut.len() + 2);
+        marks.push(0usize);
+        marks.extend(cut);
+        marks.push(chars.len());
+        let tokens = marks
+            .windows(2)
+            .filter(|w| w[1] > w[0])
+            .map(|w| chars[w[0]..w[1]].iter().collect())
+            .collect();
+        out.push(Reading {
+            tokens,
+            probability: score.exp() as f64,
+        });
+    }
+    serde_json::to_string(&out).map_err(|e| ProcessError(e.to_string()))
+}
+
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn err(result: Result<String, ProcessError>) -> String {
+        result.expect_err("expected an error").0
+    }
+
+    #[test]
+    fn nbest_cutoff_errors_are_contractual() {
+        assert_eq!(err(latte_nbest("ตากลม", "bogus")), "invalid unit");
+        assert_eq!(err(latte_nbest("ตากลม", "medium:5")), "invalid unit");
+        assert_eq!(
+            err(latte_nbest("ตากลม", "short:x")),
+            "n must be between 1 and 100"
+        );
+        assert_eq!(err(latte_nbest("ตากลม", "short:0")), "n must be between 1 and 100");
+        assert_eq!(err(latte_nbest("ตากลม", "short:101")), "n must be between 1 and 100");
+        assert_eq!(
+            err(latte_nbest("ตากลม", "short:3:4")),
+            "n must be between 1 and 100"
+        );
+        assert_eq!(
+            err(latte_nbest(&"ก".repeat(10_001), "short")),
+            "text too long (max 10000 non-whitespace characters)"
+        );
+        // the cap counts non-whitespace characters, not bytes or chars
+        assert!(latte_nbest(&format!("ก{}", " ".repeat(10_001)), "short:1").is_ok());
+    }
+
+    #[test]
+    fn nbest_empty_and_whitespace_text() {
+        assert_eq!(
+            latte_nbest("", "short:3").unwrap(),
+            r#"[{"tokens":[],"probability":1.0}]"#
+        );
+        assert_eq!(
+            latte_nbest("  ", "short:3").unwrap(),
+            r#"[{"tokens":[" "," "],"probability":1.0}]"#
+        );
+    }
+
+    #[test]
+    fn nbest_default_cutoff_is_short_ten() {
+        assert_eq!(
+            latte_nbest("ตากลม", "medium").unwrap(),
+            latte_nbest("ตากลม", "short:10").unwrap()
+        );
+        assert_eq!(
+            latte_nbest("ตากลม", "").unwrap(),
+            latte_nbest("ตากลม", "short").unwrap()
+        );
+    }
+
+    #[test]
+    fn nbest_short_three_readings() {
+        let out = latte_nbest("ตากลม", "short:3").unwrap();
+        // compact JSON, `tokens` before `probability`, nothing escaped
+        assert!(
+            out.starts_with(r#"[{"tokens":["ตา","กลม"],"probability":"#),
+            "unexpected wire shape: {out}"
+        );
+        let readings: serde_json::Value = serde_json::from_str(&out).unwrap();
+        let readings = readings.as_array().unwrap();
+        assert_eq!(readings.len(), 3);
+        let tokens: Vec<serde_json::Value> =
+            readings.iter().map(|r| r["tokens"].clone()).collect();
+        assert_eq!(
+            tokens,
+            [
+                serde_json::json!(["ตา", "กลม"]),
+                serde_json::json!(["ตากลม"]),
+                serde_json::json!(["ตาก", "ลม"]),
+            ]
+        );
+        for reading in readings {
+            let obj = reading.as_object().unwrap();
+            assert_eq!(obj.len(), 2, "each reading is exactly tokens + probability");
+            assert!(obj.contains_key("tokens") && obj.contains_key("probability"));
+        }
+        let probs: Vec<f64> = readings
+            .iter()
+            .map(|r| r["probability"].as_f64().unwrap())
+            .collect();
+        assert!(
+            probs.windows(2).all(|w| w[0] > w[1]),
+            "readings must be ranked, got {probs:?}"
+        );
+        // the wheel's top probability; values are informational, so a bounded check
+        assert!((probs[0] - 0.417_839_8).abs() < 1e-4, "got {}", probs[0]);
+    }
+}

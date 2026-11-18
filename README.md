@@ -20,7 +20,7 @@ corpus.jsonl ──▶ scripts/capture_stichula.py ──▶ golden/stichula.jso
 
 | path | what |
 |---|---|
-| `crates/tltk-core/` | the library: all 44 wire functions, no network, no async |
+| `crates/tltk-core/` | the library: all 45 wire functions, no network, no async |
 | `crates/tltk-worker/` | Cloudflare Worker (workers-rs) — thin HTTP shell over the core |
 | `crates/tltk-verifier/` | parity harness (`run` / `check` / `selftest`) |
 | `tools/convert/` | Python scripts: pickle → portable binary models, local oracle |
@@ -35,7 +35,7 @@ which never touches HTTP so it can also be used as a plain library.
 
 `POST /process` with `{"text": "...", "function": "...", "cutoff": "medium"}` →
 `{"success": true, "function": ..., "input": ..., "result": "..."}` (or
-`success: false` + `error`). 44 functions: the 16 validator names
+`success: false` + `error`). 45 functions: the 16 validator names
 (`th2ipa`, `th2roman`, `word_segment`, `syl_segment`, `segment`, `g2p`,
 `th2read`, `spell_variants`, `spoonerism`, `pos_tag`, `ner_tag`,
 `similar_words`, `similarity`, `outofgroup`, `analogy`, `plotwords`) plus
@@ -43,7 +43,8 @@ which never touches HTTP so it can also be used as a plain library.
 `sylparse_all`, `wrd_len`, `match_engtext`, `known`, `edits2`,
 `check_thaidict`, `reset_thaidict`, `read_thaidict`, `dg_print`, `dg_save`,
 `print_dtree`, `scan_dtree`, `get_tree_depth`, `tree_max_depth`, `w2v`,
-`compound`, `w2v_diffplot`, `w2v_dimplot`, `w2v_compare_color`. The port
+`compound`, `w2v_diffplot`, `w2v_dimplot`, `w2v_compare_color`,
+`malt_parser`, `malt_parser_wordlist`, `latte_segment`, `latte_nbest`. The port
 surface is **tltk 1.11** (repinned 2026-10-17; 1.11's only functional change
 vs 1.10 is TextAna's LdvTTR ×1000 → ×100, which the `text_class`/`txt2feat`
 feature path reads through TextAna). The 16 stichula functions are

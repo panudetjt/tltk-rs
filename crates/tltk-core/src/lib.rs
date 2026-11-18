@@ -134,6 +134,7 @@ impl<'a> Session<'a> {
             "w2v_compare_color" => self.wire_w2v_compare_color(text),
             "compound" => self.wire_compound(text),
             "latte_segment" => latte::latte_segment(self, text, cutoff),
+            "latte_nbest" => latte::latte_nbest(text, cutoff),
             other => Err(ProcessError(format!("Unknown function: {}", other))),
         }
     }
