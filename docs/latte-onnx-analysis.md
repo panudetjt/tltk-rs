@@ -348,6 +348,98 @@ JS to watch: `isSameRun` uses JS `\d`+Thai digits instead of Python's Unicode
 `isdecimal()`, and its nested-unit `max` loop uses `>` in a way that effectively
 breaks ties toward the *last* maximum, unlike NumPy's first-maximum.)
 
+### 2.8 Wire surface — `latte_segment`, `latte_nbest`, `latte_segment_opts`
+
+The three LATTE names ride the existing string dispatch
+`process(function, text, cutoff)` — no fourth argument and no extra export
+(issue #3 chose the `cutoff` slot for scalar parameters). `latte_segment`
+mirrors `tokenize(text, keep_whitespace=True, unit)`.
+
+**`latte_nbest(text, cutoff)`.** `text` is plain text. `cutoff` is a strict
+grammar, `<unit>` or `<unit>:<n>`:
+
+| field | values | default |
+|---|---|---|
+| `<unit>` | `long`, `short`, `minimal` | `short` (and `medium`, the verifier's default, also means `short`) |
+| `<n>` | base-10 integer in `[1, 100]` | `10` |
+
+Output is compact JSON, one object per reading, best first:
+
+```json
+[{"tokens":["ตา","กลม"],"probability":0.4178397973566892},
+ {"tokens":["ตากลม"],"probability":0.41417453195918347},
+ {"tokens":["ตาก","ลม"],"probability":0.08321445529883417}]
+```
+
+`probability` is `exp(score)` as a JSON number and is **informational** — only
+the reading order and the plain-first guarantee are contractual. Ranking is by
+descending score with the plain `latte_segment` reading forced to index 0 even
+on an exact score tie; the remaining ties keep dynamic-program insertion order
+(upstream's stable sort). Candidate pieces are the union of the lexicon **and**
+the word spans produced by all three units — not only the requested one.
+Whitespace is a hard boundary in every reading, and runs of ASCII letters /
+decimal digits stay whole. The lattice search reads at most **10,000
+non-whitespace characters** (whitespace is free); a longer input errors instead
+of allocating. The web UI is stricter than the wire on purpose: it caps n at 10
+and the n-best path at 2,000 non-whitespace characters, refusing with a
+user-facing Thai error before the wasm call so a browser tab cannot freeze
+(plain `latte_segment`, n = 1, keeps the wire's unlimited behaviour).
+
+**`latte_segment_opts(text, cutoff)`.** `text` is a compact JSON envelope and
+`cutoff` is **ignored** — the wire name, not a leading `{`, disambiguates JSON
+input from plain text. Exactly one of `text` (string) / `texts` (array of
+strings) is required.
+
+| key | type | default | notes |
+|---|---|---|---|
+| `text` | string | — | one text; mutually exclusive with `texts` |
+| `texts` | array of strings | — | ≤ 100 entries; processed per text (see below) |
+| `unit` | `long` / `short` / `minimal` | `short` | |
+| `keep_whitespace` | bool | `true` | `false` drops whitespace-only tokens |
+| `user_words` | array of strings | `[]` | ≤ 1000 raw entries; per-call hints |
+
+Unknown keys and wrong types are rejected before any allocation, and every text
+is subject to the same 10,000 non-whitespace cap. Output is always a JSON array
+of token arrays, one per input text (also for the single-`text` form), mirroring
+`tokenize_batch`:
+
+```json
+[["ตา","กลม"],["แมว","หมา"]]
+```
+
+`{"text":""}` → `[[]]`; `{"texts":[]}` → `[]`. User words are a **per-call
+lexicon overlay**: `str.strip()` then silently dropped when shorter than 2
+characters, longer than 16, or containing whitespace (there is no warning
+channel). They are hints, not forced cuts — the model still decides the final
+boundaries — and nothing global or session-scoped is mutated, so concurrent
+calls cannot see each other's dictionary.
+
+**Errors** (exact strings, the existing process-error type — never a panic
+across the wasm boundary):
+
+| error | when |
+|---|---|
+| `invalid unit` | unit token is not `long` / `short` / `minimal` |
+| `n must be between 1 and 100` | n unparsable or outside `[1, 100]` |
+| `text too long (max 10000 non-whitespace characters)` | an n-best text or any `_opts` text is above the cap |
+| `malformed JSON` | the `_opts` envelope is not JSON |
+| `invalid options` | `_opts` schema/type/cap violation (unknown key, both `text` and `texts`, `texts` > 100, `user_words` > 1000, …) |
+
+**Accepted departure — per-text, not upstream-batched, processing.** The wheel's
+`tokenize_batch` packs many lines into one ORT batch, and §6.3 explains why batch
+composition moves int8 scales (up to 2.9% of lines). The wire processes each text
+on its own (batch size 1), and n-best treats its whole text as one
+whitespace-free line; per-text consistency is the chosen semantics. A multi-line
+text can therefore differ from the wheel's batched call on the rare line whose
+cuts the scale shift flips — disclosed and accepted, mitigated by keeping
+multi-line `_opts` golden rows short.
+
+**Parity.** `latte_segment` rows stay byte-exact. N-best rows carry
+`"compare":"json-f64-1e-4"` in the golden: strings compare byte-for-byte, numeric
+leaves compare with **1e-4 absolute** tolerance (ONNX Runtime's MLAS
+accumulation order is not reproducible bit-for-bit). Goldens are captured from
+the wheel in one process and corpus order — never from the Rust binary.
+
 ---
 
 ## 3. `charclass.npz` — exact table
@@ -595,13 +687,23 @@ Exact behaviour, each direction independently:
   (all `T×B×I` elements share one uint8 scale and zero point, computed with
   the same formula as §6.1). This was verified by feeding two timesteps with
   different ranges: both timesteps used the *global* scale, not a per-step one.
-- Gates: `gi = float(int32[(Xq − zp_x) @ Wq[dir]]) * (scale_x * W_scale[dir]) + Wb[dir]`;
-  the recurrence term is computed in **float** as
-  `H_{t−1} @ (Rq[dir] * R_scale[dir]) + Rb[dir]`. I verified that the hidden
-  state is **not** dynamically quantized: in a controlled two-step probe with
-  `h0 ∈ [−0.76, 0.76]`, the value read back through the R matmul equalled the
-  float `h0` to ≤1.8e−7, whereas a uint8 requantization would have introduced
-  ~0.003 error.
+- Gates: `gi = float(int32[(Xq − zp_x) @ Wq[dir]]) * (scale_x * W_scale[dir]) + Wb[dir]`
+  for the input term, and the **recurrence term is dynamically quantized at
+  every timestep**: `H_{t−1}`'s 128 values get their own uint8 scale and zero
+  point each step (min/max over those 128 elements, ties-to-even — the same
+  formula as §6.1), and the step computes
+  `acc = int32[Σ_i (Hq[i] − zp_h) · Rq[dir][i][g]]`, scaled by
+  `(scale_h * R_scale[dir])` before `+ Rb[dir]`.
+  **Correction (LATTE port, 2026-11-18):** earlier revisions of this note
+  claimed the recurrence was computed in float and that the hidden state was
+  *not* dynamically quantized, citing a two-step probe that read
+  `h0 ∈ [−0.76, 0.76]` back through the R matmul to ≤1.8e−7. That conclusion was
+  wrong. The float-recurrence port drifted from ORT by ~8.6e−3 in the recurrence
+  and up to ~5.7e−2 in the logits — enough to flip an n-best reading order. With
+  the per-step hidden quantization the logits agree with ORT to ≤2.2e−6 and the
+  n-best probabilities to ~1e−6. `crates/tltk-core/src/latte.rs`'s `lstm()` is
+  the verified reference behaviour; a port that reproduces it is what the parity
+  goldens measure.
 - Update: `c_t = σ(f) ⊙ c_{t−1} + σ(i) ⊙ tanh(g)`; `h_t = σ(o) ⊙ tanh(c_t)`;
   initial `h_0 = c_0 = 0`.
 - Direction 0 processes `t = 0 … T−1`, direction 1 processes `t = T−1 … 0`;
@@ -624,7 +726,10 @@ segmented slightly differently alone than in a batch: up to 2.9% of the lines
 of a test set, with no score moving by more than 0.05." A Rust port must
 reproduce the *same batch grouping* (`_batches`, `batch_chars=4096`, `MAX_ROWS=512`,
 sorted by length) to match a given Python call — and for a single-line wire
-function, use batch size 1.
+function, use batch size 1. That 0.05 line is a bound on the **batch effect** of
+int8 scales, not a parity tolerance for this port: after the per-step
+hidden-state quantization of §6.2 the logits agree with ORT to ≤2.2e−6 (see §7
+item 3 for the asserted tolerance on probability wires).
 
 ---
 
@@ -637,8 +742,16 @@ function, use batch size 1.
    float32 scale arithmetic** `(max−min)/255`. Using `round()` (half away)
    or f64 intermediates will shift integer codes at ties and flip logits near 0.
 3. **Gate threshold `logit >= 0.0`.** Tiny float differences in conv/LSTM/MatMul
-   accumulation order (MLAS vs naive loops) flip a start. Decide a parity
-   tolerance by comparing logits, not tokens, on a corpus.
+   accumulation order (MLAS vs naive loops) can flip a start, so parity is
+   compared at the logit level before token strings. Settled rule for the wire:
+   `latte_segment` output stays **byte-exact**; probability-bearing wires
+   (`latte_nbest`, `latte_segment_opts`) are asserted at **1e−4 absolute on
+   numeric leaves, strings byte-exact** (`json-f64-1e-4` in the goldens). With
+   the per-step hidden-state quantization of §6.2 the port's logits agree with
+   ORT to ≤2.2e−6 and the n-best probabilities to ~1e−6, so 1e−4 is a guard with
+   margin, not the observed drift. The model card's "no score moving by more
+   than 0.05" is a statement about batch effects on int8 scales (§6.3) and is
+   **obsolete as a parity bound** — never use it as one.
 4. **Nested-unit `max` tie behaviour**: NumPy's `max` keeps the first maximum
    (coarser level). Use strict `>` when folding levels 0..k.
 5. **64-bit hash wraparound** (`wrapping_mul`/`wrapping_add`) and the exact

@@ -61,6 +61,15 @@
           <p class="form-hint">เลือกระดับความละเอียดการตัดคำของ LATTE</p>
         </div>
 
+        <!-- LATTE n control (latte_segment only): 1 = plain segmentation,
+             2-10 = ranked readings with probabilities (latte_nbest) -->
+        <div id="latteNGroup" class="form-group hidden">
+          <label for="latteNInput" class="form-label">จำนวนผลลัพธ์ (n):</label>
+          <input id="latteNInput" class="form-control" type="number" min="1" max="10" step="1" value="1"
+                 inputmode="numeric" autocomplete="off">
+          <p class="form-hint">1 = ผลลัพธ์เดียว (ตัดคำปกติ) · 2-10 = ขอหลายผลลัพธ์พร้อมความน่าจะเป็น (ไม่เกิน 2000 ตัวอักษร ไม่นับช่องว่าง)</p>
+        </div>
+
         <!-- Cutoff Selector (similar_words only) -->
         <div id="cutoffGroup" class="form-group hidden">
           <label for="cutoffSelect" class="form-label">เกณฑ์ความคล้าย (Cutoff):</label>
@@ -116,6 +125,15 @@
             </button>
           </div>
           <pre id="outputText" class="output-box" tabindex="0">ผลลัพธ์จะแสดงที่นี่หลังกดประมวลผล</pre>
+        </div>
+
+        <!-- Readings Output View (latte_segment with n > 1) -->
+        <div id="readingsOutputWrapper" class="output-wrapper hidden">
+          <div class="output-header">
+            <span class="output-title">ผลลัพธ์หลายทางเลือก (Ranked Readings):</span>
+          </div>
+          <ol id="readingsList" class="readings-list" aria-label="ผลลัพธ์การตัดคำเรียงตามความน่าจะเป็น"></ol>
+          <p class="readings-hint">เรียงจากความน่าจะเป็นสูงสุด — แถวแรก (ตัวหนา) คือผลลัพธ์ที่โมเดลเลือก</p>
         </div>
 
         <!-- Image Output View (plotwords) -->

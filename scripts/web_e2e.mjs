@@ -151,6 +151,66 @@ const INPUT_OVERRIDES = {
   wrd_len: 'ทดสอบ',
 };
 
+// --- LATTE n-best sub-check (Phase C) ---------------------------------------
+// The LATTE card's `n` control must reach `latte_nbest` through the real UI and
+// render ranked readings, and an out-of-range n must be refused before wasm.
+// Any pageerror/console error raised while this runs still fails the run.
+async function waitForStats(page, prev, re, timeout) {
+  await page.waitForFunction(
+    ({ prevText, pattern }) => {
+      const t = document.getElementById('execStats').textContent;
+      return t !== prevText && new RegExp(pattern).test(t);
+    },
+    { prevText: prev, pattern: re.source },
+    { timeout },
+  );
+}
+
+async function checkLatteNbest(page, args, results, problems) {
+  const row = { id: 'latte_nbest(ui)', ok: false, note: '' };
+  try {
+    await page.locator('#functionSelect').selectOption('latte_segment');
+    await page.waitForTimeout(150); // let onFunctionChange settle
+    const nInput = page.locator('#latteNInput');
+    if ((await nInput.count()) !== 1) throw new Error('no #latteNInput control on the LATTE card');
+    await page.locator('#inputText').fill('ตากลม');
+    await nInput.fill('3');
+
+    let prev = await page.locator('#execStats').textContent();
+    await page.locator('#runBtn').dispatchEvent('click');
+    await waitForStats(page, prev, /ประมวลผลสำเร็จ/, args.timeout);
+
+    const readings = await page.locator('#readingsList li').evaluateAll((els) =>
+      els.map((el) => ({
+        rank: el.querySelector('.reading-rank')?.textContent?.trim() ?? '',
+        tokens: [...el.querySelectorAll('.token-chip')].map((t) => t.textContent ?? ''),
+        prob: el.querySelector('.reading-probability')?.textContent?.trim() ?? '',
+      })),
+    );
+    if (readings.length < 2) throw new Error(`rendered ${readings.length} reading row(s), need >= 2`);
+    const bad = readings.findIndex((r) => !r.prob || r.tokens.length === 0);
+    if (bad >= 0) throw new Error(`reading row ${bad + 1} lacks tokens or a probability`);
+    if (!/(^|\D)1(\D|$)/.test(readings[0].rank)) throw new Error('first reading row is not rank 1');
+
+    // UI guard: the page caps n at 10, so 11 must error without running wasm.
+    await nInput.fill('11');
+    prev = await page.locator('#execStats').textContent();
+    await page.locator('#runBtn').dispatchEvent('click');
+    await waitForStats(page, prev, /เกิดข้อผิดพลาด/, args.timeout);
+    const guardErr = ((await page.locator('#errorMessage').textContent()) ?? '').trim();
+    if (!guardErr) throw new Error('n=11 was not rejected with a user-facing error');
+
+    row.ok = true;
+    row.note = `${readings.length} readings, best ${readings[0].tokens.join('|')} ${readings[0].prob}`;
+  } catch (e) {
+    row.note = 'timeout/crash: ' + String(e).split('\n')[0].slice(0, 160);
+  }
+  const died = problems.splice(0);
+  if (died.length) row.note += ' | ' + died[0].slice(0, 160);
+  results.push(row);
+  console.log(`${row.ok ? 'PASS' : 'FAIL'}  ${row.id.padEnd(20)} ${row.note}`);
+}
+
 async function main() {
   const args = parseArgs(process.argv);
   const { chromium } = await loadPlaywright();
@@ -246,6 +306,12 @@ async function main() {
     if (died.length) row.note += ' | ' + died[0].slice(0, 160);
     results.push(row);
     console.log(`${row.ok ? 'PASS' : 'FAIL'}  ${card.id.padEnd(20)} ${row.note}`);
+  }
+
+  // Phase C: the LATTE n control + readings view, alongside the card loop so a
+  // regression in the n-best UI fails the same gate as a broken function card.
+  if (!args.only) {
+    await checkLatteNbest(page, args, results, problems);
   }
 
   await browser.close();
