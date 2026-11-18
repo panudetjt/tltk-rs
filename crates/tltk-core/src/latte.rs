@@ -260,29 +260,87 @@ fn lstm(m: &Model, x: &[f32], t: usize, input: usize, layer: usize) -> Vec<f32> 
     out
 }
 
-/// 64-bit rolling-hash lexicon bits for the codepoints of one line.
-fn lex_bits(m: &Model, codes: &[u32]) -> Vec<i64> {
+/// Per-call user-dictionary overlay: sorted 64-bit word hashes per codepoint
+/// length, laid over the immutable embedded tables. Hints only (the model
+/// still decides the cuts), built and dropped with one call; never global.
+#[derive(Default)]
+struct LexOverlay {
+    tables: Vec<(usize, Vec<u64>)>,
+}
+
+/// Longest word the dictionary can hold, in characters (`_runtime.Lexicon`).
+const MAX_WORD_LEN: usize = 16;
+
+impl LexOverlay {
+    /// Strips each word and silently drops what upstream drops: shorter than
+    /// 2 or longer than 16 characters, or containing whitespace.
+    fn new(words: &[String]) -> Self {
+        let mut by_len: HashMap<usize, Vec<u64>> = HashMap::new();
+        for word in words {
+            let word = word.trim();
+            let n = word.chars().count();
+            if !(2..=MAX_WORD_LEN).contains(&n) || word.chars().any(char::is_whitespace) {
+                continue;
+            }
+            let mut h = 0u64;
+            for (i, c) in word.chars().enumerate() {
+                h = if i == 0 {
+                    c as u64
+                } else {
+                    h.wrapping_mul(HASH_MUL).wrapping_add(c as u64)
+                };
+            }
+            by_len.entry(n).or_default().push(h);
+        }
+        let mut tables: Vec<(usize, Vec<u64>)> = by_len
+            .into_iter()
+            .map(|(n, mut hashes)| {
+                hashes.sort_unstable();
+                hashes.dedup();
+                (n, hashes)
+            })
+            .collect();
+        tables.sort_unstable_by_key(|(n, _)| *n);
+        Self { tables }
+    }
+}
+
+/// Shared empty overlay for calls without user words.
+static NO_USER_WORDS: LexOverlay = LexOverlay { tables: Vec::new() };
+
+/// Marks the starts/ends/inside bits of one lex table's hits in `codes`.
+fn mark_table(codes: &[u32], n: usize, table: &[u64], bits: &mut [i64], cover: &mut [i64]) {
+    let w = codes.len();
+    for i in 0..=w - n {
+        let mut h = codes[i] as u64;
+        for j in 1..n {
+            h = h.wrapping_mul(HASH_MUL).wrapping_add(codes[i + j] as u64);
+        }
+        if table.binary_search(&h).is_ok() {
+            let bucket = len_bucket(n);
+            bits[i] |= 1i64 << bucket;
+            bits[i + n - 1] |= 1i64 << (6 + bucket);
+            if n > 2 {
+                cover[i + 1] += 1;
+                cover[i + n - 1] -= 1;
+            }
+        }
+    }
+}
+
+/// 64-bit rolling-hash lexicon bits for the codepoints of one line, embedded
+/// tables plus the call's user-word overlay.
+fn lex_bits(m: &Model, codes: &[u32], overlay: &LexOverlay) -> Vec<i64> {
     let w = codes.len();
     let mut bits = vec![0i64; w];
     let mut cover = vec![0i64; w + 1];
     for (n, table) in &m.lex {
-        let n = *n;
-        if n > w { break; }
-        for i in 0..=w - n {
-            let mut h = codes[i] as u64;
-            for j in 1..n {
-                h = h.wrapping_mul(HASH_MUL).wrapping_add(codes[i + j] as u64);
-            }
-            if table.binary_search(&h).is_ok() {
-                let bucket = len_bucket(n);
-                bits[i] |= 1i64 << bucket;
-                bits[i + n - 1] |= 1i64 << (6 + bucket);
-                if n > 2 {
-                    cover[i + 1] += 1;
-                    cover[i + n - 1] -= 1;
-                }
-            }
-        }
+        if *n > w { break; }
+        mark_table(codes, *n, table, &mut bits, &mut cover);
+    }
+    for (n, table) in &overlay.tables {
+        if *n > w { break; }
+        mark_table(codes, *n, table, &mut bits, &mut cover);
     }
     let mut cur = 0i64;
     for i in 0..w {
@@ -318,13 +376,13 @@ fn same_run(a: char, b: char) -> bool {
 
 /// One whitespace-free line through the network: for every character, the
 /// logits of all three units (coarse to fine: `long`, `short`, `minimal`).
-fn forward(m: &Model, codes: &[u32]) -> Vec<[f32; 3]> {
+fn forward(m: &Model, codes: &[u32], overlay: &LexOverlay) -> Vec<[f32; 3]> {
     let w = codes.len();
     if w == 0 { return Vec::new(); }
 
     let emb = f32v!(m, "emb");
     let lex_table = f32v!(m, "lex_table");
-    let bits = lex_bits(m, codes);
+    let bits = lex_bits(m, codes, overlay);
     let mut x = vec![0.0f32; w * 96];
     for (i, &code) in codes.iter().enumerate() {
         let cls = m.chars.get(code as usize).copied().unwrap_or(NOISE_CLASS) as usize;
@@ -390,9 +448,9 @@ fn unit_starts(codes: &[u32], logits: &[[f32; 3]], unit_idx: usize) -> Vec<bool>
 }
 
 /// Runs one whitespace-free line through the network, returning word starts.
-fn line_starts(m: &Model, line: &str, unit_idx: usize) -> Vec<bool> {
+fn line_starts(m: &Model, line: &str, unit_idx: usize, overlay: &LexOverlay) -> Vec<bool> {
     let codes: Vec<u32> = line.chars().map(|c| c as u32).collect();
-    let logits = forward(m, &codes);
+    let logits = forward(m, &codes, overlay);
     unit_starts(&codes, &logits, unit_idx)
 }
 
@@ -418,7 +476,7 @@ pub fn latte_segment(_sess: &mut Session, text: &str, unit: &str) -> Result<Stri
             all_tokens.push(raw_line.to_string());
             continue;
         }
-        let starts = line_starts(m, &codes_to_str(&codes), unit_idx);
+        let starts = line_starts(m, &codes_to_str(&codes), unit_idx, &NO_USER_WORDS);
         let mut cuts: Vec<usize> = Vec::new();
         for (i, &s) in starts.iter().enumerate() {
             if i > 0 && s { cuts.push(idx[i]); }
@@ -528,7 +586,12 @@ fn lattice(m: &Model, codes: &[u32]) -> HashSet<(usize, usize)> {
 /// `tokenize(text, keep_whitespace=True, unit)`: one model call per `\n` line,
 /// every whitespace character is a token of its own and cuts inside a run of
 /// ASCII letters or decimal digits are dropped.
-fn tokenize_spans(m: &Model, text: &str, unit_idx: usize) -> Vec<(usize, usize)> {
+fn tokenize_spans(
+    m: &Model,
+    text: &str,
+    unit_idx: usize,
+    overlay: &LexOverlay,
+) -> Vec<(usize, usize)> {
     let chars: Vec<char> = text.chars().collect();
     let n = chars.len();
     let mut cut = vec![false; n + 1];
@@ -542,7 +605,7 @@ fn tokenize_spans(m: &Model, text: &str, unit_idx: usize) -> Vec<(usize, usize)>
         }
         if !idx.is_empty() {
             let codes: Vec<u32> = idx.iter().map(|&j| chars[j] as u32).collect();
-            let logits = forward(m, &codes);
+            let logits = forward(m, &codes, overlay);
             let starts = unit_starts(&codes, &logits, unit_idx);
             for (s, &word_start) in starts.iter().enumerate().skip(1) {
                 if word_start {
@@ -623,7 +686,7 @@ pub fn latte_nbest(text: &str, cutoff: &str) -> Result<String, ProcessError> {
     let line: Vec<char> = keep.iter().map(|&j| chars[j]).collect();
     let codes: Vec<u32> = line.iter().map(|&c| c as u32).collect();
     let size = codes.len();
-    let logits = forward(m, &codes);
+    let logits = forward(m, &codes, &NO_USER_WORDS);
     let sel: Vec<f32> = logits
         .iter()
         .map(|l| {
@@ -671,7 +734,7 @@ pub fn latte_nbest(text: &str, cutoff: &str) -> Result<String, ProcessError> {
     let mut best: Option<Vec<usize>> = None;
     for v in 0..UNITS.len() {
         let mut bounds = vec![0usize];
-        for (a, b) in tokenize_spans(m, text, v) {
+        for (a, b) in tokenize_spans(m, text, v, &NO_USER_WORDS) {
             if chars[a..b].iter().all(|c| c.is_whitespace()) {
                 continue;
             }
@@ -766,12 +829,361 @@ pub fn latte_nbest(text: &str, cutoff: &str) -> Result<String, ProcessError> {
 
 
 
+// ---------------------------------------------------------------- segment opts
+
+const MAX_TEXTS: usize = 100;
+const MAX_USER_WORDS: usize = 1000;
+
+fn invalid_options() -> ProcessError {
+    ProcessError("invalid options".to_string())
+}
+
+/// One `latte_segment_opts` envelope. The custom visitor below rejects unknown
+/// and duplicate keys and enforces the list caps while reading, so the
+/// untrusted JSON cannot make us materialise more entries than the wire allows.
+#[derive(Default)]
+struct SegmentOptions {
+    text: Option<String>,
+    texts: Option<Vec<String>>,
+    unit: Option<String>,
+    keep_whitespace: Option<bool>,
+    user_words: Option<Vec<String>>,
+}
+
+/// A JSON array of strings that errors as soon as it would exceed `MAX` entries.
+struct CappedStrings<const MAX: usize>(Vec<String>);
+
+impl<'de, const MAX: usize> serde::Deserialize<'de> for CappedStrings<MAX> {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        struct V<const MAX: usize>;
+        impl<'de, const MAX: usize> serde::de::Visitor<'de> for V<MAX> {
+            type Value = CappedStrings<MAX>;
+            fn expecting(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                f.write_str("an array of strings")
+            }
+            fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+            where
+                A: serde::de::SeqAccess<'de>,
+            {
+                // honour a size hint only up to the cap: never pre-allocate the
+                // attacker's claimed length
+                let mut out = Vec::with_capacity(seq.size_hint().unwrap_or(0).min(MAX));
+                while let Some(s) = seq.next_element::<String>()? {
+                    if out.len() == MAX {
+                        return Err(serde::de::Error::custom("too many entries"));
+                    }
+                    out.push(s);
+                }
+                Ok(CappedStrings(out))
+            }
+        }
+        deserializer.deserialize_seq(V)
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for SegmentOptions {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        struct V;
+        impl<'de> serde::de::Visitor<'de> for V {
+            type Value = SegmentOptions;
+            fn expecting(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                f.write_str("a JSON object")
+            }
+            fn visit_map<A>(self, mut map: A) -> Result<Self::Value, A::Error>
+            where
+                A: serde::de::MapAccess<'de>,
+            {
+                let dup = || serde::de::Error::custom("duplicate key");
+                let mut out = SegmentOptions::default();
+                while let Some(key) = map.next_key::<String>()? {
+                    match key.as_str() {
+                        "text" => {
+                            if out.text.is_some() {
+                                return Err(dup());
+                            }
+                            out.text = Some(map.next_value()?);
+                        }
+                        "texts" => {
+                            if out.texts.is_some() {
+                                return Err(dup());
+                            }
+                            out.texts =
+                                Some(map.next_value::<CappedStrings<MAX_TEXTS>>()?.0);
+                        }
+                        "unit" => {
+                            if out.unit.is_some() {
+                                return Err(dup());
+                            }
+                            out.unit = Some(map.next_value()?);
+                        }
+                        "keep_whitespace" => {
+                            if out.keep_whitespace.is_some() {
+                                return Err(dup());
+                            }
+                            out.keep_whitespace = Some(map.next_value()?);
+                        }
+                        "user_words" => {
+                            if out.user_words.is_some() {
+                                return Err(dup());
+                            }
+                            out.user_words = Some(
+                                map.next_value::<CappedStrings<MAX_USER_WORDS>>()?.0,
+                            );
+                        }
+                        _ => return Err(serde::de::Error::custom("unknown key")),
+                    }
+                }
+                Ok(out)
+            }
+        }
+        deserializer.deserialize_map(V)
+    }
+}
+
+/// Parses and validates an options envelope. Every check runs before the model
+/// is touched; syntax maps to `malformed JSON`, schema/type/caps to
+/// `invalid options`, then `invalid unit`, then the per-text length cap.
+fn parse_segment_options(
+    envelope: &str,
+) -> Result<(Vec<String>, usize, bool, LexOverlay), ProcessError> {
+    let opts: SegmentOptions = match serde_json::from_str(envelope) {
+        Ok(opts) => opts,
+        Err(e) => {
+            return Err(match e.classify() {
+                serde_json::error::Category::Syntax | serde_json::error::Category::Eof => {
+                    ProcessError("malformed JSON".to_string())
+                }
+                _ => invalid_options(),
+            });
+        }
+    };
+    let texts = match (opts.text, opts.texts) {
+        (Some(text), None) => vec![text],
+        (None, Some(texts)) => texts,
+        _ => return Err(invalid_options()),
+    };
+    let unit_idx = match opts.unit.as_deref() {
+        None => 1, // short
+        Some(unit) => UNITS
+            .iter()
+            .position(|u| *u == unit)
+            .ok_or_else(|| ProcessError("invalid unit".to_string()))?,
+    };
+    for text in &texts {
+        let non_ws = text.chars().filter(|c| !c.is_whitespace()).count();
+        if non_ws > MAX_NBEST_CHARS {
+            return Err(ProcessError(
+                "text too long (max 10000 non-whitespace characters)".to_string(),
+            ));
+        }
+    }
+    let user_words = opts.user_words.as_deref().unwrap_or(&[]);
+    Ok((
+        texts,
+        unit_idx,
+        opts.keep_whitespace.unwrap_or(true),
+        LexOverlay::new(user_words),
+    ))
+}
+
+/// Wire entry: `latte_segment_opts(text, cutoff)` — `text` is a compact JSON
+/// envelope (`{"text":...}` or `{"texts":[...]}`, optional `unit`,
+/// `keep_whitespace`, `user_words`), `cutoff` is ignored.
+///
+/// Returns a JSON array with one token array per input text, mirroring the
+/// wheel's `tokenize_batch` (`{"text":""}` => `[[]]`, `{"texts":[]}` => `[]`).
+/// Texts are processed independently (the accepted upstream batch departure);
+/// user words are per-call lexicon hints overlaid on the embedded tables.
+pub fn latte_segment_opts(text: &str) -> Result<String, ProcessError> {
+    let (texts, unit_idx, keep_whitespace, overlay) = parse_segment_options(text)?;
+    if texts.is_empty() {
+        return Ok("[]".to_string());
+    }
+    let m = &*MODEL;
+    let mut out: Vec<Vec<String>> = Vec::with_capacity(texts.len());
+    for text in &texts {
+        let chars: Vec<char> = text.chars().collect();
+        let mut tokens: Vec<String> = tokenize_spans(m, text, unit_idx, &overlay)
+            .into_iter()
+            .map(|(a, b)| chars[a..b].iter().collect::<String>())
+            .collect();
+        if !keep_whitespace {
+            // every whitespace character is its own token upstream; drop those
+            tokens.retain(|tok| !tok.chars().all(char::is_whitespace));
+        }
+        out.push(tokens);
+    }
+    serde_json::to_string(&out).map_err(|e| ProcessError(e.to_string()))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     fn err(result: Result<String, ProcessError>) -> String {
         result.expect_err("expected an error").0
+    }
+
+    #[test]
+    fn opts_shapes_and_units_match_the_wheel() {
+        // a single `text` still produces one token array, and `short` is the default
+        assert_eq!(
+            latte_segment_opts(r#"{"text":"ตากลม"}"#).unwrap(),
+            r#"[["ตา","กลม"]]"#
+        );
+        assert_eq!(
+            latte_segment_opts(r#"{"text":"ตากลม","unit":"short"}"#).unwrap(),
+            r#"[["ตา","กลม"]]"#
+        );
+        assert_eq!(
+            latte_segment_opts(r#"{"text":"ตากลม","unit":"long"}"#).unwrap(),
+            r#"[["ตากลม"]]"#
+        );
+        assert_eq!(
+            latte_segment_opts(r#"{"text":"ตากลม","unit":"minimal"}"#).unwrap(),
+            r#"[["ตากลม"]]"#
+        );
+        assert_eq!(latte_segment_opts(r#"{"text":""}"#).unwrap(), "[[]]");
+        assert_eq!(latte_segment_opts(r#"{"texts":[]}"#).unwrap(), "[]");
+    }
+
+    #[test]
+    fn opts_whitespace_toggle_and_multiline() {
+        let text = "สวัสดีครับ วันนี้อากาศดีมาก";
+        let kept = format!(r#"{{"text":"{text}"}}"#);
+        let dropped = format!(r#"{{"text":"{text}","keep_whitespace":false}}"#);
+        assert_eq!(
+            latte_segment_opts(&kept).unwrap(),
+            r#"[["สวัสดี","ครับ"," ","วัน","นี้","อากาศ","ดี","มาก"]]"#
+        );
+        assert_eq!(
+            latte_segment_opts(&dropped).unwrap(),
+            r#"[["สวัสดี","ครับ","วัน","นี้","อากาศ","ดี","มาก"]]"#
+        );
+        // one model call per line, newline kept as its own token by default
+        assert_eq!(
+            latte_segment_opts(r#"{"text":"ตา\nกลม"}"#).unwrap(),
+            r#"[["ตา","\n","กลม"]]"#
+        );
+        assert_eq!(
+            latte_segment_opts(r#"{"text":"ตา\nกลม","keep_whitespace":false}"#).unwrap(),
+            r#"[["ตา","กลม"]]"#
+        );
+    }
+
+    #[test]
+    fn opts_texts_are_independent() {
+        assert_eq!(
+            latte_segment_opts(r#"{"texts":["ฉันกินข้าวที่บ้าน","แมวกินปลา"]}"#).unwrap(),
+            r#"[["ฉัน","กิน","ข้าว","ที่","บ้าน"],["แมว","กิน","ปลา"]]"#
+        );
+        assert_eq!(
+            latte_segment_opts(
+                r#"{"texts":["ตา กลม","คุณปุณยวีร์ไปกรุงเทพ"],"keep_whitespace":false}"#
+            )
+            .unwrap(),
+            r#"[["ตา","กลม"],["คุณ","ปุณยวีร์","ไป","กรุงเทพ"]]"#
+        );
+        // each text alone equals its slot in the batch
+        let alone = latte_segment_opts(r#"{"text":"ฉันกินข้าวที่บ้าน"}"#).unwrap();
+        assert_eq!(alone, r#"[["ฉัน","กิน","ข้าว","ที่","บ้าน"]]"#);
+    }
+
+    #[test]
+    fn opts_user_words_are_hints() {
+        // the control split, then the same text with a user word that joins it
+        assert_eq!(
+            latte_segment_opts(r#"{"text":"แมวหมา"}"#).unwrap(),
+            r#"[["แมว","หมา"]]"#
+        );
+        assert_eq!(
+            latte_segment_opts(r#"{"text":"แมวหมา","user_words":["แมวหมา"]}"#).unwrap(),
+            r#"[["แมวหมา"]]"#
+        );
+        // words are stripped like upstream `str.strip()`
+        assert_eq!(
+            latte_segment_opts(r#"{"text":"แมวหมา","user_words":[" แมวหมา "]}"#).unwrap(),
+            r#"[["แมวหมา"]]"#
+        );
+        // too short, whitespace-bearing and too long words are silently dropped
+        assert_eq!(
+            latte_segment_opts(
+                r#"{"text":"แมวหมา","user_words":["ก","ตา กลม","12345678901234567"]}"#
+            )
+            .unwrap(),
+            r#"[["แมว","หมา"]]"#
+        );
+    }
+
+    #[test]
+    fn opts_errors_are_contractual() {
+        // malformed JSON (including the empty envelope)
+        assert_eq!(err(latte_segment_opts("")), "malformed JSON");
+        assert_eq!(err(latte_segment_opts("{")), "malformed JSON");
+        assert_eq!(err(latte_segment_opts("not json")), "malformed JSON");
+        // schema violations
+        assert_eq!(err(latte_segment_opts("{}")), "invalid options");
+        assert_eq!(
+            err(latte_segment_opts(r#"{"text":"a","texts":["b"]}"#)),
+            "invalid options"
+        );
+        assert_eq!(
+            err(latte_segment_opts(r#"{"text":"a","extra":1}"#)),
+            "invalid options"
+        );
+        assert_eq!(err(latte_segment_opts(r#"{"text":5}"#)), "invalid options");
+        assert_eq!(err(latte_segment_opts(r#"{"texts":"x"}"#)), "invalid options");
+        assert_eq!(
+            err(latte_segment_opts(r#"{"texts":["x",1]}"#)),
+            "invalid options"
+        );
+        assert_eq!(
+            err(latte_segment_opts(r#"{"text":"a","keep_whitespace":"yes"}"#)),
+            "invalid options"
+        );
+        assert_eq!(
+            err(latte_segment_opts(r#"{"text":"a","user_words":[1]}"#)),
+            "invalid options"
+        );
+        assert_eq!(
+            err(latte_segment_opts(r#"{"text":"a","text":"b"}"#)),
+            "invalid options"
+        );
+        // bad unit is the schema-valid value with an unknown name
+        assert_eq!(
+            err(latte_segment_opts(r#"{"text":"a","unit":"bogus"}"#)),
+            "invalid unit"
+        );
+        assert_eq!(
+            err(latte_segment_opts(r#"{"text":"a","unit":5}"#)),
+            "invalid options"
+        );
+        // caps are validated before the model is touched
+        let texts = serde_json::json!({"texts": vec!["x"; 101]}).to_string();
+        assert_eq!(err(latte_segment_opts(&texts)), "invalid options");
+        let words = serde_json::json!({"text": "a", "user_words": vec!["ab"; 1001]}).to_string();
+        assert_eq!(err(latte_segment_opts(&words)), "invalid options");
+        let long = serde_json::json!({"text": "ก".repeat(10_001)}).to_string();
+        assert_eq!(
+            err(latte_segment_opts(&long)),
+            "text too long (max 10000 non-whitespace characters)"
+        );
+        // the cap counts non-whitespace characters, and bad unit wins over length
+        let spaces = serde_json::json!({"text": " ".repeat(10_001)}).to_string();
+        assert!(latte_segment_opts(&spaces).is_ok());
+        let spaced = serde_json::json!({"text": "ก ".repeat(10_001)}).to_string();
+        assert_eq!(
+            err(latte_segment_opts(&spaced)),
+            "text too long (max 10000 non-whitespace characters)"
+        );
+        let both = serde_json::json!({"text": "ก".repeat(10_001), "unit": "bogus"}).to_string();
+        assert_eq!(err(latte_segment_opts(&both)), "invalid unit");
     }
 
     #[test]
