@@ -135,6 +135,7 @@ impl<'a> Session<'a> {
             "compound" => self.wire_compound(text),
             "latte_segment" => latte::latte_segment(self, text, cutoff),
             "latte_nbest" => latte::latte_nbest(text, cutoff),
+            "latte_segment_opts" => latte::latte_segment_opts(text),
             other => Err(ProcessError(format!("Unknown function: {}", other))),
         }
     }
