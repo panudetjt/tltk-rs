@@ -146,6 +146,18 @@ body {
   border: 1px solid var(--danger);
 }
 
+.alert-info {
+  background-color: var(--primary-light);
+  color: var(--primary-dark);
+  border: 1px solid var(--primary);
+}
+
+.alert-info a {
+  color: var(--primary);
+  font-weight: 600;
+  text-decoration: underline;
+}
+
 .error-title {
   font-weight: 700;
   margin-bottom: 4px;
@@ -173,7 +185,8 @@ body {
 }
 
 @media (min-width: 640px) {
-  .form-grid:has(#cutoffGroup:not(.hidden)) {
+  .form-grid:has(#cutoffGroup:not(.hidden)),
+  .form-grid:has(#latteUnitGroup:not(.hidden)) {
     grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
   }
 }

@@ -355,6 +355,14 @@ export const FUNCTIONS = [
     placeholder: 'ราช การ',
     tier: 2
   },
+  {
+    id: 'latte_segment',
+    name: 'latte_segment',
+    thaiName: 'ตัดคำด้วย OpenThai 2.0 LATTE (Word Segmentation)',
+    desc: 'ตัดคำภาษาไทยด้วยโมเดล OpenThai 2.0 LATTE-WordSeg-Lite (iApp) ที่รันใน Rust → WebAssembly เลือกระดับหน่วยคำได้ 3 แบบ (Short / Long / Minimal) ผลลัพธ์เป็นรายการคำในรูปแบบ JSON',
+    placeholder: 'เจ้าหน้าที่การศึกษาเปิดเผยว่า',
+    tier: 1
+  },
 ];
 
 // Map for quick lookup by ID
@@ -367,6 +375,9 @@ const manager = new TltkManager();
 const functionSelect = document.getElementById('functionSelect');
 const functionDesc = document.getElementById('functionDesc');
 const tierTag = document.getElementById('tierTag');
+const latteUnitGroup = document.getElementById('latteUnitGroup');
+const latteUnitSelect = document.getElementById('latteUnitSelect');
+const latteInfoBanner = document.getElementById('latteInfoBanner');
 const cutoffGroup = document.getElementById('cutoffGroup');
 const cutoffSelect = document.getElementById('cutoffSelect');
 const inputText = document.getElementById('inputText');
@@ -423,6 +434,14 @@ function onFunctionChange() {
     cutoffGroup.classList.add('hidden');
   }
 
+  if (fnId === 'latte_segment') {
+    if (latteUnitGroup) latteUnitGroup.classList.remove('hidden');
+    if (latteInfoBanner) latteInfoBanner.classList.remove('hidden');
+  } else {
+    if (latteUnitGroup) latteUnitGroup.classList.add('hidden');
+    if (latteInfoBanner) latteInfoBanner.classList.add('hidden');
+  }
+
   if (fn.tier === 2) {
     tierTag.textContent = 'Tier 2 (+17.8MB)';
     tierTag.className = 'tier-tag tier-2';
@@ -431,7 +450,6 @@ function onFunctionChange() {
     tierTag.className = 'tier-tag';
   }
 
-  // Update placeholder
   inputText.placeholder = fn.placeholder;
 }
 
@@ -478,7 +496,12 @@ async function runProcess() {
   const startTime = performance.now();
 
   try {
-    const result = await manager.process(fnId, text, cutoff, handleProgress);
+    // LATTE uses the `cutoff` wire slot for its granularity unit; everything
+    // else goes through the same generic wasm dispatch.
+    const unit = latteUnitSelect ? latteUnitSelect.value : 'short';
+    const effectiveCutoff = fnId === 'latte_segment' ? unit : cutoff;
+    const result = await manager.process(fnId, text, effectiveCutoff, handleProgress);
+
     const elapsed = Math.round(performance.now() - startTime);
 
     // Hide progress bar on successful complete
@@ -557,8 +580,7 @@ async function copyOutput() {
 functionSelect.addEventListener('change', onFunctionChange);
 
 exampleBtn.addEventListener('click', () => {
-  const fnId = functionSelect.value;
-  const fn = FUNCTION_MAP.get(fnId);
+  const fn = FUNCTION_MAP.get(functionSelect.value);
   if (fn && fn.placeholder) {
     inputText.value = fn.placeholder;
   }

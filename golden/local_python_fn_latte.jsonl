@@ -1,0 +1,30 @@
+{"function":"latte_segment","text":"ฉันกินข้าวที่บ้าน","cutoff":"short","expected":"[\"ฉัน\",\"กิน\",\"ข้าว\",\"ที่\",\"บ้าน\"]","ok":true}
+{"function":"latte_segment","text":"เจ้าหน้าที่การศึกษาเปิดเผยว่า","cutoff":"short","expected":"[\"เจ้า\",\"หน้าที่\",\"การ\",\"ศึกษา\",\"เปิด\",\"เผย\",\"ว่า\"]","ok":true}
+{"function":"latte_segment","text":"ภาษาไทยเป็นภาษาที่สวยงาม","cutoff":"short","expected":"[\"ภาษา\",\"ไทย\",\"เป็น\",\"ภาษา\",\"ที่\",\"สวย\",\"งาม\"]","ok":true}
+{"function":"latte_segment","text":"แม่น้ำเจ้าพระยาไหลผ่านกรุงเทพ","cutoff":"short","expected":"[\"แม่น้ำ\",\"เจ้าพระยา\",\"ไหล\",\"ผ่าน\",\"กรุงเทพ\"]","ok":true}
+{"function":"latte_segment","text":"เด็กๆ กำลังเล่นในสวนสาธารณะ","cutoff":"short","expected":"[\"เด็ก\",\"ๆ\",\" \",\"กำลัง\",\"เล่น\",\"ใน\",\"สวนสาธารณะ\"]","ok":true}
+{"function":"latte_segment","text":"ประเทศไทยมีประชากรประมาณ 70 ล้านคน","cutoff":"short","expected":"[\"ประเทศ\",\"ไทย\",\"มี\",\"ประชากร\",\"ประมาณ\",\" \",\"70\",\" \",\"ล้าน\",\"คน\"]","ok":true}
+{"function":"latte_segment","text":"การศึกษาเป็นสิ่งสำคัญvery much","cutoff":"short","expected":"[\"การ\",\"ศึกษา\",\"เป็น\",\"สิ่ง\",\"สำคัญ\",\"very\",\" \",\"much\"]","ok":true}
+{"function":"latte_segment","text":"นายกรัฐมนตรีเดินทางไปต่างประเทศ","cutoff":"short","expected":"[\"นายก\",\"รัฐมนตรี\",\"เดินทาง\",\"ไป\",\"ต่าง\",\"ประเทศ\"]","ok":true}
+{"function":"latte_segment","text":"ผมขอแบบนี้ครับ","cutoff":"short","expected":"[\"ผม\",\"ขอ\",\"แบบ\",\"นี้\",\"ครับ\"]","ok":true}
+{"function":"latte_segment","text":"สวัสดีครับ วันนี้อากาศดีมาก","cutoff":"short","expected":"[\"สวัสดี\",\"ครับ\",\" \",\"วัน\",\"นี้\",\"อากาศ\",\"ดี\",\"มาก\"]","ok":true}
+{"function":"latte_segment","text":"ฉันกินข้าวที่บ้าน","cutoff":"long","expected":"[\"ฉัน\",\"กิน\",\"ข้าว\",\"ที่\",\"บ้าน\"]","ok":true}
+{"function":"latte_segment","text":"เจ้าหน้าที่การศึกษาเปิดเผยว่า","cutoff":"long","expected":"[\"เจ้าหน้าที่\",\"การศึกษา\",\"เปิดเผย\",\"ว่า\"]","ok":true}
+{"function":"latte_segment","text":"ภาษาไทยเป็นภาษาที่สวยงาม","cutoff":"long","expected":"[\"ภาษา\",\"ไทย\",\"เป็น\",\"ภาษา\",\"ที่\",\"สวยงาม\"]","ok":true}
+{"function":"latte_segment","text":"แม่น้ำเจ้าพระยาไหลผ่านกรุงเทพ","cutoff":"long","expected":"[\"แม่น้ำ\",\"เจ้าพระยา\",\"ไหล\",\"ผ่าน\",\"กรุงเทพ\"]","ok":true}
+{"function":"latte_segment","text":"เด็กๆ กำลังเล่นในสวนสาธารณะ","cutoff":"long","expected":"[\"เด็ก\",\"ๆ\",\" \",\"กำลัง\",\"เล่น\",\"ใน\",\"สวนสาธารณะ\"]","ok":true}
+{"function":"latte_segment","text":"ประเทศไทยมีประชากรประมาณ 70 ล้านคน","cutoff":"long","expected":"[\"ประเทศ\",\"ไทย\",\"มี\",\"ประชากร\",\"ประมาณ\",\" \",\"70\",\" \",\"ล้าน\",\"คน\"]","ok":true}
+{"function":"latte_segment","text":"การศึกษาเป็นสิ่งสำคัญvery much","cutoff":"long","expected":"[\"การศึกษา\",\"เป็น\",\"สิ่ง\",\"สำคัญ\",\"very\",\" \",\"much\"]","ok":true}
+{"function":"latte_segment","text":"นายกรัฐมนตรีเดินทางไปต่างประเทศ","cutoff":"long","expected":"[\"นายกรัฐมนตรี\",\"เดินทาง\",\"ไป\",\"ต่างประเทศ\"]","ok":true}
+{"function":"latte_segment","text":"ผมขอแบบนี้ครับ","cutoff":"long","expected":"[\"ผม\",\"ขอ\",\"แบบ\",\"นี้\",\"ครับ\"]","ok":true}
+{"function":"latte_segment","text":"สวัสดีครับ วันนี้อากาศดีมาก","cutoff":"long","expected":"[\"สวัสดี\",\"ครับ\",\" \",\"วันนี้\",\"อากาศ\",\"ดี\",\"มาก\"]","ok":true}
+{"function":"latte_segment","text":"ฉันกินข้าวที่บ้าน","cutoff":"minimal","expected":"[\"ฉัน\",\"กิน\",\"ข้าว\",\"ที่\",\"บ้าน\"]","ok":true}
+{"function":"latte_segment","text":"เจ้าหน้าที่การศึกษาเปิดเผยว่า","cutoff":"minimal","expected":"[\"เจ้า\",\"หน้า\",\"ที่\",\"การ\",\"ศึกษา\",\"เปิด\",\"เผย\",\"ว่า\"]","ok":true}
+{"function":"latte_segment","text":"ภาษาไทยเป็นภาษาที่สวยงาม","cutoff":"minimal","expected":"[\"ภาษา\",\"ไทย\",\"เป็น\",\"ภาษา\",\"ที่\",\"สวย\",\"งาม\"]","ok":true}
+{"function":"latte_segment","text":"แม่น้ำเจ้าพระยาไหลผ่านกรุงเทพ","cutoff":"minimal","expected":"[\"แม่\",\"น้ำ\",\"เจ้า\",\"พระยา\",\"ไหล\",\"ผ่าน\",\"กรุง\",\"เทพ\"]","ok":true}
+{"function":"latte_segment","text":"เด็กๆ กำลังเล่นในสวนสาธารณะ","cutoff":"minimal","expected":"[\"เด็ก\",\"ๆ\",\" \",\"กำลัง\",\"เล่น\",\"ใน\",\"สวน\",\"สาธารณะ\"]","ok":true}
+{"function":"latte_segment","text":"ประเทศไทยมีประชากรประมาณ 70 ล้านคน","cutoff":"minimal","expected":"[\"ประเทศ\",\"ไทย\",\"มี\",\"ประชากร\",\"ประมาณ\",\" \",\"70\",\" \",\"ล้าน\",\"คน\"]","ok":true}
+{"function":"latte_segment","text":"การศึกษาเป็นสิ่งสำคัญvery much","cutoff":"minimal","expected":"[\"การ\",\"ศึกษา\",\"เป็น\",\"สิ่ง\",\"สำคัญ\",\"very\",\" \",\"much\"]","ok":true}
+{"function":"latte_segment","text":"นายกรัฐมนตรีเดินทางไปต่างประเทศ","cutoff":"minimal","expected":"[\"นายก\",\"รัฐมนตรี\",\"เดิน\",\"ทาง\",\"ไป\",\"ต่าง\",\"ประเทศ\"]","ok":true}
+{"function":"latte_segment","text":"ผมขอแบบนี้ครับ","cutoff":"minimal","expected":"[\"ผม\",\"ขอ\",\"แบบ\",\"นี้\",\"ครับ\"]","ok":true}
+{"function":"latte_segment","text":"สวัสดีครับ วันนี้อากาศดีมาก","cutoff":"minimal","expected":"[\"สวัสดี\",\"ครับ\",\" \",\"วัน\",\"นี้\",\"อากาศ\",\"ดี\",\"มาก\"]","ok":true}

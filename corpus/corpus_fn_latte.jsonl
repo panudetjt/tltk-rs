@@ -1,0 +1,30 @@
+{"function":"latte_segment","text":"ฉันกินข้าวที่บ้าน","cutoff":"short"}
+{"function":"latte_segment","text":"เจ้าหน้าที่การศึกษาเปิดเผยว่า","cutoff":"short"}
+{"function":"latte_segment","text":"ภาษาไทยเป็นภาษาที่สวยงาม","cutoff":"short"}
+{"function":"latte_segment","text":"แม่น้ำเจ้าพระยาไหลผ่านกรุงเทพ","cutoff":"short"}
+{"function":"latte_segment","text":"เด็กๆ กำลังเล่นในสวนสาธารณะ","cutoff":"short"}
+{"function":"latte_segment","text":"ประเทศไทยมีประชากรประมาณ 70 ล้านคน","cutoff":"short"}
+{"function":"latte_segment","text":"การศึกษาเป็นสิ่งสำคัญvery much","cutoff":"short"}
+{"function":"latte_segment","text":"นายกรัฐมนตรีเดินทางไปต่างประเทศ","cutoff":"short"}
+{"function":"latte_segment","text":"ผมขอแบบนี้ครับ","cutoff":"short"}
+{"function":"latte_segment","text":"สวัสดีครับ วันนี้อากาศดีมาก","cutoff":"short"}
+{"function":"latte_segment","text":"ฉันกินข้าวที่บ้าน","cutoff":"long"}
+{"function":"latte_segment","text":"เจ้าหน้าที่การศึกษาเปิดเผยว่า","cutoff":"long"}
+{"function":"latte_segment","text":"ภาษาไทยเป็นภาษาที่สวยงาม","cutoff":"long"}
+{"function":"latte_segment","text":"แม่น้ำเจ้าพระยาไหลผ่านกรุงเทพ","cutoff":"long"}
+{"function":"latte_segment","text":"เด็กๆ กำลังเล่นในสวนสาธารณะ","cutoff":"long"}
+{"function":"latte_segment","text":"ประเทศไทยมีประชากรประมาณ 70 ล้านคน","cutoff":"long"}
+{"function":"latte_segment","text":"การศึกษาเป็นสิ่งสำคัญvery much","cutoff":"long"}
+{"function":"latte_segment","text":"นายกรัฐมนตรีเดินทางไปต่างประเทศ","cutoff":"long"}
+{"function":"latte_segment","text":"ผมขอแบบนี้ครับ","cutoff":"long"}
+{"function":"latte_segment","text":"สวัสดีครับ วันนี้อากาศดีมาก","cutoff":"long"}
+{"function":"latte_segment","text":"ฉันกินข้าวที่บ้าน","cutoff":"minimal"}
+{"function":"latte_segment","text":"เจ้าหน้าที่การศึกษาเปิดเผยว่า","cutoff":"minimal"}
+{"function":"latte_segment","text":"ภาษาไทยเป็นภาษาที่สวยงาม","cutoff":"minimal"}
+{"function":"latte_segment","text":"แม่น้ำเจ้าพระยาไหลผ่านกรุงเทพ","cutoff":"minimal"}
+{"function":"latte_segment","text":"เด็กๆ กำลังเล่นในสวนสาธารณะ","cutoff":"minimal"}
+{"function":"latte_segment","text":"ประเทศไทยมีประชากรประมาณ 70 ล้านคน","cutoff":"minimal"}
+{"function":"latte_segment","text":"การศึกษาเป็นสิ่งสำคัญvery much","cutoff":"minimal"}
+{"function":"latte_segment","text":"นายกรัฐมนตรีเดินทางไปต่างประเทศ","cutoff":"minimal"}
+{"function":"latte_segment","text":"ผมขอแบบนี้ครับ","cutoff":"minimal"}
+{"function":"latte_segment","text":"สวัสดีครับ วันนี้อากาศดีมาก","cutoff":"minimal"}

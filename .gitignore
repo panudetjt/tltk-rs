@@ -8,6 +8,8 @@ golden/raw/
 crates/tltk-core/data/edu.bin.gz
 crates/tltk-core/data/w2v.bin.gz
 crates/tltk-core/data/malt.bin.gz
+crates/tltk-core/data/latte_model.int8.onnx
+crates/tltk-core/data/latte_lexicon.txt.gz
 static/wasm/
 web/wasm/
 web/e2e/node_modules/
