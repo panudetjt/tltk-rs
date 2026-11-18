@@ -29,6 +29,73 @@ struct Case {
     expected: Option<String>,
     #[serde(default)]
     ok: Option<bool>,
+    /// Opt-in comparison mode for `expected`; absent means byte-exact.
+    #[serde(default)]
+    compare: Option<String>,
+}
+
+/// One golden row, keyed by (function, text, cutoff) in `cmd_check`.
+struct GoldenRow {
+    expected: String,
+    ok: bool,
+    compare: Option<String>,
+}
+
+/// Absolute tolerance of the `json-f64-1e-4` comparison mode (probability leaves).
+const JSON_F64_TOL: f64 = 1e-4;
+
+/// Compares one wire result against its golden `expected` string.
+///
+/// The default is byte-exact. `json-f64-1e-4` parses both sides as JSON and
+/// compares structurally: same object keys, arrays same length and order,
+/// strings byte-equal, bools/null equal, numbers within `1e-4` absolute (the
+/// LATTE probabilities differ from ONNX Runtime by f32 rounding). An unknown
+/// mode fails closed.
+fn compare_outputs(expected: &str, got: &str, compare: Option<&str>) -> Result<(), String> {
+    match compare {
+        None => {
+            if got == expected {
+                Ok(())
+            } else {
+                Err("byte-exact mismatch".to_string())
+            }
+        }
+        Some("json-f64-1e-4") => {
+            let want: serde_json::Value = serde_json::from_str(expected)
+                .map_err(|e| format!("golden is not JSON: {e}"))?;
+            let have: serde_json::Value =
+                serde_json::from_str(got).map_err(|e| format!("result is not JSON: {e}"))?;
+            if json_within(&want, &have, JSON_F64_TOL) {
+                Ok(())
+            } else {
+                Err("JSON differs (structure, strings, or numbers beyond 1e-4)".to_string())
+            }
+        }
+        Some(other) => Err(format!("unknown compare mode {other:?}")),
+    }
+}
+
+/// Structural JSON equality with an absolute tolerance on numbers.
+fn json_within(want: &serde_json::Value, have: &serde_json::Value, tol: f64) -> bool {
+    use serde_json::Value;
+    match (want, have) {
+        (Value::Null, Value::Null) => true,
+        (Value::Bool(a), Value::Bool(b)) => a == b,
+        (Value::String(a), Value::String(b)) => a == b,
+        (Value::Number(a), Value::Number(b)) => match (a.as_f64(), b.as_f64()) {
+            (Some(x), Some(y)) => (x - y).abs() <= tol,
+            _ => false,
+        },
+        (Value::Array(a), Value::Array(b)) => {
+            a.len() == b.len() && a.iter().zip(b).all(|(x, y)| json_within(x, y, tol))
+        }
+        (Value::Object(a), Value::Object(b)) => {
+            a.len() == b.len()
+                && a.iter()
+                    .all(|(k, v)| b.get(k).is_some_and(|w| json_within(v, w, tol)))
+        }
+        _ => false,
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
@@ -289,20 +356,23 @@ fn cmd_check(args: &[String]) {
         std::process::exit(2);
     }
     let cases = load_cases(&args[2]);
-    let golden: HashMap<(String, String, String), (String, bool)> =
-        load_cases(&args[3])
-            .into_iter()
-            .map(|g| {
+    let golden: HashMap<(String, String, String), GoldenRow> = load_cases(&args[3])
+        .into_iter()
+        .map(|g| {
+            (
                 (
-                    (
-                        g.function.clone(),
-                        g.text.clone(),
-                        g.cutoff.unwrap_or_else(|| "medium".into()),
-                    ),
-                    (g.expected.unwrap_or_default(), g.ok.unwrap_or(true)),
-                )
-            })
-            .collect();
+                    g.function.clone(),
+                    g.text.clone(),
+                    g.cutoff.unwrap_or_else(|| "medium".into()),
+                ),
+                GoldenRow {
+                    expected: g.expected.unwrap_or_default(),
+                    ok: g.ok.unwrap_or(true),
+                    compare: g.compare,
+                },
+            )
+        })
+        .collect();
     let tltk = load_models(&args[4]);
     let mut sess = tltk.session();
     let mut pass = 0usize;
@@ -314,14 +384,14 @@ fn cmd_check(args: &[String]) {
             c.text.clone(),
             c.cutoff.clone().unwrap_or_else(|| "medium".into()),
         );
-        let (expected, ok) = match golden.get(&key) {
+        let row = match golden.get(&key) {
             Some(v) => v,
             None => {
                 missing += 1;
                 continue;
             }
         };
-        if !ok {
+        if !row.ok {
             let is_err = run_case(&mut sess, c).is_err();
             if is_err {
                 pass += 1;
@@ -335,18 +405,23 @@ fn cmd_check(args: &[String]) {
             continue;
         }
         match run_case(&mut sess, c) {
-            Ok(got) if &got == expected => pass += 1,
-            Ok(got) => {
-                fail += 1;
-                println!("MISMATCH(function={} text={:?}):", c.function, c.text);
-                println!("  expected: {:?}", expected);
-                println!("  got     : {:?}", got);
-            }
+            Ok(got) => match compare_outputs(&row.expected, &got, row.compare.as_deref()) {
+                Ok(()) => pass += 1,
+                Err(why) => {
+                    fail += 1;
+                    println!(
+                        "MISMATCH(function={} text={:?}, compare={:?}): {why}",
+                        c.function, c.text, row.compare
+                    );
+                    println!("  expected: {:?}", row.expected);
+                    println!("  got     : {:?}", got);
+                }
+            },
             Err(e) => {
                 fail += 1;
                 println!(
                     "MISMATCH(function={} text={:?}): expected {:?}, got ERROR {}",
-                    c.function, c.text, expected, e
+                    c.function, c.text, row.expected, e
                 );
             }
         }
@@ -556,6 +631,7 @@ fn cmd_bench(args: &[String]) {
                     cutoff: None,
                     expected: None,
                     ok: None,
+                    compare: None,
                 };
 
                 for _ in 0..warmup {
@@ -797,6 +873,139 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// The LATTE golden: `latte_segment` rows compare byte-exactly, `latte_nbest`
+    /// rows carry the `json-f64-1e-4` mode.
+    fn latte_golden_rows() -> Vec<Case> {
+        let path = concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../golden/local_python_fn_latte.jsonl"
+        );
+        let f = std::fs::File::open(path).expect("read golden/local_python_fn_latte.jsonl");
+        std::io::BufReader::new(f)
+            .lines()
+            .filter_map(|l| {
+                let l = l.unwrap();
+                if l.trim().is_empty() {
+                    return None;
+                }
+                Some(serde_json::from_str::<Case>(&l).expect("parse latte golden row"))
+            })
+            .collect()
+    }
+
+    fn compare_rows() -> Vec<Case> {
+        latte_golden_rows()
+            .into_iter()
+            .filter(|c| c.compare.as_deref() == Some("json-f64-1e-4") && c.ok == Some(true))
+            .collect()
+    }
+
+    /// Adds `delta` to the probability of the golden's first reading.
+    fn nudge_first_probability(s: &str, delta: f64) -> String {
+        let mut v: serde_json::Value = serde_json::from_str(s).unwrap();
+        let obj = v.as_array_mut().unwrap().first_mut().unwrap().as_object_mut().unwrap();
+        let p = obj.get("probability").expect("probability").as_f64().unwrap();
+        obj.insert(
+            "probability".to_string(),
+            serde_json::Number::from_f64(p + delta).unwrap().into(),
+        );
+        serde_json::to_string(&v).unwrap()
+    }
+
+    /// Changes the first non-empty token of the golden's first reading.
+    fn mutate_first_token(s: &str) -> Option<String> {
+        let mut v: serde_json::Value = serde_json::from_str(s).unwrap();
+        for reading in v.as_array_mut().unwrap() {
+            let toks = reading.get_mut("tokens")?.as_array_mut()?;
+            if let Some(t) = toks.first_mut() {
+                let mut x = t.as_str()?.to_string();
+                x.push('x');
+                *t = serde_json::Value::String(x);
+                return Some(serde_json::to_string(&v).unwrap());
+            }
+        }
+        None
+    }
+
+    fn drop_last_reading(s: &str) -> String {
+        let mut v: serde_json::Value = serde_json::from_str(s).unwrap();
+        v.as_array_mut().unwrap().pop();
+        serde_json::to_string(&v).unwrap()
+    }
+
+    #[test]
+    fn test_compare_default_is_byte_exact() {
+        assert!(compare_outputs(r#"["a"]"#, r#"["a"]"#, None).is_ok());
+        assert!(compare_outputs(r#"["a"]"#, r#"["a",]"#, None).is_err());
+        // unknown modes fail closed instead of silently passing
+        assert!(compare_outputs("x", "x", Some("json-f64-1e-4x")).is_err());
+        assert!(compare_outputs("x", "x", Some("")).is_err());
+    }
+
+    #[test]
+    fn test_json_f64_tolerance_control() {
+        let rows = compare_rows();
+        assert!(
+            rows.len() >= 10,
+            "expected the latte_nbest golden rows in golden/local_python_fn_latte.jsonl, found {}",
+            rows.len()
+        );
+        for row in &rows {
+            let expected = row.expected.as_deref().unwrap();
+            let mode = row.compare.as_deref();
+            assert!(
+                compare_outputs(expected, expected, mode).is_ok(),
+                "golden must pass against itself: {:?}",
+                row.text
+            );
+            // a 1e-6 probability nudge is inside the 1e-4 tolerance
+            let nudged = nudge_first_probability(expected, 1e-6);
+            assert!(
+                compare_outputs(expected, &nudged, mode).is_ok(),
+                "1e-6 must pass, text={:?}",
+                row.text
+            );
+        }
+    }
+
+    #[test]
+    fn test_json_f64_comparator_is_a_gate() {
+        let rows = compare_rows();
+        assert!(!rows.is_empty(), "no json-f64-1e-4 golden rows to gate");
+        let mut mutated_a_token = 0usize;
+        for row in &rows {
+            let expected = row.expected.as_deref().unwrap();
+            let mode = row.compare.as_deref();
+            // a real probability error must fail
+            let wrong = nudge_first_probability(expected, 0.01);
+            assert!(
+                compare_outputs(expected, &wrong, mode).is_err(),
+                "a probability off by 0.01 must fail, text={:?}",
+                row.text
+            );
+            // a wrong token string must fail
+            if let Some(mutated) = mutate_first_token(expected) {
+                mutated_a_token += 1;
+                assert!(
+                    compare_outputs(expected, &mutated, mode).is_err(),
+                    "a mutated token must fail, text={:?}",
+                    row.text
+                );
+            }
+            // a truncated reading list must fail
+            let truncated = drop_last_reading(expected);
+            assert!(
+                compare_outputs(expected, &truncated, mode).is_err(),
+                "a truncated reading list must fail, text={:?}",
+                row.text
+            );
+        }
+        assert!(
+            mutated_a_token > 0,
+            "no golden row had a token to mutate — the token comparison is ungated"
+        );
+    }
 
     #[test]
     fn test_proc_status_fallback_nonexistent() {

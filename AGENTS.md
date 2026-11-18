@@ -1,6 +1,6 @@
 # AGENTS.md — tltk-rs
 
-Rust rewrite of TLTK (Thai NLP toolkit) — **44 wire functions**, port surface
+Rust rewrite of TLTK (Thai NLP toolkit) — **45 wire functions**, port surface
 **tltk 1.11** (repinned 2026-10-17; 1.11's only functional change vs 1.10 is
 TextAna's LdvTTR ×1000 → ×100): the 16 validator functions **byte-identical
 to the stichula validator / Python oracle**, and 27 more of upstream's
