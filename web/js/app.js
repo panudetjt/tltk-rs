@@ -405,12 +405,12 @@ const downloadImgLink = document.getElementById('downloadImgLink');
 const readingsOutputWrapper = document.getElementById('readingsOutputWrapper');
 const readingsList = document.getElementById('readingsList');
 
-// LATTE readings UI limits. The wire allows n <= 100 and 10,000 non-whitespace
-// characters; the page caps n at 10 and the n-best path at 2,000 characters so
-// the lattice search cannot freeze a browser tab. These are UI guards only —
-// `latte_segment` (n = 1) keeps its unlimited behaviour.
+// LATTE card UI limits. The wire allows n <= 100 and 10,000 non-whitespace
+// characters; the page caps n at 10 and the card's text at 2,000 characters
+// for every n, so the lattice search cannot freeze a browser tab. These are UI
+// guards only — the wire keeps its own limits.
 const LATTE_UI_MAX_N = 10;
-const LATTE_UI_NBEST_MAX_CHARS = 2000;
+const LATTE_UI_MAX_CHARS = 2000;
 
 /**
  * Initializes the function dropdown.
@@ -577,7 +577,9 @@ async function runProcess() {
 
   // LATTE n control: n = 1 keeps today's plain `latte_segment` call; n = 2..10
   // switches to `latte_nbest` and the readings view. Both guards run BEFORE any
-  // wasm call so a bad n (or an oversized n-best input) cannot reach the engine.
+  // wasm call so a bad n (or an oversized input) cannot reach the engine. The
+  // character cap applies to the LATTE card at every n; only n = 1 is special
+  // in which wire name it uses.
   let latteN = 1;
   if (fnId === 'latte_segment') {
     const raw = (latteNInput?.value ?? '1').trim();
@@ -587,13 +589,11 @@ async function runProcess() {
       showError(`จำนวนผลลัพธ์ (n) ต้องเป็นจำนวนเต็ม 1-${LATTE_UI_MAX_N} — ค่าที่ใส่: ${raw === '' ? '(ว่าง)' : raw}`);
       return;
     }
-    if (latteN > 1) {
-      const chars = nonWhitespaceLength(text);
-      if (chars > LATTE_UI_NBEST_MAX_CHARS) {
-        execStats.textContent = 'เกิดข้อผิดพลาด';
-        showError(`โหมดหลายผลลัพธ์ (n > 1) รองรับข้อความไม่เกิน ${LATTE_UI_NBEST_MAX_CHARS} ตัวอักษร (ไม่นับช่องว่าง) — ข้อความนี้มี ${chars} ตัวอักษร`);
-        return;
-      }
+    const chars = nonWhitespaceLength(text);
+    if (chars > LATTE_UI_MAX_CHARS) {
+      execStats.textContent = 'เกิดข้อผิดพลาด';
+      showError(`การตัดคำด้วย LATTE รองรับข้อความไม่เกิน ${LATTE_UI_MAX_CHARS} ตัวอักษร (ไม่นับช่องว่าง) — ข้อความนี้มี ${chars} ตัวอักษร`);
+      return;
     }
   }
 
