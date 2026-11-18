@@ -169,6 +169,7 @@ A client-only web toolbox page usable identically to the stichula original with 
 ### What it is
 
 - **Full 16-function Thai NLP suite**: `th2ipa`, `th2roman`, `word_segment`, `syl_segment`, `segment`, `g2p`, `th2read`, `spell_variants`, `spoonerism`, `pos_tag`, `ner_tag`, `similar_words`, `similarity`, `outofgroup`, `analogy`, and `plotwords` (PCA scatter plot rendered as inline PNG).
+- **LATTE word-segmentation wire surface**: `latte_segment` (long / short / minimal units), `latte_nbest` (ranked readings with probabilities, reachable from the in-page `n` control) and the API-only `latte_segment_opts` (multi-text, whitespace toggle, per-call user words) — see [docs/latte-onnx-analysis.md](docs/latte-onnx-analysis.md).
 - **Byte-identical results**: strictly follows tltk 1.11 / stichula parity.
 - **Zero external dependencies**: no frameworks, no bundler, no CDN fonts or scripts — works completely offline once cached.
 
