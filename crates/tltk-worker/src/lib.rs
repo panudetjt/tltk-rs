@@ -39,7 +39,7 @@ async fn router(req: Request, env: Env) -> Result<Response> {
                 "malt_parser","malt_parser_wordlist",
                 "th2ipa_all","sylparse_all",
                 "wrd_len","match_engtext","known","edits2","check_thaidict","reset_thaidict","read_thaidict",
-                "w2v","w2v_diffplot","w2v_dimplot","w2v_compare_color","compound","latte_segment"
+                "w2v","w2v_diffplot","w2v_dimplot","w2v_compare_color","compound","latte_segment","latte_nbest","latte_segment_opts"
             ],
         })),
         _ => Response::error("Not Found", 404),

@@ -377,6 +377,8 @@ const functionDesc = document.getElementById('functionDesc');
 const tierTag = document.getElementById('tierTag');
 const latteUnitGroup = document.getElementById('latteUnitGroup');
 const latteUnitSelect = document.getElementById('latteUnitSelect');
+const latteNGroup = document.getElementById('latteNGroup');
+const latteNInput = document.getElementById('latteNInput');
 const latteInfoBanner = document.getElementById('latteInfoBanner');
 const cutoffGroup = document.getElementById('cutoffGroup');
 const cutoffSelect = document.getElementById('cutoffSelect');
@@ -400,6 +402,15 @@ const copyBtn = document.getElementById('copyBtn');
 const imageOutputWrapper = document.getElementById('imageOutputWrapper');
 const outputImage = document.getElementById('outputImage');
 const downloadImgLink = document.getElementById('downloadImgLink');
+const readingsOutputWrapper = document.getElementById('readingsOutputWrapper');
+const readingsList = document.getElementById('readingsList');
+
+// LATTE card UI limits. The wire allows n <= 100 and 10,000 non-whitespace
+// characters; the page caps n at 10 and the card's text at 2,000 characters
+// for every n, so the lattice search cannot freeze a browser tab. These are UI
+// guards only — the wire keeps its own limits.
+const LATTE_UI_MAX_N = 10;
+const LATTE_UI_MAX_CHARS = 2000;
 
 /**
  * Initializes the function dropdown.
@@ -436,11 +447,17 @@ function onFunctionChange() {
 
   if (fnId === 'latte_segment') {
     if (latteUnitGroup) latteUnitGroup.classList.remove('hidden');
+    if (latteNGroup) latteNGroup.classList.remove('hidden');
     if (latteInfoBanner) latteInfoBanner.classList.remove('hidden');
   } else {
     if (latteUnitGroup) latteUnitGroup.classList.add('hidden');
+    if (latteNGroup) latteNGroup.classList.add('hidden');
     if (latteInfoBanner) latteInfoBanner.classList.add('hidden');
   }
+
+  // the readings view and the plain output belong to the previous function's
+  // run — never leave one visible under a different card
+  resetOutputs();
 
   if (fn.tier === 2) {
     tierTag.textContent = 'Tier 2 (+17.8MB)';
@@ -471,6 +488,78 @@ function handleProgress({ phase, fileIndex, totalFiles, fileName, percent }) {
 }
 
 /**
+ * Leaves the readings mode: clears and hides the readings view and restores the
+ * plain output box (which keeps whatever the last plain run left in it).
+ */
+function resetOutputs() {
+  if (readingsList) readingsList.replaceChildren();
+  if (readingsOutputWrapper) readingsOutputWrapper.classList.add('hidden');
+  if (textOutputWrapper) textOutputWrapper.classList.remove('hidden');
+}
+
+/**
+ * Counts characters that are not whitespace (the wire's length cap unit).
+ */
+function nonWhitespaceLength(text) {
+  let n = 0;
+  for (const ch of text) {
+    if (!/\s/u.test(ch)) n++;
+  }
+  return n;
+}
+
+/**
+ * Renders `latte_nbest` JSON ([{tokens, probability}, ...], best first) as one
+ * row per reading. DOM APIs + textContent only — wire data never reaches
+ * innerHTML.
+ */
+function renderReadings(json) {
+  let readings;
+  try {
+    readings = JSON.parse(json);
+  } catch {
+    throw new Error('ผลลัพธ์หลายทางเลือกไม่ใช่ JSON ที่ถูกต้อง');
+  }
+  if (!Array.isArray(readings) || readings.length === 0) {
+    throw new Error('ไม่พบผลลัพธ์หลายทางเลือกจากโมเดล');
+  }
+
+  const frag = document.createDocumentFragment();
+  readings.forEach((reading, i) => {
+    const row = document.createElement('li');
+    row.className = i === 0 ? 'reading-row reading-best' : 'reading-row';
+
+    const rank = document.createElement('span');
+    rank.className = 'reading-rank';
+    rank.textContent = `#${i + 1}`;
+
+    const tokens = document.createElement('span');
+    tokens.className = 'reading-tokens';
+    const list = Array.isArray(reading?.tokens) ? reading.tokens : [];
+    for (const token of list) {
+      const chip = document.createElement('span');
+      chip.className = 'token-chip';
+      chip.textContent = token;
+      tokens.appendChild(chip);
+    }
+
+    const prob = document.createElement('span');
+    prob.className = 'reading-probability';
+    const p = Number(reading?.probability);
+    if (Number.isFinite(p)) {
+      prob.textContent = `p = ${p.toFixed(4)}`;
+      prob.title = String(p);
+    } else {
+      prob.textContent = 'p = ?';
+    }
+
+    row.append(rank, tokens, prob);
+    frag.appendChild(row);
+  });
+  readingsList.replaceChildren(frag);
+}
+
+/**
  * Runs the selected function with input text.
  */
 async function runProcess() {
@@ -486,6 +575,28 @@ async function runProcess() {
     return;
   }
 
+  // LATTE n control: n = 1 keeps today's plain `latte_segment` call; n = 2..10
+  // switches to `latte_nbest` and the readings view. Both guards run BEFORE any
+  // wasm call so a bad n (or an oversized input) cannot reach the engine. The
+  // character cap applies to the LATTE card at every n; only n = 1 is special
+  // in which wire name it uses.
+  let latteN = 1;
+  if (fnId === 'latte_segment') {
+    const raw = (latteNInput?.value ?? '1').trim();
+    latteN = Number(raw);
+    if (!/^\d+$/.test(raw) || !Number.isInteger(latteN) || latteN < 1 || latteN > LATTE_UI_MAX_N) {
+      execStats.textContent = 'เกิดข้อผิดพลาด';
+      showError(`จำนวนผลลัพธ์ (n) ต้องเป็นจำนวนเต็ม 1-${LATTE_UI_MAX_N} — ค่าที่ใส่: ${raw === '' ? '(ว่าง)' : raw}`);
+      return;
+    }
+    const chars = nonWhitespaceLength(text);
+    if (chars > LATTE_UI_MAX_CHARS) {
+      execStats.textContent = 'เกิดข้อผิดพลาด';
+      showError(`การตัดคำด้วย LATTE รองรับข้อความไม่เกิน ${LATTE_UI_MAX_CHARS} ตัวอักษร (ไม่นับช่องว่าง) — ข้อความนี้มี ${chars} ตัวอักษร`);
+      return;
+    }
+  }
+
   // Clear previous errors
   errorPane.classList.add('hidden');
   errorMessage.textContent = '';
@@ -496,11 +607,16 @@ async function runProcess() {
   const startTime = performance.now();
 
   try {
-    // LATTE uses the `cutoff` wire slot for its granularity unit; everything
-    // else goes through the same generic wasm dispatch.
+    // LATTE uses the `cutoff` wire slot for its granularity unit (and, for the
+    // n-best path, `<unit>:<n>`); everything else goes through the same generic
+    // wasm dispatch.
     const unit = latteUnitSelect ? latteUnitSelect.value : 'short';
-    const effectiveCutoff = fnId === 'latte_segment' ? unit : cutoff;
-    const result = await manager.process(fnId, text, effectiveCutoff, handleProgress);
+    const useNbest = fnId === 'latte_segment' && latteN > 1;
+    const effectiveCutoff = fnId === 'latte_segment'
+      ? (useNbest ? `${unit}:${latteN}` : unit)
+      : cutoff;
+    const wireFunction = useNbest ? 'latte_nbest' : fnId;
+    const result = await manager.process(wireFunction, text, effectiveCutoff, handleProgress);
 
     const elapsed = Math.round(performance.now() - startTime);
 
@@ -516,6 +632,13 @@ async function runProcess() {
       downloadImgLink.href = `data:image/png;base64,${b64}`;
       imageOutputWrapper.classList.remove('hidden');
       textOutputWrapper.classList.add('hidden');
+      if (readingsOutputWrapper) readingsOutputWrapper.classList.add('hidden');
+    } else if (useNbest) {
+      // ranked readings: one row per reading, tokens + probability, best first
+      renderReadings(result);
+      readingsOutputWrapper.classList.remove('hidden');
+      textOutputWrapper.classList.add('hidden');
+      imageOutputWrapper.classList.add('hidden');
     } else {
       // textana returns compact JSON — pretty-print for display only
       let shown = result;
@@ -527,6 +650,8 @@ async function runProcess() {
       outputText.textContent = shown || '(ผลลัพธ์ว่างเปล่า)';
       textOutputWrapper.classList.remove('hidden');
       imageOutputWrapper.classList.add('hidden');
+      if (readingsOutputWrapper) readingsOutputWrapper.classList.add('hidden');
+      if (readingsList) readingsList.replaceChildren();
     }
   } catch (err) {
     progressSection.classList.add('hidden');

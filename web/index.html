@@ -7,7 +7,7 @@
   <meta name="theme-color" content="#2563eb">
   <link rel="apple-touch-icon" href="/icons/icon-192.png">
   <title>TLTK Web Toolbox — เครื่องมือประมวลผลภาษาไทยในเบราว์เซอร์</title>
-  <link rel="stylesheet" href="css/style.css?v=2">
+  <link rel="stylesheet" href="css/style.css?v=3">
 </head>
 <body>
   <div class="container">
@@ -59,6 +59,15 @@
             <option value="minimal">Minimal (ระดับหน่วยคำย่อย - Morphemes)</option>
           </select>
           <p class="form-hint">เลือกระดับความละเอียดการตัดคำของ LATTE</p>
+        </div>
+
+        <!-- LATTE n control (latte_segment only): 1 = plain segmentation,
+             2-10 = ranked readings with probabilities (latte_nbest) -->
+        <div id="latteNGroup" class="form-group hidden">
+          <label for="latteNInput" class="form-label">จำนวนผลลัพธ์ (n):</label>
+          <input id="latteNInput" class="form-control" type="number" min="1" max="10" step="1" value="1"
+                 inputmode="numeric" autocomplete="off">
+          <p class="form-hint">1 = ผลลัพธ์เดียว (ตัดคำปกติ) · 2-10 = ขอหลายผลลัพธ์พร้อมความน่าจะเป็น — การ์ด LATTE รับข้อความไม่เกิน 2000 ตัวอักษร (ไม่นับช่องว่าง)</p>
         </div>
 
         <!-- Cutoff Selector (similar_words only) -->
@@ -118,6 +127,15 @@
           <pre id="outputText" class="output-box" tabindex="0">ผลลัพธ์จะแสดงที่นี่หลังกดประมวลผล</pre>
         </div>
 
+        <!-- Readings Output View (latte_segment with n > 1) -->
+        <div id="readingsOutputWrapper" class="output-wrapper hidden">
+          <div class="output-header">
+            <span class="output-title">ผลลัพธ์หลายทางเลือก (Ranked Readings):</span>
+          </div>
+          <ol id="readingsList" class="readings-list" aria-label="ผลลัพธ์การตัดคำเรียงตามความน่าจะเป็น"></ol>
+          <p class="readings-hint">เรียงจากความน่าจะเป็นสูงสุด — แถวแรก (ตัวหนา) คือผลลัพธ์ที่โมเดลเลือก</p>
+        </div>
+
         <!-- Image Output View (plotwords) -->
         <div id="imageOutputWrapper" class="output-wrapper hidden">
           <div class="output-header">
@@ -144,6 +162,6 @@
     </footer>
   </div>
 
-  <script type="module" src="js/app.js"></script>
+  <script type="module" src="js/app.js?v=4"></script>
 </body>
 </html>
