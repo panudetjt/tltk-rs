@@ -11,8 +11,8 @@
 //! Pre/post-processing (64-bit poly hash lexicon bits, Thai orthography rules,
 //! whitespace-as-token, ASCII/digit runs) follows `_runtime.py` verbatim.
 //! See `docs/latte-onnx-analysis.md` for the graph and the empirically pinned
-//! `DynamicQuantizeLSTM` semantics (round-to-nearest-even, global X scale,
-//! float recurrence, per-direction i/o/f/c weights).
+//! `DynamicQuantizeLSTM` semantics (round-to-nearest-even, dynamic scales for
+//! the input and for the step's hidden state, per-direction i/o/f/c weights).
 //!
 //! Goldens are captured from the iApp wheel, never from this code.
 
@@ -234,12 +234,16 @@ fn lstm(m: &Model, x: &[f32], t: usize, input: usize, layer: usize) -> Vec<f32> 
                 }
                 z[g] = (acc as f32) * (xs * wscale) + wb[g];
             }
+            // DynamicQuantizeLSTM quantizes the hidden state as well, per step and
+            // per direction, with a dynamic scale over its 128 values; without it
+            // the recurrence drifts by ~1e-3 and the logits by ~5e-2.
+            let (hq, hs, hz) = dql(&h);
             for g in 0..4 * HIDDEN {
-                let mut acc = 0.0f32;
+                let mut acc: i32 = 0;
                 for i in 0..HIDDEN {
-                    acc += h[i] * (rqd[i * 4 * HIDDEN + g] as f32) * rscale;
+                    acc += (hq[i] as i32 - hz) * (rqd[i * 4 * HIDDEN + g] as i32);
                 }
-                z[g] += acc + rb[g];
+                z[g] += (acc as f32) * (hs * rscale) + rb[g];
             }
             for i in 0..HIDDEN {
                 let ii = sigmoid(z[i]);
