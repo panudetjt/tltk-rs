@@ -383,7 +383,12 @@ non-whitespace characters** (whitespace is free); a longer input errors instead
 of allocating. The web UI is stricter than the wire on purpose: it caps n at 10
 and the n-best path at 2,000 non-whitespace characters, refusing with a
 user-facing Thai error before the wasm call so a browser tab cannot freeze
-(plain `latte_segment`, n = 1, keeps the wire's unlimited behaviour).
+(plain `latte_segment`, n = 1, keeps the wire's unlimited behaviour). The worker
+wire keeps the full 10,000-character cap — the wheel's own limit — and a maximal
+API request is an accepted CPU cost, documented rather than silently lowered
+(lowering it would diverge from the wheel). Empty or whitespace-only n-best
+input returns the characters themselves as one certain reading (probability
+`1.0`), exactly like the wheel.
 
 **`latte_segment_opts(text, cutoff)`.** `text` is a compact JSON envelope and
 `cutoff` is **ignored** — the wire name, not a leading `{`, disambiguates JSON
@@ -744,9 +749,9 @@ item 3 for the asserted tolerance on probability wires).
 3. **Gate threshold `logit >= 0.0`.** Tiny float differences in conv/LSTM/MatMul
    accumulation order (MLAS vs naive loops) can flip a start, so parity is
    compared at the logit level before token strings. Settled rule for the wire:
-   `latte_segment` output stays **byte-exact**; probability-bearing wires
-   (`latte_nbest`, `latte_segment_opts`) are asserted at **1e−4 absolute on
-   numeric leaves, strings byte-exact** (`json-f64-1e-4` in the goldens). With
+   `latte_segment` and `latte_segment_opts` stay **byte-exact**; the
+   probability-bearing `latte_nbest` is asserted at **1e−4 absolute on numeric
+   leaves, strings byte-exact** (`json-f64-1e-4` in the goldens). With
    the per-step hidden-state quantization of §6.2 the port's logits agree with
    ORT to ≤2.2e−6 and the n-best probabilities to ~1e−6, so 1e−4 is a guard with
    margin, not the observed drift. The model card's "no score moving by more

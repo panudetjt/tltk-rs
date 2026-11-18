@@ -130,12 +130,12 @@ def nbest_args(cutoff: str) -> tuple[str, int]:
     """The wire's n-best cutoff grammar: `<unit>` | `<unit>:<n>`; "" and "medium" mean short, n=10."""
     if cutoff in ("", "medium"):
         return "short", 10
-    unit, _, n = cutoff.partition(":")
+    unit, sep, n = cutoff.partition(":")
     if unit not in UNITS:
         raise ValueError(f"invalid unit {unit!r}")
-    if not n:
+    if not sep:
         return unit, 10
-    if not n.isdigit() or not 1 <= int(n) <= MAX_NBEST:
+    if not n.isascii() or not n.isdigit() or not 1 <= int(n) <= MAX_NBEST:
         raise ValueError("n must be between 1 and 100")
     return unit, int(n)
 

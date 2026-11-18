@@ -206,7 +206,10 @@ async function checkLatteNbest(page, args, results, problems) {
     row.note = 'timeout/crash: ' + String(e).split('\n')[0].slice(0, 160);
   }
   const died = problems.splice(0);
-  if (died.length) row.note += ' | ' + died[0].slice(0, 160);
+  if (died.length) {
+    row.ok = false;
+    row.note += ' | ' + died[0].slice(0, 160);
+  }
   results.push(row);
   console.log(`${row.ok ? 'PASS' : 'FAIL'}  ${row.id.padEnd(20)} ${row.note}`);
 }
