@@ -50,6 +50,17 @@
           <p id="functionDesc" class="form-hint"></p>
         </div>
 
+        <!-- LATTE Granularity Unit Selector (latte_segment only) -->
+        <div id="latteUnitGroup" class="form-group hidden">
+          <label for="latteUnitSelect" class="form-label">ระดับหน่วยตัดคำ (Granularity):</label>
+          <select id="latteUnitSelect" class="form-control">
+            <option value="short" selected>Short (ระดับคำ - Words / ค่าเริ่มต้น)</option>
+            <option value="long">Long (ระดับคำผสม - Compounds)</option>
+            <option value="minimal">Minimal (ระดับหน่วยคำย่อย - Morphemes)</option>
+          </select>
+          <p class="form-hint">เลือกระดับความละเอียดการตัดคำของ LATTE</p>
+        </div>
+
         <!-- Cutoff Selector (similar_words only) -->
         <div id="cutoffGroup" class="form-group hidden">
           <label for="cutoffSelect" class="form-label">เกณฑ์ความคล้าย (Cutoff):</label>
@@ -60,6 +71,11 @@
           </select>
           <p class="form-hint">กำหนดค่าความคล้ายขั้นต่ำสำหรับคำที่ค้นหา</p>
         </div>
+      </div>
+
+      <!-- LATTE Model Info Banner -->
+      <div id="latteInfoBanner" class="alert alert-info hidden" role="note">
+        <strong>OpenThai 2.0 LATTE-WordSeg-Lite:</strong> โมเดลตัดคำภาษาไทยขนาดเล็กบน CPU (1.17M พารามิเตอร์) จาก <a href="https://huggingface.co/iapp/OpenThai2.0-LATTE-WordSeg-Lite" target="_blank" rel="noopener">iApp Technology</a> ประมวลผลในเบราว์เซอร์ด้วย Rust → WebAssembly (ไม่มี ONNX Runtime หรือ CDN ภายนอก) รองรับการตัดคำ 3 ระดับ (Long / Short / Minimal)
       </div>
 
       <!-- Input Text Area -->
